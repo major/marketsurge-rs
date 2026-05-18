@@ -1,0 +1,19 @@
+{
+  "operationName": "MarketDataAdhocScreen",
+  "variables": {
+    "correlationTag": "marketsurge",
+    "responseColumns": [
+      {"name": "Symbol"},
+      {"name": "CompanyName"}
+    ],
+    "adhocQuery": null,
+    "includeSource": {
+      "screenId": {"id": 46, "dialect": "MS_LIST_ID"}
+    },
+    "pageSize": 1000,
+    "resultLimit": 1000000,
+    "pageSkip": 0,
+    "resultType": "RESULT_WITH_EXPRESSION_COUNTS"
+  },
+  "query": "query MarketDataAdhocScreen(\n  $correlationTag: String!\n  $adhocQuery: MDAdhocQueryInput\n  $responseColumns: [MDAdhocScreenerDataItemInput!]!\n  $resultLimit: Int!\n  $pageSize: Int!\n  $pageSkip: Int\n  $includeSource: MDScreenerDataSourceInput!\n  $resultType: MDScreenerResultType\n) {\n  marketDataAdhocScreen(\n    correlationTag: $correlationTag\n    adhocQuery: $adhocQuery\n    resultLimit: $resultLimit\n    pageSize: $pageSize\n    pageSkip: $pageSkip\n    includeSource: $includeSource\n    responseDataPoints: $responseColumns\n    resultType: $resultType\n  ) {\n    correlationTag\n    elapsedTime\n    errorValues\n    numberOfInstrumentsInSource\n    numberOfMatchingInstruments\n    adhocQueryString\n    adhocQuery {\n      terms {\n        numberOfMatchingInstruments\n        ordinal\n        left {\n          name\n          mdItemID\n        }\n        operand\n        right {\n          value\n          maximumValue\n          minimumValue\n        }\n      }\n    }\n    responseValues {\n      value\n      mdItem {\n        mdItemID\n        name\n      }\n    }\n  }\n}"
+}

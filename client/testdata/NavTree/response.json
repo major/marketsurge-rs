@@ -1,0 +1,38 @@
+{
+  "data": {
+    "user": {
+      "navTree": [
+        {
+          "id": "folder-reports",
+          "name": "My Reports",
+          "parentId": null,
+          "type": "SYSTEM_FOLDER",
+          "treeType": "MSR_NAV",
+          "children": [
+            {"id": "report-120", "name": "Minervini Trend - 5 Months", "type": "REPORTS_SCREEN"},
+            {"id": "report-121", "name": "RS Line Blue Dot", "type": "REPORTS_SCREEN"}
+          ],
+          "contentType": "REPORTS"
+        },
+        {
+          "id": "report-120",
+          "name": "Minervini Trend - 5 Months",
+          "parentId": "folder-reports",
+          "type": "REPORTS_SCREEN",
+          "treeType": "MSR_NAV",
+          "url": "/report/minervini-5m",
+          "referenceId": "{\"originalId\":120,\"isCoachAccount\":false}"
+        },
+        {
+          "id": "leaf-screen-1",
+          "name": "My Growth Screen",
+          "parentId": "folder-screens",
+          "type": "STOCK_SCREEN",
+          "treeType": "MSR_NAV",
+          "url": "/screen/growth",
+          "referenceId": "{\"originalId\":42,\"isCoachAccount\":false}"
+        }
+      ]
+    }
+  }
+}

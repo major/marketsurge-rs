@@ -1,0 +1,60 @@
+{
+  "data": {
+    "marketDataScreen": {
+      "screenName": "MarketSurge.RelatedInformation.StockTopIndustriesInSector",
+      "responseValues": [
+        [
+          {
+            "value": "Elec-Semicondctor Fablss",
+            "mdItem": {
+              "mdItemID": 50,
+              "name": "IndustryName"
+            }
+          },
+          {
+            "value": "A+",
+            "mdItem": {
+              "mdItemID": 512,
+              "name": "IndustryGroupRSRatingLetter"
+            }
+          }
+        ],
+        [
+          {
+            "value": "Elec-Semicondctor Mfg",
+            "mdItem": {
+              "mdItemID": 50,
+              "name": "IndustryName"
+            }
+          },
+          {
+            "value": "A",
+            "mdItem": {
+              "mdItemID": 512,
+              "name": "IndustryGroupRSRatingLetter"
+            }
+          }
+        ],
+        [
+          {
+            "value": "Comp-Data Storage",
+            "mdItem": {
+              "mdItemID": 50,
+              "name": "IndustryName"
+            }
+          },
+          {
+            "value": "B+",
+            "mdItem": {
+              "mdItemID": 512,
+              "name": "IndustryGroupRSRatingLetter"
+            }
+          }
+        ]
+      ],
+      "numberOfInstrumentsInSource": 3,
+      "errorValues": [],
+      "elapsedTime": "PT0.0082451S"
+    }
+  }
+}

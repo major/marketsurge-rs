@@ -1,0 +1,43 @@
+{
+  "data": {
+    "marketDataAdhocScreen": {
+      "correlationTag": "Screen With Watchlist",
+      "elapsedTime": "PT1.7843191S",
+      "errorValues": [],
+      "numberOfMatchingInstruments": 0,
+      "numberOfInstrumentsInSource": 0,
+      "responseValues": [
+        [
+          {
+            "value": "95",
+            "mdItem": {
+              "mdItemID": 483,
+              "name": "EPSRating",
+              "__typename": "MDAdhocScreenerDataItem"
+            },
+            "__typename": "MDAdhocScreenerResponseValue"
+          },
+          {
+            "value": "98",
+            "mdItem": {
+              "mdItemID": 2,
+              "name": "RSRating",
+              "__typename": "MDAdhocScreenerDataItem"
+            },
+            "__typename": "MDAdhocScreenerResponseValue"
+          },
+          {
+            "value": "A+",
+            "mdItem": {
+              "mdItemID": 5,
+              "name": "AccDisRating",
+              "__typename": "MDAdhocScreenerDataItem"
+            },
+            "__typename": "MDAdhocScreenerResponseValue"
+          }
+        ]
+      ],
+      "__typename": "MDAdhocScreenerResult"
+    }
+  }
+}

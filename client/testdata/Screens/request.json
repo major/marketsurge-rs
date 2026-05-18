@@ -1,0 +1,7 @@
+{
+  "operationName": "Screens",
+  "variables": {
+    "site": "marketsurge"
+  },
+  "query": "query Screens($site: Site!, $type: ScreenType, $sortDir: SortDirInput) {\n  user {\n    screens(site: $site, type: $type, sortDir: $sortDir) {\n      site\n      id\n      name\n      type\n      source {\n        id\n        type\n        pub\n      }\n      updatedAt\n      filterCriteria\n      description\n      createdAt\n    }\n  }\n}"
+}

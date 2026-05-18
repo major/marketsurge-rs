@@ -1,0 +1,7 @@
+{
+  "operationName": "GetAllWatchlistNames",
+  "variables": {
+    "pub": "msr"
+  },
+  "query": "query GetAllWatchlistNames($pub: String!) {\n  watchlists(pub: $pub) {\n    id\n    name\n    lastModifiedDateUtc\n    description\n  }\n}"
+}

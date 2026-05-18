@@ -1,0 +1,275 @@
+{
+  "data": {
+    "marketData": [
+      {
+        "id": "AAPL",
+        "originRequest": {
+          "fromDialect": "CHARTING",
+          "symbol": "AAPL"
+        },
+        "ratings": {
+          "compRating": [
+            {"value": 95, "periodOffset": "CURRENT", "period": "P12M"}
+          ],
+          "rsRating": [
+            {"value": 92, "periodOffset": "CURRENT", "period": "P12M"}
+          ],
+          "epsRating": [
+            {"value": 88, "periodOffset": "CURRENT", "period": "P12M"}
+          ],
+          "smrRating": [
+            {"value": 85, "periodOffset": "CURRENT", "period": "P12M", "letterValue": "A"}
+          ],
+          "adRating": [
+            {"letterValue": "B+", "period": "P12M", "periodOffset": "CURRENT", "value": 78}
+          ]
+        },
+        "pricingStatistics": {
+          "endOfDayStatistics": {
+            "historicalPriceStatistics": [
+              {
+                "period": "P1Q",
+                "periodOffset": "CURRENT",
+                "periodEndDate": {"value": "2026-03-31", "formattedValue": "03/31/2026"},
+                "priceHighDate": {"value": "2026-03-15", "formattedValue": "03/15/2026"},
+                "priceHigh": {"value": 198.5, "formattedValue": "198.50"},
+                "priceLowDate": {"value": "2026-01-10", "formattedValue": "01/10/2026"},
+                "priceLow": {"value": 172.3, "formattedValue": "172.30"},
+                "priceClose": {"value": 195.2, "formattedValue": "195.20"},
+                "pricePercentChange": {"value": 8.5, "formattedValue": "+8.50%"}
+              }
+            ],
+            "pricingStartDate": {"value": "2022-01-03"},
+            "pricingEndDate": {"value": "2026-05-08"},
+            "volumeMovingAverages": [
+              {"value": 55000000, "period": "P50D", "periodOffset": "CURRENT"}
+            ],
+            "avgDollarVolume50Day": {"value": 12500000000, "formattedValue": "$12.5B"},
+            "marketCapitalization": {"value": 3200000000000, "formattedValue": "$3.2T"},
+            "averageTrueRangePercent": [
+              {"value": 1.85, "formattedValue": "1.85%", "period": "P21D", "periodOffset": "CURRENT"}
+            ],
+            "antEvents": [
+              {"value": "2026-04-15"}
+            ],
+            "upDownVolumeRatio": {"value": 1.2, "scalingFactor": 1.0, "formattedValue": "1.2"},
+            "alpha": {"formattedValue": "0.15", "scalingFactor": 1.0, "value": 0.15},
+            "beta": {"value": 1.1, "scalingFactor": 1.0, "formattedValue": "1.1"},
+            "shortInterest": {
+              "daysToCover": {"formattedValue": "1.5", "value": 1.5},
+              "daysToCoverPercentChange": {"formattedValue": "-5.2%", "value": -5.2},
+              "percentOfFloat": {"value": 0.8, "scalingFactor": 100.0, "formattedValue": "0.80%"},
+              "volume": {"value": 85000000, "scalingFactor": 1.0, "formattedValue": "85M"}
+            },
+            "blueDotDailyEvents": [
+              {"formattedValue": "05/01/2026", "value": "2026-05-01"}
+            ],
+            "blueDotWeeklyEvents": [
+              {"formattedValue": "04/28/2026", "value": "2026-04-28"}
+            ]
+          },
+          "intradayStatistics": {
+            "pricePercentChangeVs": [
+              {"formattedValue": "+1.25%", "value": 1.25, "subject": "PREVIOUS_CLOSE", "period": "P1D"}
+            ],
+            "volumePercentChangeVs": [
+              {"value": 15.3, "formattedValue": "+15.3%", "subject": "P50D_AVG", "period": "P50D"}
+            ],
+            "isDailyBlueDotEvent": true,
+            "isWeeklyBlueDotEvent": false,
+            "yield": {"formattedValue": "0.55%", "scalingFactor": 100.0, "value": 0.55},
+            "priceToCashFlowRatio": {"value": 28.5, "scalingFactor": 1.0, "formattedValue": "28.5"},
+            "forwardPriceToEarningsRatio": {"value": 30.2, "scalingFactor": 1.0, "formattedValue": "30.2"},
+            "priceToSalesRatio": {"value": 8.5, "scalingFactor": 1.0, "formattedValue": "8.5"},
+            "priceToEarningsRatio": {"formattedValue": "32.1", "scalingFactor": 1.0, "value": 32.1},
+            "priceToEarningsVsSP500": {"value": 1.45, "scalingFactor": 1.0, "formattedValue": "1.45"}
+          }
+        },
+        "corporateActions": {
+          "dividendNextReportedExDate": {"formattedValue": "08/15/2026", "value": "2026-08-15"},
+          "dividends": [
+            {
+              "amount": {"formattedValue": "$0.25"},
+              "changeIndicator": "UNCHANGED",
+              "exDate": {"value": "2026-05-10"}
+            }
+          ],
+          "spinoffs": [],
+          "splits": [
+            {"splitDate": {"value": "2020-08-31"}}
+          ]
+        },
+        "symbology": {
+          "company": {
+            "companyName": "Apple Inc.",
+            "address": "One Apple Park Way",
+            "address2": null,
+            "phone": "408-996-1010",
+            "businessDescription": "Designs and manufactures consumer electronics.",
+            "url": "https://www.apple.com",
+            "city": "Cupertino",
+            "country": "US",
+            "stateProvince": "CA"
+          },
+          "instrument": {
+            "subType": "COMMON_STOCK",
+            "ipoDate": {"value": "1980-12-12"},
+            "ipoPrice": {
+              "formattedValue": "$22.00",
+              "value": 22.0,
+              "currencySymbolInfo": {"unitSymbol": "$"}
+            }
+          }
+        },
+        "patternInfo": {
+          "patterns": [
+            {
+              "baseDepth": {"value": 15.2, "scalingFactor": 100.0, "formattedValue": "15%"},
+              "avgVolumeRatePctOnPivot": {"value": 125.0, "scalingFactor": 100.0, "formattedValue": "125%"},
+              "pricePctChangeOnPivot": {"value": 3.5, "scalingFactor": 100.0, "formattedValue": "3.5%"},
+              "handleDepth": {"value": 8.3, "scalingFactor": 100.0, "formattedValue": "8%"},
+              "handleLength": 12,
+              "cupLength": 35,
+              "cupEndDate": {"value": "2026-03-01"},
+              "handleLowDate": {"value": "2026-03-15"},
+              "handleStartDate": {"value": "2026-03-01"},
+              "baseBottomDate": {"value": "2026-02-10"},
+              "id": "pattern-001",
+              "baseLength": 47,
+              "baseNumber": 1,
+              "baseStatus": "COMPLETE",
+              "patternType": "CUP_WITH_HANDLE",
+              "periodicity": "DAILY",
+              "baseStage": "SECOND",
+              "baseStartDate": {"value": "2026-01-05"},
+              "baseEndDate": {"value": "2026-04-15"},
+              "pivotPrice": {
+                "currencySymbolInfo": {
+                  "mantissaPrecision": 2,
+                  "unitSymbol": "$",
+                  "isoCurrencyCode": "USD",
+                  "isSuffix": false
+                },
+                "value": 195.5,
+                "scalingFactor": 1.0,
+                "formattedValue": "$195.50"
+              },
+              "pivotDate": {"value": "2026-04-15"},
+              "pivotPriceDate": {"value": "2026-04-15"},
+              "leftSideHighDate": {"value": "2026-01-05"}
+            }
+          ],
+          "tightAreas": [
+            {
+              "patternID": 1,
+              "startDate": {"value": "2026-03-10"},
+              "endDate": {"value": "2026-03-20"},
+              "length": 8
+            }
+          ]
+        },
+        "financials": {
+          "epsDueDate": {"value": "2026-07-25", "formattedValue": "07/25/2026"},
+          "epsDueDateStatus": "CONFIRMED",
+          "epsLastReportedDate": {"value": "2026-04-25"},
+          "consensusFinancials": {
+            "eps": {
+              "reportedEarnings": [
+                {
+                  "value": {"value": 1.65},
+                  "percentChangeYOY": {"value": 12.5},
+                  "periodOffset": "CURRENT",
+                  "period": "P1Q",
+                  "periodEndDate": {"value": "2026-03-31"},
+                  "effectiveDate": {"value": "2026-04-25"},
+                  "percentSurprise": {"value": 5.2},
+                  "surpriseAmount": {"value": 0.08},
+                  "quarterNumber": 2,
+                  "fiscalYear": 2026
+                }
+              ],
+              "growthRate": [
+                {"value": 15.3, "scalingFactor": 100.0, "period": "P1Y", "formattedValue": "15%"}
+              ],
+              "earningsStability": 3
+            },
+            "sales": {
+              "reportedSales": [
+                {
+                  "value": {"value": 95200000000},
+                  "percentChangeYOY": {"value": 8.2},
+                  "periodOffset": "CURRENT",
+                  "period": "P1Q",
+                  "periodEndDate": {"value": "2026-03-31"},
+                  "effectiveDate": {"value": "2026-04-25"},
+                  "percentSurprise": {"value": 2.1},
+                  "surpriseAmount": {"value": 1950000000},
+                  "quarterNumber": 2,
+                  "fiscalYear": 2026
+                }
+              ],
+              "growthRate": [
+                {"formattedValue": "7%", "period": "P3Y", "scalingFactor": 100.0, "value": 7.2}
+              ]
+            }
+          },
+          "cashFlowPerShareLastYear": {"formattedValue": "$7.25", "value": 7.25},
+          "profitMarginValues": [
+            {
+              "period": "P1Q",
+              "preTaxMargin": {"formattedValue": "30.5%", "scalingFactor": 100.0, "value": 30.5},
+              "afterTaxMargin": {"value": 25.3},
+              "grossMargin": {"value": 46.2},
+              "returnOnEquity": {"value": 160.5, "formattedValue": "160.5%"},
+              "periodEndDate": {"value": "2026-03-31", "formattedValue": "03/31/2026"},
+              "periodOffset": "CURRENT"
+            }
+          ],
+          "estimates": {
+            "epsEstimates": [
+              {
+                "revisionDirection": "UP",
+                "effectiveDate": {"value": "2026-05-01"},
+                "period": "P1Q",
+                "value": {"value": 1.72},
+                "percentChangeYOY": {"value": 10.5},
+                "periodEndDate": {"value": "2026-06-30"},
+                "type": "CONSENSUS"
+              }
+            ],
+            "salesEstimates": [
+              {
+                "revisionDirection": "FLAT",
+                "effectiveDate": {"value": "2026-05-01"},
+                "period": "P1Q",
+                "value": {"value": 98500000000},
+                "percentChangeYOY": {"value": 6.8},
+                "periodEndDate": {"value": "2026-06-30"}
+              }
+            ]
+          }
+        },
+        "industry": {
+          "name": "Comp-Hardware/Peripherals",
+          "sector": "Technology",
+          "indCode": "G3620",
+          "groupRanks": [
+            {"value": 15, "period": "P6M", "periodOffset": "CURRENT"}
+          ],
+          "groupRS": [
+            {"value": 88, "periodOffset": "CURRENT", "letterValue": "A", "period": "P6M"}
+          ],
+          "numberOfStocksInGroup": 25
+        },
+        "ownership": {
+          "fundsFloatPercentHeld": {"value": 62.5, "scalingFactor": 100.0, "formattedValue": "62.5%"}
+        },
+        "fundamentals": {
+          "researchAndDevelopmentPercentLastQtr": {"value": 7.8, "scalingFactor": 100.0, "formattedValue": "7.8%"},
+          "newCEODate": {"value": "2011-08-24"},
+          "debtPercent": {"formattedValue": "45%"}
+        }
+      }
+    ]
+  }
+}

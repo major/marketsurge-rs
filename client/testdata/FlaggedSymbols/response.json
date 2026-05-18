@@ -1,0 +1,20 @@
+{
+  "data": {
+    "watchlist": {
+      "id": "12345",
+      "name": "My Watchlist",
+      "lastModifiedDateUtc": "2025-01-01T00:00:00Z",
+      "description": "Test watchlist",
+      "items": [
+        {
+          "key": "AAPL",
+          "dowJonesKey": "US:AAPL"
+        },
+        {
+          "key": "MSFT",
+          "dowJonesKey": "US:MSFT"
+        }
+      ]
+    }
+  }
+}

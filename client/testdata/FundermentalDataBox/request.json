@@ -1,0 +1,11 @@
+{
+  "operationName": "FundermentalDataBox",
+  "variables": {
+    "symbols": ["AAPL"],
+    "symbolDialectType": "CHARTING",
+    "upToHistoricalPeriodOffset": "P7Y_AGO",
+    "upToQueryPeriodOffset": "P2Y_FUTURE",
+    "reportedSalesUpToHistoricalPeriod2": "P7Y_AGO",
+    "salesEstimatesUpToQueryPeriod2": "P2Y_FUTURE"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "operationName": "RunScreen",
+  "variables": {
+    "input": {
+      "correlationTag": "marketsurge",
+      "coachAccount": true,
+      "includeSource": {},
+      "pageSize": 1000,
+      "resultLimit": 1000000,
+      "screenId": "screen-abc-123",
+      "site": "marketsurge",
+      "skip": 0,
+      "responseColumns": [{"name": "Symbol"}, {"name": "CompanyName"}]
+    }
+  },
+  "query": "query RunScreen($input: ScreenResultInput!) {\n  user {\n    runScreen(input: $input) {\n      numberOfMatchingInstruments\n      responseValues {\n        value\n        mdItem {\n          name\n          mdItemID\n        }\n      }\n    }\n  }\n}"
+}

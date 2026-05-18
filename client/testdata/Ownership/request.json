@@ -1,0 +1,7 @@
+{
+  "operationName": "Ownership",
+  "variables": {
+    "symbols": ["AAPL"],
+    "symbolDialectType": "CHARTING"
+  }
+}

@@ -1,0 +1,92 @@
+# CodeRabbit Configuration for marketsurge-rs
+# Docs: https://docs.coderabbit.ai/configuration/
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+language: en-US
+tone_instructions: >
+  You are a brilliant but world-weary senior developer who has seen too much.
+  Deliver feedback with dry wit and gentle sarcasm, but always be helpful.
+  Use programming puns when the opportunity arises.
+
+reviews:
+  profile: chill
+  collapse_walkthrough: false
+  poem: false
+  request_changes_workflow: true
+  high_level_summary: false
+  high_level_summary_placeholder: "@coderabbitai summary"
+  abort_on_close: true
+  review_status: true
+  suggested_labels: false
+  suggested_reviewers: false
+  in_progress_fortune: false
+
+  pre_merge_checks:
+    title:
+      mode: "off"
+    docstrings:
+      mode: "off"
+    description:
+      mode: warning
+
+  auto_review:
+    # Keep automatic reviews off so maintainers can request CodeRabbit manually when quota is available.
+    enabled: false
+    drafts: false
+    auto_pause_after_reviewed_commits: 0
+    base_branches:
+      - main
+    ignore_title_keywords:
+      - "WIP"
+      - "[WIP]"
+      - "DO NOT MERGE"
+
+  path_filters:
+    - "!**/target/**"
+    - "!.sisyphus/**"
+
+  path_instructions:
+    - path: "client/**/*.rs"
+      instructions: |
+        Client crate review:
+        - Preserve exact MarketSurge wire contracts, form field names, cookie names, and request encoding.
+        - Never expose cookie values, auth cookies, or session tokens in logs, errors, tests, docs, Debug, or Display output.
+        - Prefer focused API-boundary feedback over broad architecture rewrites.
+        - Don't nitpick style because rustfmt and clippy handle formatting and lint.
+
+    - path: "agent/**/*.rs"
+      instructions: |
+        CLI crate review:
+        - stdout is machine-readable output only; diagnostics and logs belong on stderr.
+        - Keep compact JSON defaults stable unless tests and README examples are updated.
+        - Ensure new commands wire clap, command dispatch, tests, and README notes together.
+        - Don't duplicate client wire-contract rules in the CLI layer.
+
+    - path: "**/*.{rs,toml,yml,yaml}"
+      instructions: |
+        Rust workspace review:
+        - Respect the one-way dependency direction: agent depends on client, client never depends on agent.
+        - Keep publishable crate metadata valid for crates.io.
+        - Release automation should preserve release-plz for crates.io publishing and cargo-dist for CLI artifacts.
+
+    - path: ".github/workflows/**"
+      instructions: "Validate workflow syntax and security, including minimum permissions and pinned actions."
+
+    - path: "Makefile"
+      instructions: |
+        Makefile validation:
+        - .PHONY declarations for all non-file targets.
+        - Build targets should run cargo clippy and cargo test.
+        - Avoid flags that are already defaults.
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  learnings:
+    scope: global
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "guidelines.md"
+      - "**/AGENTS.md"

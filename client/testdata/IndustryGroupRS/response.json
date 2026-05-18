@@ -1,0 +1,18 @@
+{
+  "data": {
+    "marketData": [
+      {
+        "originRequest": {
+          "symbol": "AAPL"
+        },
+        "industry": {
+          "groupRS": [
+            {
+              "value": 85
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

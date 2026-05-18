@@ -1,0 +1,45 @@
+{
+  "data": {
+    "user": {
+      "screen": {
+        "id": "screen-Peter Lynch",
+        "name": "Peter Lynch",
+        "site": "marketsurge",
+        "description": "Fundamental screen inspired by Peter Lynch",
+        "filterCriteria": {
+          "terms": [
+            {
+              "left": { "name": "RSRating" },
+              "operand": "GREATER_THAN_OR_EQUAL",
+              "right": { "value": "80" }
+            },
+            {
+              "left": { "name": "EPSRating" },
+              "operand": "GREATER_THAN_OR_EQUAL",
+              "right": { "value": "70" }
+            }
+          ],
+          "type": "AND"
+        },
+        "resultConfig": {
+          "limit": 500,
+          "sortBy": {
+            "field": "RSRating",
+            "direction": "DESCENDING"
+          }
+        },
+        "result": {
+          "count": 42,
+          "description": "Stocks matching Peter Lynch criteria",
+          "updatedAt": "2024-09-15T14:30:00Z"
+        },
+        "type": "STOCK_SCREEN",
+        "source": {
+          "excludeMsrDatabase": false
+        },
+        "createdAt": "2024-01-01T00:00:00Z",
+        "updatedAt": "2024-09-15T14:30:00Z"
+      }
+    }
+  }
+}

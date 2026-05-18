@@ -1,0 +1,81 @@
+{
+  "data": {
+    "marketData": [
+      {
+        "id": "AAPL-CHARTING",
+        "originRequest": {
+          "fromDialect": "CHARTING",
+          "symbol": "AAPL"
+        },
+        "pricing": {
+          "timeSeries": {
+            "period": "ONE_DAY",
+            "dataPoints": [
+              {
+                "startDateTime": "2025-05-01T13:30:00.000Z",
+                "endDateTime": "2025-05-01T20:00:00.000Z",
+                "volume": { "value": 48523100 },
+                "last": { "value": 210.45 },
+                "low": { "value": 208.12 },
+                "high": { "value": 211.98 },
+                "open": { "value": 209.50 }
+              },
+              {
+                "startDateTime": "2025-05-02T13:30:00.000Z",
+                "endDateTime": "2025-05-02T20:00:00.000Z",
+                "volume": { "value": 35210400 },
+                "last": { "value": 212.30 },
+                "low": { "value": 210.00 },
+                "high": { "value": 213.75 },
+                "open": { "value": 210.80 }
+              }
+            ]
+          },
+          "quote": {
+            "tradeDateTime": "2025-05-02T20:00:00.000Z",
+            "timeliness": "REAL_TIME",
+            "quoteType": "REGULAR",
+            "volume": { "value": 35210400, "formattedValue": "35,210,400" },
+            "percentChange": { "value": 0.88, "formattedValue": "+0.88%" },
+            "netChange": { "value": 1.85, "formattedValue": "+1.85" },
+            "last": { "value": 212.30, "formattedValue": "212.30" }
+          },
+          "premarketQuote": {
+            "last": { "value": 212.50, "formattedValue": "212.50" },
+            "tradeDateTime": "2025-05-02T13:00:00.000Z",
+            "timeliness": "DELAYED",
+            "volume": { "value": 1250000, "formattedValue": "1,250,000" },
+            "percentChange": { "value": 0.09, "formattedValue": "+0.09%" },
+            "quoteType": "PRE_MARKET",
+            "netChange": { "value": 0.20, "formattedValue": "+0.20" }
+          },
+          "postmarketQuote": {
+            "volume": { "value": 890000, "formattedValue": "890,000" },
+            "tradeDateTime": "2025-05-02T22:00:00.000Z",
+            "timeliness": "DELAYED",
+            "percentChange": { "formattedValue": "-0.12%", "value": -0.12 },
+            "netChange": { "value": -0.25, "formattedValue": "-0.25" },
+            "quoteType": "POST_MARKET",
+            "last": { "value": 212.05, "formattedValue": "212.05" }
+          },
+          "currentMarketState": "POST_MARKET"
+        }
+      }
+    ],
+    "exchangeData": {
+      "city": "New York",
+      "countryCode": "US",
+      "exchangeISO": "XNYS",
+      "id": "NYSE",
+      "holidays": [
+        {
+          "name": "Independence Day",
+          "holidayType": "FULL",
+          "description": "Independence Day",
+          "startDateTime": "2025-07-04T00:00:00.000Z",
+          "endDateTime": "2025-07-04T23:59:59.000Z"
+        }
+      ]
+    }
+  }
+}

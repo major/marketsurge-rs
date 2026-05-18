@@ -1,0 +1,8 @@
+{
+  "operationName": "FlaggedSymbols",
+  "variables": {
+    "pub": "msr",
+    "watchlistId": "12345"
+  },
+  "query": "query FlaggedSymbols($pub: String!, $watchlistId: ID!) {\n  watchlist(pub: $pub, watchlistId: $watchlistId) {\n    id\n    name\n    lastModifiedDateUtc\n    description\n    items {\n      key\n      dowJonesKey\n    }\n  }\n}"
+}

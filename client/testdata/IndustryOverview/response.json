@@ -1,0 +1,49 @@
+{
+  "data": {
+    "marketData": [
+      {
+        "id": "13-4698",
+        "industry": {
+          "name": "Elec-Semicondctor Fablss",
+          "indCode": 7010,
+          "newsCode": "I/SEMF",
+          "sector": "CHIPS",
+          "groupMarketValueInBillions": {
+            "formattedValue": "9,056.41B"
+          },
+          "numNewHighsInGroup": 1,
+          "numNewLowsInGroup": 0,
+          "numberOfStocksInGroup": 45,
+          "groupRanks": [
+            {
+              "value": 16,
+              "period": "P6M",
+              "periodOffset": "CURRENT"
+            }
+          ],
+          "pricePercentChangeVs": [
+            {
+              "subject": "VS_1D_AGO",
+              "formattedValue": "-1.22%"
+            },
+            {
+              "subject": "VS_YTD",
+              "formattedValue": "27.07%"
+            }
+          ]
+        },
+        "ratings": {
+          "hasRatingsData": true,
+          "industry": {
+            "adRankInIndustryGroup": 10,
+            "compRankInIndustryGroup": 1,
+            "epsRankInIndustryGroup": 4,
+            "numberOfStocksInGroup": 45,
+            "rsRankInIndustryGroup": 2,
+            "smrRankInIndustryGroup": 8
+          }
+        }
+      }
+    ]
+  }
+}

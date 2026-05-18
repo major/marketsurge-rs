@@ -1,0 +1,43 @@
+{
+  "data": {
+    "user": {
+      "runScreen": {
+        "numberOfMatchingInstruments": 3,
+        "responseValues": [
+          [
+            {
+              "value": "NVDA",
+              "mdItem": {
+                "name": "Symbol",
+                "mdItemID": 2001
+              }
+            },
+            {
+              "value": "NVIDIA Corp",
+              "mdItem": {
+                "name": "CompanyName",
+                "mdItemID": 2002
+              }
+            }
+          ],
+          [
+            {
+              "value": "GOOGL",
+              "mdItem": {
+                "name": "Symbol",
+                "mdItemID": 2001
+              }
+            },
+            {
+              "value": "Alphabet Inc",
+              "mdItem": {
+                "name": "CompanyName",
+                "mdItemID": 2002
+              }
+            }
+          ]
+        ]
+      }
+    }
+  }
+}

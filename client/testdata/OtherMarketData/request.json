@@ -1,0 +1,11 @@
+{
+  "operationName": "OtherMarketData",
+  "variables": {
+    "symbols": ["AAPL"],
+    "symbolDialectType": "CHARTING",
+    "upToHistoricalPeriodForProfitMargin": "P12Q_AGO",
+    "upToHistoricalPeriodOffset": "P24Q_AGO",
+    "upToQueryPeriodOffset": "P4Q_FUTURE"
+  },
+  "query": "query OtherMarketData($symbols: [String!]!, $symbolDialectType: MDSymbolDialectType!, ...) { marketData(symbols: $symbols, symbolDialectType: $symbolDialectType) { id originRequest { fromDialect symbol } ratings { ... } pricingStatistics { ... } corporateActions { ... } symbology { ... } patternInfo { ... } financials { ... } industry { ... } ownership { ... } fundamentals { ... } } }"
+}

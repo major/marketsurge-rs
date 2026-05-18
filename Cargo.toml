@@ -1,0 +1,10 @@
+[workspace]
+resolver = "2"
+members = [
+    "client",
+    "agent",
+]
+
+[profile.dist]
+inherits = "release"
+lto = "thin"

@@ -1,0 +1,8 @@
+{
+  "operationName": "IndustryGroupRS",
+  "variables": {
+    "symbols": ["AAPL"],
+    "symbolDialectType": "CHARTING"
+  },
+  "query": "query IndustryGroupRS($symbols: [String!]!, $symbolDialectType: MDSymbolDialectType!) {\n  marketData(symbols: $symbols, symbolDialectType: $symbolDialectType) {\n    originRequest {\n      symbol\n    }\n    industry {\n      groupRS(where: { periodOffset: { eq: CURRENT }, period: { eq: P6M } }) {\n        value\n      }\n    }\n  }\n}"
+}

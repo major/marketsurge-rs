@@ -1,0 +1,39 @@
+{
+  "data": {
+    "user": {
+      "watchlists": [
+        {
+          "id": "folder-1",
+          "name": "My Watchlists",
+          "parentId": null,
+          "type": "FOLDER",
+          "treeType": "MSR_NAV",
+          "children": [
+            {"id": "leaf-1", "name": "Growth Stocks", "type": "LEAF"}
+          ],
+          "contentType": "WATCHLIST"
+        },
+        {
+          "id": "leaf-2",
+          "name": "Tech Leaders",
+          "parentId": "folder-1",
+          "type": "LEAF",
+          "treeType": "MSR_NAV",
+          "url": "/watchlist/tech-leaders",
+          "referenceId": "12345"
+        }
+      ],
+      "screens": [
+        {
+          "id": "screen-leaf-1",
+          "name": "IBD 50",
+          "parentId": null,
+          "type": "LEAF",
+          "treeType": "MSR_NAV",
+          "url": "/screen/ibd50",
+          "referenceId": "screen-001"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,184 @@
+{
+  "data": {
+    "marketDataScreen": {
+      "screenName": "MarketSurge.RelatedInformation.MUTIFundOwnership",
+      "responseValues": [
+        [
+          {
+            "value": "SEEGX",
+            "mdItem": {
+              "mdItemID": 431,
+              "name": "Symbol"
+            }
+          },
+          {
+            "value": "107-14734",
+            "mdItem": {
+              "mdItemID": 2012,
+              "name": "DowJonesKey"
+            }
+          },
+          {
+            "value": "JPMorgan Large-Cap Growth Fund I Cl",
+            "mdItem": {
+              "mdItemID": 410,
+              "name": "CompanyName"
+            }
+          },
+          {
+            "value": "0.86",
+            "mdItem": {
+              "mdItemID": 632,
+              "name": "HoldingsPctFundAssetsHeld"
+            }
+          },
+          {
+            "value": "4552935",
+            "mdItem": {
+              "mdItemID": 453,
+              "name": "NumberOfFunds1QAgo"
+            }
+          },
+          {
+            "value": "03/31/2026 00:00:00",
+            "mdItem": {
+              "mdItemID": 2074,
+              "name": "NumberOfFundsDate1QAgo"
+            }
+          },
+          {
+            "value": "4892333",
+            "mdItem": {
+              "mdItemID": 452,
+              "name": "NumberOfFunds2QAgo"
+            }
+          },
+          {
+            "value": "12/31/2025 00:00:00",
+            "mdItem": {
+              "mdItemID": 2075,
+              "name": "NumberOfFundsDate2QAgo"
+            }
+          },
+          {
+            "value": "",
+            "mdItem": {
+              "mdItemID": 451,
+              "name": "NumberOfFunds3QAgo"
+            }
+          },
+          {
+            "value": "",
+            "mdItem": {
+              "mdItemID": 2076,
+              "name": "NumberOfFundsDate3QAgo"
+            }
+          },
+          {
+            "value": "",
+            "mdItem": {
+              "mdItemID": 450,
+              "name": "NumberOfFunds4QAgo"
+            }
+          },
+          {
+            "value": "",
+            "mdItem": {
+              "mdItemID": 2077,
+              "name": "NumberOfFundsDate4QAgo"
+            }
+          }
+        ],
+        [
+          {
+            "value": "PRCOX",
+            "mdItem": {
+              "mdItemID": 431,
+              "name": "Symbol"
+            }
+          },
+          {
+            "value": "107-30619",
+            "mdItem": {
+              "mdItemID": 2012,
+              "name": "DowJonesKey"
+            }
+          },
+          {
+            "value": "T. Rowe Price U.S. Equity Research Fund",
+            "mdItem": {
+              "mdItemID": 410,
+              "name": "CompanyName"
+            }
+          },
+          {
+            "value": "0.72",
+            "mdItem": {
+              "mdItemID": 632,
+              "name": "HoldingsPctFundAssetsHeld"
+            }
+          },
+          {
+            "value": "556171",
+            "mdItem": {
+              "mdItemID": 453,
+              "name": "NumberOfFunds1QAgo"
+            }
+          },
+          {
+            "value": "03/31/2026 00:00:00",
+            "mdItem": {
+              "mdItemID": 2074,
+              "name": "NumberOfFundsDate1QAgo"
+            }
+          },
+          {
+            "value": "569833",
+            "mdItem": {
+              "mdItemID": 452,
+              "name": "NumberOfFunds2QAgo"
+            }
+          },
+          {
+            "value": "12/31/2025 00:00:00",
+            "mdItem": {
+              "mdItemID": 2075,
+              "name": "NumberOfFundsDate2QAgo"
+            }
+          },
+          {
+            "value": "347057",
+            "mdItem": {
+              "mdItemID": 451,
+              "name": "NumberOfFunds3QAgo"
+            }
+          },
+          {
+            "value": "09/30/2025 00:00:00",
+            "mdItem": {
+              "mdItemID": 2076,
+              "name": "NumberOfFundsDate3QAgo"
+            }
+          },
+          {
+            "value": "652373",
+            "mdItem": {
+              "mdItemID": 450,
+              "name": "NumberOfFunds4QAgo"
+            }
+          },
+          {
+            "value": "06/30/2025 00:00:00",
+            "mdItem": {
+              "mdItemID": 2077,
+              "name": "NumberOfFundsDate4QAgo"
+            }
+          }
+        ]
+      ],
+      "numberOfInstrumentsInSource": 5,
+      "errorValues": [],
+      "elapsedTime": "PT0.0157223S"
+    }
+  }
+}

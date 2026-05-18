@@ -1,0 +1,8 @@
+{
+  "operationName": "CoachTree",
+  "variables": {
+    "site": "marketsurge",
+    "treeType": "MSR_NAV"
+  },
+  "query": "query CoachTree($site: Site!, $treeType: NavTreeTypeInput!) {\n  user {\n    watchlists: coachTree(\n      coachTreeType: WATCHLIST\n      site: $site\n      treeType: $treeType\n    ) {\n      ... on NavTreeFolder {\n        id\n        name\n        parentId\n        type\n        children {\n          ... on NavTreeFolder { id name type }\n          ... on NavTreeLeaf { id name type }\n        }\n        contentType\n        treeType\n      }\n      ... on NavTreeLeaf {\n        id\n        name\n        parentId\n        type\n        url\n        treeType\n        referenceId\n      }\n    }\n    screens: coachTree(\n      coachTreeType: SCREEN\n      site: $site\n      treeType: $treeType\n    ) {\n      ... on NavTreeFolder {\n        id\n        name\n        parentId\n        type\n        children {\n          ... on NavTreeFolder { id name type }\n          ... on NavTreeLeaf { id name type }\n        }\n        contentType\n        treeType\n      }\n      ... on NavTreeLeaf {\n        id\n        name\n        parentId\n        type\n        url\n        treeType\n        referenceId\n      }\n    }\n  }\n}"
+}

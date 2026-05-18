@@ -1,0 +1,9 @@
+{
+  "operationName": "Screen",
+  "variables": {
+    "site": "marketsurge",
+    "screenId": "screen-Peter Lynch",
+    "coachScreen": true
+  },
+  "query": "query Screen($site: Site!, $screenId: ID!, $coachScreen: Boolean) {\n  user {\n    screen(site: $site, screenId: $screenId, coachScreen: $coachScreen) {\n      id\n      name\n      site\n      description\n      filterCriteria\n      resultConfig {\n        limit\n        sortBy {\n          field\n          direction\n        }\n      }\n      result {\n        count\n        description\n        updatedAt\n      }\n      type\n      source {\n        excludeMsrDatabase\n      }\n      createdAt\n      updatedAt\n    }\n  }\n}"
+}

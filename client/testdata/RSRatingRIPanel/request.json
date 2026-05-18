@@ -1,0 +1,7 @@
+{
+  "operationName": "RSRatingRIPanel",
+  "variables": {
+    "symbols": ["AAPL"],
+    "symbolDialectType": "CHARTING"
+  }
+}

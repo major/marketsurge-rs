@@ -1,0 +1,21 @@
+{
+  "operationName": "ScreenerWatchlist",
+  "variables": {
+    "correlationTag": "Screen With Watchlist",
+    "responseColumns": [
+      {"name": "EPSRating"},
+      {"name": "RSRating"},
+      {"name": "AccDisRating"}
+    ],
+    "resultLimit": 1,
+    "pageSize": 1,
+    "pageSkip": 0,
+    "includeSource": {
+      "instruments": {
+        "symbols": ["AMD"],
+        "dialect": "CHARTING"
+      }
+    }
+  },
+  "query": "query ScreenerWatchlist($correlationTag: String!, $responseColumns: [MDAdhocScreenerDataItemInput!]!, $resultLimit: Int!, $pageSize: Int!, $pageSkip: Int, $includeSource: MDScreenerDataSourceInput!) {\n  marketDataAdhocScreen(\n    correlationTag: $correlationTag\n    resultLimit: $resultLimit\n    pageSize: $pageSize\n    pageSkip: $pageSkip\n    includeSource: $includeSource\n    responseDataPoints: $responseColumns\n  ) {\n    correlationTag\n    elapsedTime\n    errorValues\n    numberOfMatchingInstruments\n    numberOfInstrumentsInSource\n    responseValues {\n      value\n      mdItem {\n        mdItemID\n        name\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}"
+}

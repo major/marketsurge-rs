@@ -1,0 +1,64 @@
+{
+  "data": {
+    "marketDataAdhocScreen": {
+      "correlationTag": "marketsurge",
+      "elapsedTime": "42ms",
+      "errorValues": [],
+      "numberOfInstrumentsInSource": 8500,
+      "numberOfMatchingInstruments": 2,
+      "adhocQueryString": "CompositeRating >= 90",
+      "adhocQuery": {
+        "terms": [
+          {
+            "numberOfMatchingInstruments": 2,
+            "ordinal": 1,
+            "left": {
+              "name": "CompositeRating",
+              "mdItemID": "2001"
+            },
+            "operand": ">=",
+            "right": {
+              "value": "90",
+              "maximumValue": null,
+              "minimumValue": null
+            }
+          }
+        ]
+      },
+      "responseValues": [
+        [
+          {
+            "value": "AAPL",
+            "mdItem": {
+              "mdItemID": "1001",
+              "name": "Symbol"
+            }
+          },
+          {
+            "value": "Apple Inc",
+            "mdItem": {
+              "mdItemID": "1002",
+              "name": "CompanyName"
+            }
+          }
+        ],
+        [
+          {
+            "value": "MSFT",
+            "mdItem": {
+              "mdItemID": "1001",
+              "name": "Symbol"
+            }
+          },
+          {
+            "value": "Microsoft Corp",
+            "mdItem": {
+              "mdItemID": "1002",
+              "name": "CompanyName"
+            }
+          }
+        ]
+      ]
+    }
+  }
+}

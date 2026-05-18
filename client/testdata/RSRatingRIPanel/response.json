@@ -1,0 +1,34 @@
+{
+  "data": {
+    "marketData": [
+      {
+        "id": "AAPL",
+        "originRequest": {
+          "fromDialect": "CHARTING",
+          "symbol": "AAPL"
+        },
+        "ratings": {
+          "rsRating": [
+            {
+              "letterValue": "A",
+              "period": "DAILY",
+              "periodOffset": "CURRENT",
+              "value": 92
+            },
+            {
+              "letterValue": "B",
+              "period": "DAILY",
+              "periodOffset": "P1W_AGO",
+              "value": 85
+            }
+          ]
+        },
+        "pricingStatistics": {
+          "intradayStatistics": {
+            "rsLineNewHigh": true
+          }
+        }
+      }
+    ]
+  }
+}

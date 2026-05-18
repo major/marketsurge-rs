@@ -1,0 +1,43 @@
+{
+  "data": {
+    "user": {
+      "screens": [
+        {
+          "site": "marketsurge",
+          "id": "scr-001",
+          "name": "Growth Leaders",
+          "type": "CUSTOM",
+          "source": {
+            "id": "src-001",
+            "type": "USER",
+            "pub": "msr"
+          },
+          "updatedAt": "2025-01-15T10:30:00Z",
+          "filterCriteria": {
+            "terms": [
+              {
+                "left": { "name": "CompositeRating" },
+                "operand": "GREATER_THAN_OR_EQUAL",
+                "right": { "value": "90" }
+              }
+            ],
+            "type": "AND"
+          },
+          "description": "Top growth stocks by composite rating",
+          "createdAt": "2024-06-01T08:00:00Z"
+        },
+        {
+          "site": "marketsurge",
+          "id": "scr-002",
+          "name": "RS Leaders",
+          "type": "CUSTOM",
+          "source": null,
+          "updatedAt": "2025-02-20T14:00:00Z",
+          "filterCriteria": null,
+          "description": null,
+          "createdAt": "2024-09-10T12:00:00Z"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "data": {
+    "marketData": [
+      {
+        "id": "AAPL",
+        "financials": {
+          "consensusFinancials": {
+            "eps": {
+              "reportedEarnings": [
+                {
+                  "value": {"formattedValue": "$1.65", "value": 1.65},
+                  "percentChangeYOY": {"formattedValue": "+12.5%", "value": 12.5},
+                  "periodOffset": "CURRENT",
+                  "periodEndDate": {"value": "2026-03-31"}
+                },
+                {
+                  "value": {"formattedValue": "$1.52", "value": 1.52},
+                  "percentChangeYOY": {"formattedValue": "+8.3%", "value": 8.3},
+                  "periodOffset": "P1Q_AGO",
+                  "periodEndDate": {"value": "2025-12-31"}
+                }
+              ]
+            },
+            "sales": {
+              "reportedSales": [
+                {
+                  "value": {"formattedValue": "$95.2B", "value": 95200000000},
+                  "percentChangeYOY": {"formattedValue": "+8.2%", "value": 8.2},
+                  "periodEndDate": {"value": "2026-03-31"},
+                  "periodOffset": "CURRENT"
+                }
+              ]
+            }
+          },
+          "estimates": {
+            "epsEstimates": [
+              {
+                "value": {"value": 1.72, "formattedValue": "$1.72"},
+                "percentChangeYOY": {"value": 10.5, "formattedValue": "+10.5%"},
+                "periodOffset": "P1Q_FUTURE",
+                "period": "P1Q",
+                "revisionDirection": "UP"
+              }
+            ],
+            "salesEstimates": [
+              {
+                "value": {"value": 98500000000, "formattedValue": "$98.5B"},
+                "percentChangeYOY": {"value": 6.8, "formattedValue": "+6.8%"},
+                "periodOffset": "P1Q_FUTURE",
+                "period": "P1Q"
+              }
+            ]
+          }
+        },
+        "symbology": {
+          "company": {
+            "companyName": "Apple Inc."
+          },
+          "instrument": {
+            "symbols": [
+              {"value": "AAPL", "type": "CHARTING"}
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

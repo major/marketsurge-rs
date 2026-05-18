@@ -1,0 +1,8 @@
+{
+  "operationName": "NavTree",
+  "variables": {
+    "site": "marketsurge",
+    "treeType": "MSR_NAV"
+  },
+  "query": "query NavTree($site: Site!, $treeType: NavTreeTypeInput!) {\n  user {\n    navTree(site: $site, treeType: $treeType) {\n      ... on NavTreeFolder {\n        id\n        name\n        parentId\n        type\n        children {\n          ... on NavTreeFolder { id name type }\n          ... on NavTreeLeaf { id name type }\n        }\n        contentType\n        treeType\n      }\n      ... on NavTreeLeaf {\n        id\n        name\n        parentId\n        type\n        url\n        treeType\n        referenceId\n      }\n    }\n  }\n}"
+}
