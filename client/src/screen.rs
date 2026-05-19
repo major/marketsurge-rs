@@ -3,93 +3,19 @@
 use serde::{Deserialize, Serialize};
 
 use crate::client::Client;
-use crate::graphql::GraphQLRequest;
 use crate::types::ResponseColumn;
 
 // ---------------------------------------------------------------------------
 // GraphQL queries
 // ---------------------------------------------------------------------------
 
-const QUERY_SCREEN: &str = r#"query Screen($site: Site!, $screenId: ID!, $coachScreen: Boolean) {
-  user {
-    screen(site: $site, screenId: $screenId, coachScreen: $coachScreen) {
-      id
-      name
-      site
-      description
-      filterCriteria
-      resultConfig {
-        limit
-        sortBy {
-          field
-          direction
-        }
-      }
-      result {
-        count
-        description
-        updatedAt
-      }
-      type
-      source {
-        excludeMsrDatabase
-      }
-      createdAt
-      updatedAt
-    }
-  }
-}"#;
+const QUERY_SCREEN: &str = include_str!("graphql/screen.graphql");
 
-const QUERY_SCREENS: &str = r#"query Screens($site: Site!, $type: ScreenType, $sortDir: SortDirInput) {
-  user {
-    screens(site: $site, type: $type, sortDir: $sortDir) {
-      site
-      id
-      name
-      type
-      source {
-        id
-        type
-        pub
-      }
-      updatedAt
-      filterCriteria
-      description
-      createdAt
-    }
-  }
-}"#;
+const QUERY_SCREENS: &str = include_str!("graphql/screens.graphql");
 
-const QUERY_RUN_SCREEN: &str = r#"query RunScreen($input: ScreenResultInput!) {
-  user {
-    runScreen(input: $input) {
-      numberOfMatchingInstruments
-      responseValues {
-        value
-        mdItem {
-          name
-          mdItemID
-        }
-      }
-    }
-  }
-}"#;
+const QUERY_RUN_SCREEN: &str = include_str!("graphql/run_screen.graphql");
 
-const QUERY_MARKET_DATA_SCREEN: &str = r#"query MarketDataScreen($screenName: String!, $parameters: [ScreenerParameterInput!]!) {
-  marketDataScreen(screenName: $screenName, parameters: $parameters) {
-    screenName
-    responseValues {
-      value
-      mdItem {
-        mdItemID
-        name
-      }
-    }
-    numberOfInstrumentsInSource
-    errorValues
-    elapsedTime
-  }
-}"#;
+const QUERY_MARKET_DATA_SCREEN: &str = include_str!("graphql/market_data_screen.graphql");
 
 // ---------------------------------------------------------------------------
 // Wire variable types (serialization only)
@@ -485,13 +411,8 @@ impl Client {
             coach_screen,
         };
 
-        let request = GraphQLRequest {
-            operation_name: "Screen".to_string(),
-            variables,
-            query: QUERY_SCREEN.to_string(),
-        };
-
-        self.graphql_post(&request).await
+        self.graphql_operation("Screen", variables, QUERY_SCREEN)
+            .await
     }
 
     /// Lists saved screen definitions for the authenticated user.
@@ -507,13 +428,8 @@ impl Client {
             sort_dir: None,
         };
 
-        let request = GraphQLRequest {
-            operation_name: "Screens".to_string(),
-            variables,
-            query: QUERY_SCREENS.to_string(),
-        };
-
-        self.graphql_post(&request).await
+        self.graphql_operation("Screens", variables, QUERY_SCREENS)
+            .await
     }
 
     /// Runs a saved screen by its ID and returns matching instruments.
@@ -528,13 +444,8 @@ impl Client {
     ) -> crate::error::Result<RunScreenResponse> {
         let variables = RunScreenVariables { input };
 
-        let request = GraphQLRequest {
-            operation_name: "RunScreen".to_string(),
-            variables,
-            query: QUERY_RUN_SCREEN.to_string(),
-        };
-
-        self.graphql_post(&request).await
+        self.graphql_operation("RunScreen", variables, QUERY_RUN_SCREEN)
+            .await
     }
 
     /// Runs a named screen query with key-value parameters.
@@ -558,13 +469,8 @@ impl Client {
             parameters,
         };
 
-        let request = GraphQLRequest {
-            operation_name: "MarketDataScreen".to_string(),
-            variables,
-            query: QUERY_MARKET_DATA_SCREEN.to_string(),
-        };
-
-        self.graphql_post(&request).await
+        self.graphql_operation("MarketDataScreen", variables, QUERY_MARKET_DATA_SCREEN)
+            .await
     }
 }
 

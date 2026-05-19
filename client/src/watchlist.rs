@@ -4,34 +4,15 @@ use serde::{Deserialize, Serialize};
 
 use crate::adhoc_screen::{AdhocScreenIncludeSource, AdhocScreenInstruments, AdhocScreenResponse};
 use crate::client::Client;
-use crate::graphql::GraphQLRequest;
 use crate::types::{ResponseColumn, symbols_to_owned};
 
 // ---------------------------------------------------------------------------
 // GraphQL queries
 // ---------------------------------------------------------------------------
 
-const QUERY_GET_ALL_WATCHLIST_NAMES: &str = r#"query GetAllWatchlistNames($pub: String!) {
-  watchlists(pub: $pub) {
-    id
-    name
-    lastModifiedDateUtc
-    description
-  }
-}"#;
+const QUERY_GET_ALL_WATCHLIST_NAMES: &str = include_str!("graphql/get_all_watchlist_names.graphql");
 
-const QUERY_FLAGGED_SYMBOLS: &str = r#"query FlaggedSymbols($pub: String!, $watchlistId: ID!) {
-  watchlist(pub: $pub, watchlistId: $watchlistId) {
-    id
-    name
-    lastModifiedDateUtc
-    description
-    items {
-      key
-      dowJonesKey
-    }
-  }
-}"#;
+const QUERY_FLAGGED_SYMBOLS: &str = include_str!("graphql/flagged_symbols.graphql");
 
 const DEFAULT_WATCHLIST_PUB: &str = "msr";
 const DEFAULT_SCREENER_WATCHLIST_CORRELATION_TAG: &str = "Screen With Watchlist";
@@ -137,13 +118,12 @@ impl Client {
             publication: DEFAULT_WATCHLIST_PUB.to_string(),
         };
 
-        let request = GraphQLRequest {
-            operation_name: "GetAllWatchlistNames".to_string(),
+        self.graphql_operation(
+            "GetAllWatchlistNames",
             variables,
-            query: QUERY_GET_ALL_WATCHLIST_NAMES.to_string(),
-        };
-
-        self.graphql_post(&request).await
+            QUERY_GET_ALL_WATCHLIST_NAMES,
+        )
+        .await
     }
 
     /// Fetches the symbols in the specified watchlist.
@@ -161,13 +141,8 @@ impl Client {
             watchlist_id: watchlist_id.to_string(),
         };
 
-        let request = GraphQLRequest {
-            operation_name: "FlaggedSymbols".to_string(),
-            variables,
-            query: QUERY_FLAGGED_SYMBOLS.to_string(),
-        };
-
-        self.graphql_post(&request).await
+        self.graphql_operation("FlaggedSymbols", variables, QUERY_FLAGGED_SYMBOLS)
+            .await
     }
 
     /// Fetches screener data for specific symbols via the watchlist

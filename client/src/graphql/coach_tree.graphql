@@ -1,0 +1,58 @@
+query CoachTree($site: Site!, $treeType: NavTreeTypeInput!) {
+  user {
+    watchlists: coachTree(
+      coachTreeType: WATCHLIST
+      site: $site
+      treeType: $treeType
+    ) {
+      ... on NavTreeFolder {
+        id
+        name
+        parentId
+        type
+        children {
+          ... on NavTreeFolder { id name type }
+          ... on NavTreeLeaf { id name type }
+        }
+        contentType
+        treeType
+      }
+      ... on NavTreeLeaf {
+        id
+        name
+        parentId
+        type
+        url
+        treeType
+        referenceId
+      }
+    }
+    screens: coachTree(
+      coachTreeType: SCREEN
+      site: $site
+      treeType: $treeType
+    ) {
+      ... on NavTreeFolder {
+        id
+        name
+        parentId
+        type
+        children {
+          ... on NavTreeFolder { id name type }
+          ... on NavTreeLeaf { id name type }
+        }
+        contentType
+        treeType
+      }
+      ... on NavTreeLeaf {
+        id
+        name
+        parentId
+        type
+        url
+        treeType
+        referenceId
+      }
+    }
+  }
+}

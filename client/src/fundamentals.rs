@@ -3,99 +3,13 @@
 use serde::{Deserialize, Serialize};
 
 use crate::client::Client;
-use crate::graphql::GraphQLRequest;
 use crate::types::symbols_to_owned;
 
 // ---------------------------------------------------------------------------
 // GraphQL query
 // ---------------------------------------------------------------------------
 
-const QUERY_FUNDERMENTAL_DATA_BOX: &str = r#"query FundermentalDataBox(
-  $symbols: [String!]!
-  $symbolDialectType: MDSymbolDialectType!
-  $upToHistoricalPeriodOffset: MDUpToQueryPeriodOffsetHistorical!
-  $upToQueryPeriodOffset: MDUpToQueryPeriodOffsetFuture!
-  $reportedSalesUpToHistoricalPeriod2: MDUpToQueryPeriodOffsetHistorical!
-  $salesEstimatesUpToQueryPeriod2: MDUpToQueryPeriodOffsetFuture!
-) {
-  marketData(symbols: $symbols, symbolDialectType: $symbolDialectType) {
-    financials {
-      consensusFinancials {
-        eps {
-          reportedEarnings(upToHistoricalPeriodOffset: $upToHistoricalPeriodOffset) {
-            value {
-              formattedValue
-              value
-            }
-            percentChangeYOY {
-              formattedValue
-              value
-            }
-            periodOffset
-            periodEndDate {
-              value
-            }
-          }
-        }
-        sales {
-          reportedSales(upToHistoricalPeriodOffset: $reportedSalesUpToHistoricalPeriod2) {
-            value {
-              formattedValue
-              value
-            }
-            percentChangeYOY {
-              formattedValue
-              value
-            }
-            periodEndDate {
-              value
-            }
-            periodOffset
-          }
-        }
-      }
-      estimates {
-        epsEstimates(upToQueryPeriodOffset: $upToQueryPeriodOffset) {
-          value {
-            value
-            formattedValue
-          }
-          percentChangeYOY {
-            value
-            formattedValue
-          }
-          periodOffset
-          period
-          revisionDirection
-        }
-        salesEstimates(upToQueryPeriodOffset: $salesEstimatesUpToQueryPeriod2) {
-          value {
-            value
-            formattedValue
-          }
-          percentChangeYOY {
-            value
-            formattedValue
-          }
-          periodOffset
-          period
-        }
-      }
-    }
-    id
-    symbology {
-      company {
-        companyName
-      }
-      instrument {
-        symbols {
-          value
-          type
-        }
-      }
-    }
-  }
-}"#;
+const QUERY_FUNDERMENTAL_DATA_BOX: &str = include_str!("graphql/fundermental_data_box.graphql");
 
 // ---------------------------------------------------------------------------
 // Wire variable types (serialization only)
@@ -294,13 +208,12 @@ impl Client {
             sales_estimates_up_to_query_period_2: sales_estimates_period.to_string(),
         };
 
-        let request = GraphQLRequest {
-            operation_name: "FundermentalDataBox".to_string(),
+        self.graphql_operation(
+            "FundermentalDataBox",
             variables,
-            query: QUERY_FUNDERMENTAL_DATA_BOX.to_string(),
-        };
-
-        self.graphql_post(&request).await
+            QUERY_FUNDERMENTAL_DATA_BOX,
+        )
+        .await
     }
 }
 

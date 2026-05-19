@@ -1,0 +1,26 @@
+query ScreenerWatchlist($correlationTag: String!, $responseColumns: [MDAdhocScreenerDataItemInput!]!, $resultLimit: Int!, $pageSize: Int!, $pageSkip: Int, $includeSource: MDScreenerDataSourceInput!) {
+  marketDataAdhocScreen(
+    correlationTag: $correlationTag
+    resultLimit: $resultLimit
+    pageSize: $pageSize
+    pageSkip: $pageSkip
+    includeSource: $includeSource
+    responseDataPoints: $responseColumns
+  ) {
+    correlationTag
+    elapsedTime
+    errorValues
+    numberOfMatchingInstruments
+    numberOfInstrumentsInSource
+    responseValues {
+      value
+      mdItem {
+        mdItemID
+        name
+        __typename
+      }
+      __typename
+    }
+    __typename
+  }
+}

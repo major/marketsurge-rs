@@ -3,143 +3,16 @@
 use serde::{Deserialize, Serialize};
 
 use crate::client::Client;
-use crate::graphql::GraphQLRequest;
 use crate::types::symbols_to_owned;
 
 // ---------------------------------------------------------------------------
 // GraphQL queries
 // ---------------------------------------------------------------------------
 
-const QUERY_CHART_MARKET_DATA: &str = r#"query ChartMarketData(
-  $symbols: [String!]!
-  $symbolDialectType: MDSymbolDialectType!
-  $where: TimeSeriesFilterInput!
-  $exchangeName: String!
-) {
-  marketData(symbols: $symbols, symbolDialectType: $symbolDialectType) {
-    id
-    originRequest {
-      fromDialect
-      symbol
-    }
-    pricing {
-      timeSeries(where: $where) {
-        period
-        dataPoints {
-          startDateTime
-          endDateTime
-          volume { value }
-          last { value }
-          low { value }
-          high { value }
-          open { value }
-        }
-      }
-      quote {
-        tradeDateTime
-        timeliness
-        quoteType
-        volume { value formattedValue }
-        percentChange { value formattedValue }
-        netChange { value formattedValue }
-        last { value formattedValue }
-      }
-      premarketQuote {
-        last { value formattedValue }
-        tradeDateTime
-        timeliness
-        volume { value formattedValue }
-        percentChange { value formattedValue }
-        quoteType
-        netChange { value formattedValue }
-      }
-      postmarketQuote {
-        volume { value formattedValue }
-        tradeDateTime
-        timeliness
-        percentChange { formattedValue value }
-        netChange { value formattedValue }
-        quoteType
-        last { value formattedValue }
-      }
-      currentMarketState
-    }
-  }
-  exchangeData(exchangeName: $exchangeName) {
-    city
-    countryCode
-    exchangeISO
-    id
-    holidays(
-      where: {
-        startDateTime: { gt: "2021-12-02T07:00:00.000Z" }
-        endDateTime: { lt: "2026-03-27T23:55:25.000Z" }
-      }
-    ) {
-      name
-      holidayType
-      description
-      startDateTime
-      endDateTime
-    }
-  }
-}"#;
+const QUERY_CHART_MARKET_DATA: &str = include_str!("graphql/chart_market_data.graphql");
 
-const QUERY_CHART_MARKET_DATA_WEEKLY: &str = r#"query ChartMarketData(
-  $symbols: [String!]!
-  $symbolDialectType: MDSymbolDialectType!
-  $where: TimeSeriesFilterInput!
-) {
-  marketData(symbols: $symbols, symbolDialectType: $symbolDialectType) {
-    id
-    originRequest {
-      fromDialect
-      symbol
-    }
-    pricing {
-      timeSeries(where: $where) {
-        period
-        dataPoints {
-          startDateTime
-          endDateTime
-          volume { value }
-          last { value }
-          low { value }
-          high { value }
-          open { value }
-        }
-      }
-      quote {
-        tradeDateTime
-        timeliness
-        quoteType
-        volume { value formattedValue }
-        percentChange { value formattedValue }
-        netChange { value formattedValue }
-        last { value formattedValue }
-      }
-      premarketQuote {
-        last { value formattedValue }
-        tradeDateTime
-        timeliness
-        volume { value formattedValue }
-        percentChange { value formattedValue }
-        quoteType
-        netChange { value formattedValue }
-      }
-      postmarketQuote {
-        volume { value formattedValue }
-        tradeDateTime
-        timeliness
-        percentChange { formattedValue value }
-        netChange { value formattedValue }
-        quoteType
-        last { value formattedValue }
-      }
-      currentMarketState
-    }
-  }
-}"#;
+const QUERY_CHART_MARKET_DATA_WEEKLY: &str =
+    include_str!("graphql/chart_market_data_weekly.graphql");
 
 // ---------------------------------------------------------------------------
 // Wire variable types (serialization only)
@@ -362,13 +235,8 @@ impl Client {
             exchange_name: exchange_name.to_string(),
         };
 
-        let request = GraphQLRequest {
-            operation_name: "ChartMarketData".to_string(),
-            variables,
-            query: QUERY_CHART_MARKET_DATA.to_string(),
-        };
-
-        self.graphql_post(&request).await
+        self.graphql_operation("ChartMarketData", variables, QUERY_CHART_MARKET_DATA)
+            .await
     }
 
     /// Fetches weekly chart market data for the given symbols.
@@ -401,13 +269,8 @@ impl Client {
             },
         };
 
-        let request = GraphQLRequest {
-            operation_name: "ChartMarketData".to_string(),
-            variables,
-            query: QUERY_CHART_MARKET_DATA_WEEKLY.to_string(),
-        };
-
-        self.graphql_post(&request).await
+        self.graphql_operation("ChartMarketData", variables, QUERY_CHART_MARKET_DATA_WEEKLY)
+            .await
     }
 }
 

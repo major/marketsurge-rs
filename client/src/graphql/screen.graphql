@@ -1,0 +1,29 @@
+query Screen($site: Site!, $screenId: ID!, $coachScreen: Boolean) {
+  user {
+    screen(site: $site, screenId: $screenId, coachScreen: $coachScreen) {
+      id
+      name
+      site
+      description
+      filterCriteria
+      resultConfig {
+        limit
+        sortBy {
+          field
+          direction
+        }
+      }
+      result {
+        count
+        description
+        updatedAt
+      }
+      type
+      source {
+        excludeMsrDatabase
+      }
+      createdAt
+      updatedAt
+    }
+  }
+}

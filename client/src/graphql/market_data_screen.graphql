@@ -1,0 +1,15 @@
+query MarketDataScreen($screenName: String!, $parameters: [ScreenerParameterInput!]!) {
+  marketDataScreen(screenName: $screenName, parameters: $parameters) {
+    screenName
+    responseValues {
+      value
+      mdItem {
+        mdItemID
+        name
+      }
+    }
+    numberOfInstrumentsInSource
+    errorValues
+    elapsedTime
+  }
+}

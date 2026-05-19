@@ -3,38 +3,13 @@
 use serde::{Deserialize, Serialize};
 
 use crate::client::Client;
-use crate::graphql::GraphQLRequest;
 use crate::types::SymbolVariables;
 
 // ---------------------------------------------------------------------------
 // GraphQL query
 // ---------------------------------------------------------------------------
 
-const QUERY_RS_RATING_RI_PANEL: &str = r#"query RSRatingRIPanel(
-  $symbols: [String!]!
-  $symbolDialectType: MDSymbolDialectType!
-) {
-  marketData(symbols: $symbols, symbolDialectType: $symbolDialectType) {
-    id
-    originRequest {
-      fromDialect
-      symbol
-    }
-    ratings {
-      rsRating {
-        letterValue
-        period
-        periodOffset
-        value
-      }
-    }
-    pricingStatistics {
-      intradayStatistics {
-        rsLineNewHigh
-      }
-    }
-  }
-}"#;
+const QUERY_RS_RATING_RI_PANEL: &str = include_str!("graphql/rs_rating_ri_panel.graphql");
 
 // ---------------------------------------------------------------------------
 // Response types
@@ -128,13 +103,12 @@ impl Client {
         symbols: &[&str],
         symbol_dialect_type: Option<&str>,
     ) -> crate::error::Result<RsRatingRiPanelResponse> {
-        let request = GraphQLRequest {
-            operation_name: "RSRatingRIPanel".to_string(),
-            variables: SymbolVariables::new(symbols, symbol_dialect_type),
-            query: QUERY_RS_RATING_RI_PANEL.to_string(),
-        };
-
-        self.graphql_post(&request).await
+        self.graphql_operation(
+            "RSRatingRIPanel",
+            SymbolVariables::new(symbols, symbol_dialect_type),
+            QUERY_RS_RATING_RI_PANEL,
+        )
+        .await
     }
 }
 

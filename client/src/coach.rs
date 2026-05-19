@@ -3,70 +3,12 @@
 use serde::{Deserialize, Serialize};
 
 use crate::client::Client;
-use crate::graphql::GraphQLRequest;
 
 // ---------------------------------------------------------------------------
 // GraphQL query
 // ---------------------------------------------------------------------------
 
-const QUERY_COACH_TREE: &str = r#"query CoachTree($site: Site!, $treeType: NavTreeTypeInput!) {
-  user {
-    watchlists: coachTree(
-      coachTreeType: WATCHLIST
-      site: $site
-      treeType: $treeType
-    ) {
-      ... on NavTreeFolder {
-        id
-        name
-        parentId
-        type
-        children {
-          ... on NavTreeFolder { id name type }
-          ... on NavTreeLeaf { id name type }
-        }
-        contentType
-        treeType
-      }
-      ... on NavTreeLeaf {
-        id
-        name
-        parentId
-        type
-        url
-        treeType
-        referenceId
-      }
-    }
-    screens: coachTree(
-      coachTreeType: SCREEN
-      site: $site
-      treeType: $treeType
-    ) {
-      ... on NavTreeFolder {
-        id
-        name
-        parentId
-        type
-        children {
-          ... on NavTreeFolder { id name type }
-          ... on NavTreeLeaf { id name type }
-        }
-        contentType
-        treeType
-      }
-      ... on NavTreeLeaf {
-        id
-        name
-        parentId
-        type
-        url
-        treeType
-        referenceId
-      }
-    }
-  }
-}"#;
+const QUERY_COACH_TREE: &str = include_str!("graphql/coach_tree.graphql");
 
 // ---------------------------------------------------------------------------
 // Wire variable types (serialization only)
@@ -130,13 +72,8 @@ impl Client {
             tree_type: tree_type.to_string(),
         };
 
-        let request = GraphQLRequest {
-            operation_name: "CoachTree".to_string(),
-            variables,
-            query: QUERY_COACH_TREE.to_string(),
-        };
-
-        self.graphql_post(&request).await
+        self.graphql_operation("CoachTree", variables, QUERY_COACH_TREE)
+            .await
     }
 }
 

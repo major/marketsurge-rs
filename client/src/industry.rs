@@ -3,7 +3,6 @@
 use serde::{Deserialize, Serialize};
 
 use crate::client::Client;
-use crate::graphql::GraphQLRequest;
 use crate::market_data::{MdFormattedFloat, MdGroupRank, MdPercentChangeVs};
 use crate::types::SymbolVariables;
 
@@ -11,56 +10,9 @@ use crate::types::SymbolVariables;
 // GraphQL query
 // ---------------------------------------------------------------------------
 
-const QUERY_INDUSTRY_GROUP_RS: &str = r#"query IndustryGroupRS($symbols: [String!]!, $symbolDialectType: MDSymbolDialectType!) {
-  marketData(symbols: $symbols, symbolDialectType: $symbolDialectType) {
-    originRequest {
-      symbol
-    }
-    industry {
-      groupRS(where: { periodOffset: { eq: CURRENT }, period: { eq: P6M } }) {
-        value
-      }
-    }
-  }
-}"#;
+const QUERY_INDUSTRY_GROUP_RS: &str = include_str!("graphql/industry_group_rs.graphql");
 
-const QUERY_INDUSTRY_OVERVIEW: &str = r#"query IndustryOverview($symbols: [String!]!, $symbolDialectType: MDSymbolDialectType!) {
-  marketData(symbols: $symbols, symbolDialectType: $symbolDialectType) {
-    id
-    industry {
-      name
-      indCode
-      newsCode
-      sector
-      groupMarketValueInBillions {
-        formattedValue
-      }
-      numNewHighsInGroup
-      numNewLowsInGroup
-      numberOfStocksInGroup
-      groupRanks(where: {periodOffset: {eq: CURRENT}}) {
-        value
-        period
-        periodOffset
-      }
-      pricePercentChangeVs(where: {subject: {in: [VS_YTD, VS_1D_AGO]}}) {
-        subject
-        formattedValue
-      }
-    }
-    ratings {
-      hasRatingsData
-      industry {
-        adRankInIndustryGroup
-        compRankInIndustryGroup
-        epsRankInIndustryGroup
-        numberOfStocksInGroup
-        rsRankInIndustryGroup
-        smrRankInIndustryGroup
-      }
-    }
-  }
-}"#;
+const QUERY_INDUSTRY_OVERVIEW: &str = include_str!("graphql/industry_overview.graphql");
 
 // ---------------------------------------------------------------------------
 // Response types
@@ -203,13 +155,12 @@ impl Client {
         symbols: &[&str],
         symbol_dialect_type: Option<&str>,
     ) -> crate::error::Result<IndustryGroupRsResponse> {
-        let request = GraphQLRequest {
-            operation_name: "IndustryGroupRS".to_string(),
-            variables: SymbolVariables::new(symbols, symbol_dialect_type),
-            query: QUERY_INDUSTRY_GROUP_RS.to_string(),
-        };
-
-        self.graphql_post(&request).await
+        self.graphql_operation(
+            "IndustryGroupRS",
+            SymbolVariables::new(symbols, symbol_dialect_type),
+            QUERY_INDUSTRY_GROUP_RS,
+        )
+        .await
     }
 
     /// Fetches industry overview data including summary statistics and
@@ -224,13 +175,12 @@ impl Client {
         symbols: &[&str],
         symbol_dialect_type: Option<&str>,
     ) -> crate::error::Result<IndustryOverviewResponse> {
-        let request = GraphQLRequest {
-            operation_name: "IndustryOverview".to_string(),
-            variables: SymbolVariables::new(symbols, symbol_dialect_type),
-            query: QUERY_INDUSTRY_OVERVIEW.to_string(),
-        };
-
-        self.graphql_post(&request).await
+        self.graphql_operation(
+            "IndustryOverview",
+            SymbolVariables::new(symbols, symbol_dialect_type),
+            QUERY_INDUSTRY_OVERVIEW,
+        )
+        .await
     }
 }
 

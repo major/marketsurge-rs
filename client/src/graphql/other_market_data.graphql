@@ -1,0 +1,1039 @@
+query OtherMarketData(
+  $symbols: [String!]!
+  $symbolDialectType: MDSymbolDialectType!
+  $upToHistoricalPeriodOffset: MDUpToQueryPeriodOffsetHistorical!
+  $upToQueryPeriodOffset: MDUpToQueryPeriodOffsetFuture!
+  $upToHistoricalPeriodForProfitMargin: MDUpToQueryPeriodOffsetHistorical!
+) {
+  marketData(symbols: $symbols, symbolDialectType: $symbolDialectType) {
+    id
+    originRequest {
+      fromDialect
+      symbol
+    }
+    ratings {
+      compRating {
+        value
+        periodOffset
+        period
+      }
+      rsRating(where: { periodOffset: { eq: CURRENT } }) {
+        value
+        periodOffset
+        period
+      }
+      epsRating {
+        value
+        periodOffset
+        period
+      }
+      smrRating {
+        value
+        periodOffset
+        period
+        letterValue
+      }
+      adRating(where: { periodOffset: { eq: CURRENT }, period: { eq: P12M } }) {
+        letterValue
+        period
+        periodOffset
+        value
+      }
+    }
+    pricingStatistics {
+      endOfDayStatistics {
+        historicalPriceStatistics(where: { period: { eq: P1Q } }) {
+          period
+          periodOffset
+          periodEndDate {
+            value
+            formattedValue
+          }
+          priceHighDate {
+            value
+            formattedValue
+          }
+          priceHigh {
+            value
+            formattedValue
+          }
+          priceLowDate {
+            value
+            formattedValue
+          }
+          priceLow {
+            value
+            formattedValue
+          }
+          priceClose {
+            value
+            formattedValue
+          }
+          pricePercentChange {
+            value
+            formattedValue
+          }
+        }
+        pricingStartDate {
+          value
+        }
+        pricingEndDate {
+          value
+        }
+        volumeMovingAverages {
+          value
+          period
+          periodOffset
+        }
+        avgDollarVolume50Day {
+          value
+          formattedValue
+        }
+        marketCapitalization {
+          value
+          formattedValue
+        }
+        averageTrueRangePercent {
+          value
+          formattedValue
+          period
+          periodOffset
+        }
+        antEvents {
+          value
+        }
+        upDownVolumeRatio {
+          value
+          scalingFactor
+          formattedValue
+        }
+        alpha {
+          formattedValue
+          scalingFactor
+          value
+        }
+        beta {
+          value
+          scalingFactor
+          formattedValue
+        }
+        shortInterest {
+          daysToCover {
+            formattedValue
+            value
+          }
+          daysToCoverPercentChange {
+            formattedValue
+            value
+          }
+          percentOfFloat {
+            value
+            scalingFactor
+            formattedValue
+          }
+          volume {
+            value
+            scalingFactor
+            formattedValue
+          }
+        }
+        blueDotDailyEvents {
+          formattedValue
+          value
+        }
+        blueDotWeeklyEvents {
+          formattedValue
+          value
+        }
+      }
+      intradayStatistics {
+        pricePercentChangeVs {
+          formattedValue
+          value
+          subject
+          period
+        }
+        volumePercentChangeVs {
+          value
+          formattedValue
+          subject
+          period
+        }
+        isDailyBlueDotEvent
+        isWeeklyBlueDotEvent
+        yield {
+          formattedValue
+          scalingFactor
+          value
+        }
+        priceToCashFlowRatio {
+          value
+          scalingFactor
+          formattedValue
+        }
+        forwardPriceToEarningsRatio {
+          value
+          scalingFactor
+          formattedValue
+        }
+        priceToSalesRatio {
+          value
+          scalingFactor
+          formattedValue
+        }
+        priceToEarningsRatio {
+          formattedValue
+          scalingFactor
+          value
+        }
+        priceToEarningsVsSP500 {
+          value
+          scalingFactor
+          formattedValue
+        }
+      }
+    }
+    corporateActions {
+      dividendNextReportedExDate {
+        formattedValue
+        value
+      }
+      dividends {
+        amount {
+          formattedValue
+        }
+        changeIndicator
+        exDate {
+          value
+        }
+      }
+      spinoffs {
+        exDate {
+          value
+        }
+      }
+      splits {
+        splitDate {
+          value
+        }
+      }
+    }
+    symbology {
+      company {
+        companyName
+        address
+        address2
+        phone
+        businessDescription
+        url
+        city
+        country
+        stateProvince
+      }
+      instrument {
+        subType
+        ipoDate {
+          value
+        }
+        ipoPrice {
+          formattedValue
+          value
+          currencySymbolInfo {
+            unitSymbol
+          }
+        }
+      }
+    }
+    patternInfo {
+      patterns(
+        where: {
+          baseStartDate: { value: { gte: "{pattern_start_date}" } }
+          baseEndDate: { value: { lte: "{pattern_end_date}" } }
+          periodicity: { eq: DAILY }
+        }
+      ) {
+        ... on MDCupWithoutHandle {
+          baseDepth {
+            value
+            scalingFactor
+            formattedValue
+          }
+          avgVolumeRatePctOnPivot {
+            value
+            scalingFactor
+            formattedValue
+          }
+          pricePctChangeOnPivot {
+            value
+            scalingFactor
+            formattedValue
+          }
+          handleDepth {
+            value
+            scalingFactor
+            formattedValue
+          }
+          handleLength
+          cupLength
+          cupEndDate {
+            value
+          }
+          handleLowDate {
+            value
+          }
+          handleStartDate {
+            value
+          }
+          baseBottomDate {
+            value
+          }
+          id
+          baseLength
+          baseNumber
+          baseStatus
+          patternType
+          periodicity
+          baseStage
+          baseStartDate {
+            value
+          }
+          baseEndDate {
+            value
+          }
+          pivotPrice {
+            currencySymbolInfo {
+              mantissaPrecision
+              unitSymbol
+              isoCurrencyCode
+              isSuffix
+            }
+            value
+            scalingFactor
+            formattedValue
+          }
+          pivotDate {
+            value
+          }
+          pivotPriceDate {
+            value
+          }
+          leftSideHighDate {
+            value
+          }
+        }
+        ... on MDCupWithHandle {
+          baseDepth {
+            value
+            scalingFactor
+            formattedValue
+          }
+          avgVolumeRatePctOnPivot {
+            value
+            scalingFactor
+            formattedValue
+          }
+          pricePctChangeOnPivot {
+            value
+            scalingFactor
+            formattedValue
+          }
+          handleDepth {
+            value
+            scalingFactor
+            formattedValue
+          }
+          handleLength
+          cupLength
+          cupEndDate {
+            value
+          }
+          handleLowDate {
+            value
+          }
+          handleStartDate {
+            value
+          }
+          baseBottomDate {
+            value
+          }
+          id
+          baseLength
+          baseNumber
+          baseStatus
+          patternType
+          periodicity
+          baseStage
+          baseStartDate {
+            value
+          }
+          baseEndDate {
+            value
+          }
+          pivotPrice {
+            currencySymbolInfo {
+              mantissaPrecision
+              unitSymbol
+              isoCurrencyCode
+              isSuffix
+            }
+            value
+            scalingFactor
+            formattedValue
+          }
+          pivotDate {
+            value
+          }
+          pivotPriceDate {
+            value
+          }
+          leftSideHighDate {
+            value
+          }
+        }
+        ... on MDConsolidation {
+          baseDepth {
+            value
+            scalingFactor
+            formattedValue
+          }
+          avgVolumeRatePctOnPivot {
+            value
+            scalingFactor
+            formattedValue
+          }
+          pricePctChangeOnPivot {
+            value
+            scalingFactor
+            formattedValue
+          }
+          baseBottomDate {
+            value
+          }
+          id
+          baseLength
+          baseNumber
+          baseStatus
+          patternType
+          periodicity
+          baseStage
+          baseStartDate {
+            value
+          }
+          baseEndDate {
+            value
+          }
+          pivotPrice {
+            value
+            scalingFactor
+            formattedValue
+            currencySymbolInfo {
+              mantissaPrecision
+              unitSymbol
+              isoCurrencyCode
+              isSuffix
+            }
+          }
+          pivotDate {
+            value
+          }
+          pivotPriceDate {
+            value
+          }
+          leftSideHighDate {
+            value
+          }
+        }
+        ... on MDFlatBase {
+          baseDepth {
+            value
+            scalingFactor
+            formattedValue
+          }
+          avgVolumeRatePctOnPivot {
+            value
+            scalingFactor
+            formattedValue
+          }
+          pricePctChangeOnPivot {
+            value
+            scalingFactor
+            formattedValue
+          }
+          baseBottomDate {
+            value
+          }
+          id
+          baseLength
+          baseNumber
+          baseStatus
+          patternType
+          periodicity
+          baseStage
+          baseStartDate {
+            value
+          }
+          baseEndDate {
+            value
+          }
+          pivotPrice {
+            currencySymbolInfo {
+              mantissaPrecision
+              unitSymbol
+              isoCurrencyCode
+              isSuffix
+            }
+            value
+            scalingFactor
+            formattedValue
+          }
+          pivotDate {
+            value
+          }
+          pivotPriceDate {
+            value
+          }
+          leftSideHighDate {
+            value
+          }
+        }
+        ... on MDIpoBase {
+          upBars
+          blueBars
+          stallBars
+          upVolumeTotal {
+            value
+            scalingFactor
+            formattedValue
+          }
+          downBars
+          redBars
+          supportBars
+          downVolumeTotal {
+            value
+            scalingFactor
+            formattedValue
+          }
+          volumePctChangeOnPivot {
+            value
+            scalingFactor
+            formattedValue
+          }
+          baseDepth {
+            value
+            scalingFactor
+            formattedValue
+          }
+          avgVolumeRatePctOnPivot {
+            value
+            scalingFactor
+            formattedValue
+          }
+          pricePctChangeOnPivot {
+            value
+            scalingFactor
+            formattedValue
+          }
+          baseBottomDate {
+            value
+          }
+          id
+          baseLength
+          baseNumber
+          baseStatus
+          patternType
+          periodicity
+          baseStage
+          baseStartDate {
+            value
+          }
+          baseEndDate {
+            value
+          }
+          pivotPrice {
+            currencySymbolInfo {
+              mantissaPrecision
+              unitSymbol
+              isoCurrencyCode
+              isSuffix
+            }
+            value
+            scalingFactor
+            formattedValue
+          }
+          pivotDate {
+            value
+          }
+          pivotPriceDate {
+            value
+          }
+          leftSideHighDate {
+            value
+          }
+        }
+        ... on MDSaucerWithHandle {
+          baseDepth {
+            value
+            scalingFactor
+            formattedValue
+          }
+          avgVolumeRatePctOnPivot {
+            value
+            scalingFactor
+            formattedValue
+          }
+          pricePctChangeOnPivot {
+            value
+            scalingFactor
+            formattedValue
+          }
+          handleDepth {
+            value
+            scalingFactor
+            formattedValue
+          }
+          handleLength
+          cupLength
+          cupEndDate {
+            value
+          }
+          handleLowDate {
+            value
+          }
+          handleStartDate {
+            value
+          }
+          baseBottomDate {
+            value
+          }
+          id
+          baseLength
+          baseNumber
+          baseStatus
+          patternType
+          periodicity
+          baseStage
+          baseStartDate {
+            value
+          }
+          baseEndDate {
+            value
+          }
+          pivotPrice {
+            currencySymbolInfo {
+              mantissaPrecision
+              unitSymbol
+              isoCurrencyCode
+              isSuffix
+            }
+            value
+            scalingFactor
+            formattedValue
+          }
+          pivotDate {
+            value
+          }
+          pivotPriceDate {
+            value
+          }
+          leftSideHighDate {
+            value
+          }
+        }
+        ... on MDSaucerWithoutHandle {
+          baseDepth {
+            value
+            scalingFactor
+            formattedValue
+          }
+          avgVolumeRatePctOnPivot {
+            value
+            scalingFactor
+            formattedValue
+          }
+          pricePctChangeOnPivot {
+            value
+            scalingFactor
+            formattedValue
+          }
+          handleDepth {
+            value
+            scalingFactor
+            formattedValue
+          }
+          handleLength
+          cupLength
+          cupEndDate {
+            value
+          }
+          handleLowDate {
+            value
+          }
+          handleStartDate {
+            value
+          }
+          baseBottomDate {
+            value
+          }
+          id
+          baseLength
+          baseNumber
+          baseStatus
+          patternType
+          periodicity
+          baseStage
+          baseStartDate {
+            value
+          }
+          baseEndDate {
+            value
+          }
+          pivotPrice {
+            currencySymbolInfo {
+              mantissaPrecision
+              unitSymbol
+              isoCurrencyCode
+              isSuffix
+            }
+            value
+            scalingFactor
+            formattedValue
+          }
+          pivotDate {
+            value
+          }
+          pivotPriceDate {
+            value
+          }
+          leftSideHighDate {
+            value
+          }
+        }
+        ... on MDAscendingBase {
+          avgVolumeRatePctOnPivot {
+            value
+            scalingFactor
+            formattedValue
+          }
+          pricePctChangeOnPivot {
+            value
+            scalingFactor
+            formattedValue
+          }
+          firstBottomDate {
+            value
+          }
+          secondAscendingHighDate {
+            value
+          }
+          secondBottomDate {
+            value
+          }
+          thirdAscendingHighDate {
+            value
+          }
+          thirdBottomDate {
+            value
+          }
+          pullBack1Depth {
+            value
+            scalingFactor
+            formattedValue
+          }
+          pullBack2Depth {
+            value
+            scalingFactor
+            formattedValue
+          }
+          pullBack3Depth {
+            value
+            scalingFactor
+            formattedValue
+          }
+          id
+          baseLength
+          baseNumber
+          baseStatus
+          patternType
+          periodicity
+          baseStage
+          baseStartDate {
+            value
+          }
+          baseEndDate {
+            value
+          }
+          pivotPrice {
+            currencySymbolInfo {
+              mantissaPrecision
+              unitSymbol
+              isoCurrencyCode
+              isSuffix
+            }
+            value
+            scalingFactor
+            formattedValue
+          }
+          pivotDate {
+            value
+          }
+          pivotPriceDate {
+            value
+          }
+          leftSideHighDate {
+            value
+          }
+        }
+        ... on MDDoubleBottom {
+          baseDepth {
+            value
+            scalingFactor
+            formattedValue
+          }
+          avgVolumeRatePctOnPivot {
+            value
+            scalingFactor
+            formattedValue
+          }
+          pricePctChangeOnPivot {
+            value
+            scalingFactor
+            formattedValue
+          }
+          firstBottomDate {
+            value
+          }
+          secondBottomDate {
+            value
+          }
+          midPeakDate {
+            value
+          }
+          id
+          baseLength
+          baseNumber
+          baseStatus
+          patternType
+          periodicity
+          baseStage
+          baseStartDate {
+            value
+          }
+          baseEndDate {
+            value
+          }
+          pivotPrice {
+            currencySymbolInfo {
+              mantissaPrecision
+              unitSymbol
+              isoCurrencyCode
+              isSuffix
+            }
+            value
+            scalingFactor
+            formattedValue
+          }
+          pivotDate {
+            value
+          }
+          pivotPriceDate {
+            value
+          }
+          leftSideHighDate {
+            value
+          }
+        }
+      }
+      tightAreas(
+        where: {
+          startDate: { value: { gte: "{pattern_start_date}" } }
+          endDate: { value: { gte: "{pattern_start_date}" } }
+        }
+      ) {
+        patternID
+        startDate {
+          value
+        }
+        endDate {
+          value
+        }
+        length
+      }
+    }
+    financials {
+      epsDueDate {
+        value
+        formattedValue
+      }
+      epsDueDateStatus
+      epsLastReportedDate {
+        value
+      }
+      consensusFinancials {
+        eps {
+          reportedEarnings(upToHistoricalPeriodOffset: $upToHistoricalPeriodOffset) {
+            value {
+              value
+            }
+            percentChangeYOY {
+              value
+            }
+            periodOffset
+            period
+            periodEndDate {
+              value
+            }
+            effectiveDate {
+              value
+            }
+            percentSurprise {
+              value
+            }
+            surpriseAmount {
+              value
+            }
+            quarterNumber
+            fiscalYear
+          }
+          growthRate(where: { period: { eq: P1Y } }) {
+            value
+            scalingFactor
+            period
+            formattedValue
+          }
+          earningsStability
+        }
+        sales {
+          reportedSales(upToHistoricalPeriodOffset: $upToHistoricalPeriodOffset) {
+            value {
+              value
+            }
+            percentChangeYOY {
+              value
+            }
+            periodOffset
+            period
+            periodEndDate {
+              value
+            }
+            effectiveDate {
+              value
+            }
+            percentSurprise {
+              value
+            }
+            surpriseAmount {
+              value
+            }
+            quarterNumber
+            fiscalYear
+          }
+          growthRate(where: { period: { eq: P3Y } }) {
+            formattedValue
+            period
+            scalingFactor
+            value
+          }
+        }
+      }
+      cashFlowPerShareLastYear {
+        formattedValue
+        value
+      }
+      profitMarginValues(upToHistoricalPeriodOffset: $upToHistoricalPeriodForProfitMargin) {
+        period
+        preTaxMargin {
+          formattedValue
+          scalingFactor
+          value
+        }
+        afterTaxMargin {
+          value
+        }
+        grossMargin {
+          value
+        }
+        returnOnEquity {
+          value
+          formattedValue
+        }
+        periodEndDate {
+          value
+          formattedValue
+        }
+        periodOffset
+      }
+      estimates {
+        epsEstimates(upToQueryPeriodOffset: $upToQueryPeriodOffset) {
+          revisionDirection
+          effectiveDate {
+            value
+          }
+          period
+          value {
+            value
+          }
+          percentChangeYOY {
+            value
+          }
+          periodEndDate {
+            value
+          }
+          type
+        }
+        salesEstimates(upToQueryPeriodOffset: $upToQueryPeriodOffset) {
+          revisionDirection
+          effectiveDate {
+            value
+          }
+          period
+          value {
+            value
+          }
+          percentChangeYOY {
+            value
+          }
+          periodEndDate {
+            value
+          }
+        }
+      }
+    }
+    industry {
+      name
+      sector
+      indCode
+      groupRanks {
+        value
+        period
+        periodOffset
+      }
+      groupRS {
+        value
+        periodOffset
+        letterValue
+        period
+      }
+      numberOfStocksInGroup
+    }
+    ownership {
+      fundsFloatPercentHeld {
+        value
+        scalingFactor
+        formattedValue
+      }
+    }
+    fundamentals {
+      researchAndDevelopmentPercentLastQtr {
+        value
+        scalingFactor
+        formattedValue
+      }
+      newCEODate {
+        value
+      }
+      debtPercent {
+        formattedValue
+      }
+    }
+  }
+}

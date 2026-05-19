@@ -205,6 +205,21 @@ impl Client {
 
         Ok(serde_json::from_value(serde_json::Value::Null)?)
     }
+
+    /// Sends a typed GraphQL operation with the shared request envelope.
+    pub(crate) async fn graphql_operation<V, T>(
+        &self,
+        operation_name: &str,
+        variables: V,
+        query: impl Into<String>,
+    ) -> Result<T>
+    where
+        V: Serialize,
+        T: DeserializeOwned,
+    {
+        let request = GraphQLRequest::new(operation_name, variables, query);
+        self.graphql_post(&request).await
+    }
 }
 
 fn default_headers(config: &ClientConfig) -> HeaderMap {
