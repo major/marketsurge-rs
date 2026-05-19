@@ -8,8 +8,7 @@ use serde::Serialize;
 use tracing::instrument;
 
 use crate::cli::{OwnershipArgs, SymbolsArgs};
-use crate::common::auth::handle_api_error;
-use crate::common::command::{run_command, zip_symbols};
+use crate::common::command::{api_call, run_command, zip_symbols};
 
 /// Screen name for the fund ownership detail query.
 const FUND_OWNERSHIP_SCREEN: &str = "MarketSurge.RelatedInformation.MUTIFundOwnership";
@@ -83,10 +82,7 @@ async fn execute_summary(args: &SymbolsArgs, json_table: bool) -> i32 {
         &args.symbols,
         json_table,
         |client, symbol_refs| async move {
-            let response = client
-                .ownership(&symbol_refs)
-                .await
-                .map_err(handle_api_error)?;
+            let response = api_call(client.ownership(&symbol_refs)).await?;
 
             Ok(flatten_ownership_summary(
                 &symbol_refs,
@@ -104,17 +100,15 @@ async fn execute_funds(args: &SymbolsArgs, json_table: bool) -> i32 {
         json_table,
         |client, symbol_refs| async move {
             // Resolve DJ_KEY for each symbol via the fundamentals API symbology.
-            let fundamentals = client
-                .fundamentals(
-                    &symbol_refs,
-                    "CHARTING",
-                    "P7Y_AGO",
-                    "P2Y_FUTURE",
-                    "P7Y_AGO",
-                    "P2Y_FUTURE",
-                )
-                .await
-                .map_err(handle_api_error)?;
+            let fundamentals = api_call(client.fundamentals(
+                &symbol_refs,
+                "CHARTING",
+                "P7Y_AGO",
+                "P2Y_FUTURE",
+                "P7Y_AGO",
+                "P2Y_FUTURE",
+            ))
+            .await?;
 
             let mut records = Vec::new();
 
@@ -141,10 +135,8 @@ async fn execute_funds(args: &SymbolsArgs, json_table: bool) -> i32 {
                     },
                 ];
 
-                let response = client
-                    .market_data_screen(FUND_OWNERSHIP_SCREEN, parameters)
-                    .await
-                    .map_err(handle_api_error)?;
+                let response =
+                    api_call(client.market_data_screen(FUND_OWNERSHIP_SCREEN, parameters)).await?;
 
                 if let Some(result) = response.market_data_screen {
                     records.extend(flatten_fund_rows(symbol, &result.response_values));
@@ -258,6 +250,7 @@ fn flatten_fund_rows(
 
 #[cfg(test)]
 mod tests {
+    use crate::common::test_support::response_value;
     use marketsurge_client::fundamentals::{
         FundamentalsInstrument, FundamentalsItem, FundamentalsSymbol, FundamentalsSymbology,
     };
@@ -265,19 +258,9 @@ mod tests {
         OwnershipData, OwnershipDateValue, OwnershipFormattedValue, OwnershipItem,
         OwnershipQuarterlySummary,
     };
-    use marketsurge_client::screen::{MdItem, ResponseValue};
+    use marketsurge_client::screen::ResponseValue;
 
     use super::{cell_value, extract_dj_key, flatten_fund_rows, flatten_ownership_summary};
-
-    fn response_value(name: &str, value: Option<&str>) -> ResponseValue {
-        ResponseValue {
-            value: value.map(str::to_string),
-            md_item: Some(MdItem {
-                md_item_id: None,
-                name: Some(name.to_string()),
-            }),
-        }
-    }
 
     #[test]
     fn test_cell_value_matching_value() {

@@ -6,8 +6,7 @@ use serde::Serialize;
 use tracing::instrument;
 
 use crate::cli::WatchlistArgs;
-use crate::common::auth::handle_api_error;
-use crate::common::command::{run_client_command, run_command};
+use crate::common::command::{api_call, run_client_command, run_command};
 use crate::common::rows::{flatten_response_rows, response_columns};
 
 /// Watchlist subcommands.
@@ -102,10 +101,7 @@ fn flatten_watchlist_list(watchlists: &[WatchlistSummary]) -> Vec<WatchlistRecor
 #[instrument(skip_all)]
 async fn execute_list(json_table: bool) -> i32 {
     run_client_command(json_table, |client| async move {
-        let response = client
-            .get_all_watchlist_names()
-            .await
-            .map_err(handle_api_error)?;
+        let response = api_call(client.get_all_watchlist_names()).await?;
 
         Ok(flatten_watchlist_list(&response.watchlists))
     })
@@ -134,10 +130,7 @@ async fn execute_symbols(args: &WatchlistSymbolsArgs, json_table: bool) -> i32 {
     let watchlist_id = args.watchlist_id.clone();
 
     run_client_command(json_table, |client| async move {
-        let response = client
-            .flagged_symbols(&watchlist_id)
-            .await
-            .map_err(handle_api_error)?;
+        let response = api_call(client.flagged_symbols(&watchlist_id)).await?;
 
         Ok(flatten_watchlist_symbols(response.watchlist.as_ref()))
     })
@@ -152,10 +145,7 @@ async fn execute_screen(args: &WatchlistScreenArgs, json_table: bool) -> i32 {
         &args.symbols,
         json_table,
         |client, symbol_refs| async move {
-            let response = client
-                .screener_watchlist_items(&symbol_refs, columns)
-                .await
-                .map_err(handle_api_error)?;
+            let response = api_call(client.screener_watchlist_items(&symbol_refs, columns)).await?;
 
             let empty = Vec::new();
             let rows = response
@@ -172,7 +162,7 @@ async fn execute_screen(args: &WatchlistScreenArgs, json_table: bool) -> i32 {
 
 #[cfg(test)]
 mod tests {
-    use marketsurge_client::screen::{MdItem, ResponseValue};
+    use crate::common::test_support::{response_value, response_value_without_md_item};
     use marketsurge_client::watchlist::WatchlistItem;
 
     use super::*;
@@ -242,20 +232,8 @@ mod tests {
     #[test]
     fn flatten_screen_maps_named_cells() {
         let rows = vec![vec![
-            ResponseValue {
-                value: Some("95".into()),
-                md_item: Some(MdItem {
-                    md_item_id: None,
-                    name: Some("EPSRating".into()),
-                }),
-            },
-            ResponseValue {
-                value: Some("88".into()),
-                md_item: Some(MdItem {
-                    md_item_id: None,
-                    name: Some("RSRating".into()),
-                }),
-            },
+            response_value("EPSRating", Some("95")),
+            response_value("RSRating", Some("88")),
         ]];
 
         let records = flatten_response_rows(&rows);
@@ -274,17 +252,8 @@ mod tests {
     #[test]
     fn flatten_screen_skips_missing_md_item() {
         let rows = vec![vec![
-            ResponseValue {
-                value: Some("99".into()),
-                md_item: None,
-            },
-            ResponseValue {
-                value: Some("A".into()),
-                md_item: Some(MdItem {
-                    md_item_id: None,
-                    name: Some("SMRRating".into()),
-                }),
-            },
+            response_value_without_md_item(Some("99")),
+            response_value("SMRRating", Some("A")),
         ]];
 
         let records = flatten_response_rows(&rows);
@@ -296,13 +265,7 @@ mod tests {
 
     #[test]
     fn flatten_screen_none_value_preserved() {
-        let rows = vec![vec![ResponseValue {
-            value: None,
-            md_item: Some(MdItem {
-                md_item_id: None,
-                name: Some("CompRating".into()),
-            }),
-        }]];
+        let rows = vec![vec![response_value("CompRating", None)]];
 
         let records = flatten_response_rows(&rows);
 

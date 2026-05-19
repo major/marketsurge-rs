@@ -5,8 +5,7 @@ use serde::Serialize;
 use tracing::instrument;
 
 use crate::cli::ChartArgs;
-use crate::common::auth::handle_api_error;
-use crate::common::command::{run_command, zip_symbols};
+use crate::common::command::{api_call, run_command, zip_symbols};
 use marketsurge_client::chart::ChartMarketDataResponse;
 
 /// Flat output record for a single OHLCV data point.
@@ -84,26 +83,22 @@ pub async fn handle(args: &ChartArgs, json_table: bool) -> i32 {
                 let start = (now - chrono::Duration::weeks(156))
                     .format(DATE_FMT)
                     .to_string();
-                client
-                    .chart_market_data_weekly(&symbol_refs, "CHARTING", &start, &end)
-                    .await
-                    .map_err(handle_api_error)?
+                api_call(client.chart_market_data_weekly(&symbol_refs, "CHARTING", &start, &end))
+                    .await?
             } else {
                 let start = (now - chrono::Duration::days(365))
                     .format(DATE_FMT)
                     .to_string();
-                client
-                    .chart_market_data(
-                        &symbol_refs,
-                        "CHARTING",
-                        &start,
-                        &end,
-                        "ONE_DAY",
-                        true,
-                        "NYSE",
-                    )
-                    .await
-                    .map_err(handle_api_error)?
+                api_call(client.chart_market_data(
+                    &symbol_refs,
+                    "CHARTING",
+                    &start,
+                    &end,
+                    "ONE_DAY",
+                    true,
+                    "NYSE",
+                ))
+                .await?
             };
 
             Ok(flatten_chart_data(&symbol_refs, response))

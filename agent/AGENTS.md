@@ -26,6 +26,7 @@ agent/src/
     auth.rs         browser cookie auth, error-to-exit-code mapping
     command.rs      run_command() harness, zip_symbols() helper
     rows.rs         row flattening and response column helpers
+    test_support.rs shared command test constructors (cfg(test) only)
 ```
 
 ## Conventions
