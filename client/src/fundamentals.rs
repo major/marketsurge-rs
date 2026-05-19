@@ -162,12 +162,7 @@ where
 
     match value {
         None | Some(Value::Null) => Ok(None),
-        Some(Value::Array(values)) if values.is_empty() => Ok(None),
-        Some(Value::Array(values)) => {
-            serde_json::from_value::<Vec<FundamentalsCompany>>(Value::Array(values))
-                .map(|companies| companies.into_iter().next())
-                .map_err(serde::de::Error::custom)
-        }
+        Some(Value::Array(values)) => deserialize_first_array_element(values),
         Some(value) => serde_json::from_value(value)
             .map(Some)
             .map_err(serde::de::Error::custom),
@@ -184,16 +179,24 @@ where
 
     match value {
         None | Some(Value::Null) => Ok(None),
-        Some(Value::Array(values)) if values.is_empty() => Ok(None),
-        Some(Value::Array(values)) => {
-            serde_json::from_value::<Vec<FundamentalsInstrument>>(Value::Array(values))
-                .map(|instruments| instruments.into_iter().next())
-                .map_err(serde::de::Error::custom)
-        }
+        Some(Value::Array(values)) => deserialize_first_array_element(values),
         Some(value) => serde_json::from_value(value)
             .map(Some)
             .map_err(serde::de::Error::custom),
     }
+}
+
+fn deserialize_first_array_element<T, E>(values: Vec<Value>) -> Result<Option<T>, E>
+where
+    T: serde::de::DeserializeOwned,
+    E: serde::de::Error,
+{
+    values
+        .into_iter()
+        .next()
+        .map(serde_json::from_value)
+        .transpose()
+        .map_err(E::custom)
 }
 
 /// Company profile information.
@@ -261,7 +264,11 @@ fn json_value_to_string(value: Value) -> Option<String> {
         Value::String(value) => Some(value),
         Value::Number(value) => Some(value.to_string()),
         Value::Bool(value) => Some(value.to_string()),
-        Value::Array(values) => Some(Value::Array(values).to_string()),
+        Value::Array(mut values) => match values.len() {
+            0 => None,
+            1 => values.pop().and_then(json_value_to_string),
+            _ => Some(Value::Array(values).to_string()),
+        },
         Value::Object(map) => {
             for key in ["value", "formattedValue", "displayValue", "name"] {
                 if let Some(value) = map.get(key).cloned().and_then(json_value_to_string) {
@@ -465,6 +472,35 @@ mod tests {
         assert_eq!(symbols[0].value.as_deref(), Some("13-4698"));
         assert_eq!(symbols[0].node_type.as_deref(), Some("DJ_KEY"));
         assert_eq!(symbols[1].value.as_deref(), Some("AMD"));
+    }
+
+    #[test]
+    fn symbology_uses_first_array_wrapped_company_and_instrument() {
+        let symbology: FundamentalsSymbology = serde_json::from_str(
+            r#"{
+                "company": [
+                    {"companyName": "Advanced Micro Devices, Inc."},
+                    12345
+                ],
+                "instrument": [
+                    {
+                        "symbols": {"value": ["AMD"], "type": ["TICKER"]}
+                    },
+                    "ignored"
+                ]
+            }"#,
+        )
+        .expect("symbology should parse the first array-wrapped values");
+
+        assert_eq!(
+            symbology.company.unwrap().company_name.as_deref(),
+            Some("Advanced Micro Devices, Inc.")
+        );
+
+        let symbols = symbology.instrument.unwrap().symbols;
+        assert_eq!(symbols.len(), 1);
+        assert_eq!(symbols[0].value.as_deref(), Some("AMD"));
+        assert_eq!(symbols[0].node_type.as_deref(), Some("TICKER"));
     }
 
     #[cfg(not(coverage))]
