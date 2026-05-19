@@ -1,7 +1,5 @@
 //! Stock screen commands for listing, running, and querying screens.
 
-use std::collections::BTreeMap;
-
 use clap::{Args, Subcommand};
 use marketsurge_client::coach::{CoachTreeNode, CoachTreeResponse};
 use marketsurge_client::screen::{ResponseValue, ScreenEntry, ScreensResponse};
@@ -10,6 +8,7 @@ use tracing::instrument;
 
 use crate::common::auth::handle_api_error;
 use crate::common::command::run_client_command;
+use crate::common::rows::flatten_response_rows;
 
 /// Screen subcommands.
 #[derive(Debug, Subcommand)]
@@ -136,7 +135,7 @@ async fn execute_run(args: &RunArgs, json_table: bool) -> i32 {
             .map(|result| result.response_values.as_slice())
             .unwrap_or(&[]);
 
-        Ok(flatten_screen_rows(rows))
+        Ok(flatten_response_rows(rows))
     })
     .await
 }
@@ -193,26 +192,6 @@ fn map_coach_screen_node(node: &CoachTreeNode) -> ScreenListRecord {
         updated_at: None,
         created_at: None,
     }
-}
-
-/// Converts screen response rows into flat key-value maps.
-///
-/// Each row becomes a `BTreeMap` mapping column name to cell value. Cells
-/// without a named `md_item` are skipped.
-fn flatten_screen_rows(
-    response_values: &[Vec<ResponseValue>],
-) -> Vec<BTreeMap<String, Option<String>>> {
-    response_values
-        .iter()
-        .map(|row| {
-            row.iter()
-                .filter_map(|cell| {
-                    let name = cell.md_item.as_ref().and_then(|m| m.name.clone())?;
-                    Some((name, cell.value.clone()))
-                })
-                .collect()
-        })
-        .collect()
 }
 
 /// Resolves a screen name to its ID by checking the coach tree.
@@ -306,7 +285,7 @@ mod tests {
     }
 
     #[test]
-    fn flatten_screen_rows_converts_two_rows() {
+    fn flatten_response_rows_converts_two_rows() {
         let rows = vec![
             vec![
                 make_response_value("Symbol", "AAPL"),
@@ -318,7 +297,7 @@ mod tests {
             ],
         ];
 
-        let result = flatten_screen_rows(&rows);
+        let result = flatten_response_rows(&rows);
         assert_eq!(result.len(), 2);
         assert_eq!(result[0].get("Symbol"), Some(&Some("AAPL".to_string())));
         assert_eq!(
@@ -328,13 +307,13 @@ mod tests {
     }
 
     #[test]
-    fn flatten_screen_rows_empty_input() {
-        let result = flatten_screen_rows(&[]);
+    fn flatten_response_rows_empty_input() {
+        let result = flatten_response_rows(&[]);
         assert!(result.is_empty());
     }
 
     #[test]
-    fn flatten_screen_rows_skips_cells_without_md_item_name() {
+    fn flatten_response_rows_skips_cells_without_md_item_name() {
         let rows = vec![vec![
             make_response_value("Symbol", "TSLA"),
             ResponseValue {
@@ -350,7 +329,7 @@ mod tests {
             },
         ]];
 
-        let result = flatten_screen_rows(&rows);
+        let result = flatten_response_rows(&rows);
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].len(), 1);
         assert_eq!(result[0].get("Symbol"), Some(&Some("TSLA".to_string())));

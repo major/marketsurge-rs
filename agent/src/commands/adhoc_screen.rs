@@ -1,16 +1,14 @@
 //! Ad-hoc stock screening command.
 
-use std::collections::BTreeMap;
-
 use clap::Args;
 use marketsurge_client::adhoc_screen::{
-    AdhocScreenId, AdhocScreenIncludeSource, AdhocScreenInstruments, ResponseValue,
+    AdhocScreenId, AdhocScreenIncludeSource, AdhocScreenInstruments,
 };
-use marketsurge_client::types::ResponseColumn;
 use tracing::instrument;
 
 use crate::common::auth::handle_api_error;
 use crate::common::command::run_client_command;
+use crate::common::rows::{flatten_response_rows, response_columns};
 
 /// Arguments for the adhoc-screen command.
 #[derive(Debug, Args)]
@@ -52,14 +50,7 @@ pub struct AdhocScreenCommandArgs {
 #[instrument(skip_all)]
 #[cfg(not(coverage))]
 pub async fn handle(args: &AdhocScreenCommandArgs, json_table: bool) -> i32 {
-    let columns: Vec<ResponseColumn> = args
-        .columns
-        .iter()
-        .map(|name| ResponseColumn {
-            name: name.clone(),
-            sort_information: None,
-        })
-        .collect();
+    let columns = response_columns(&args.columns);
 
     let adhoc_query: Option<serde_json::Value> = match &args.query {
         Some(q) => match serde_json::from_str(q) {
@@ -99,7 +90,7 @@ pub async fn handle(args: &AdhocScreenCommandArgs, json_table: bool) -> i32 {
             .map(|result| &result.response_values[..])
             .unwrap_or(&[]);
 
-        Ok(flatten_adhoc_screen_rows(response_values))
+        Ok(flatten_response_rows(response_values))
     })
     .await
 }
@@ -134,25 +125,10 @@ fn build_include_source(args: &AdhocScreenCommandArgs) -> AdhocScreenIncludeSour
     }
 }
 
-fn flatten_adhoc_screen_rows(
-    response_values: &[Vec<ResponseValue>],
-) -> Vec<BTreeMap<String, Option<String>>> {
-    response_values
-        .iter()
-        .map(|row| {
-            row.iter()
-                .filter_map(|cell| {
-                    let name = cell.md_item.as_ref().and_then(|m| m.name.clone())?;
-                    Some((name, cell.value.clone()))
-                })
-                .collect()
-        })
-        .collect()
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{AdhocScreenCommandArgs, build_include_source, flatten_adhoc_screen_rows};
+    use super::{AdhocScreenCommandArgs, build_include_source};
+    use crate::common::rows::flatten_response_rows;
     use marketsurge_client::adhoc_screen::{MdItem, ResponseValue};
 
     fn args(
@@ -241,7 +217,7 @@ mod tests {
             vec![rv(Some("Symbol"), Some("TSLA")), rv(Some("RS"), Some("80"))],
         ];
 
-        let result = flatten_adhoc_screen_rows(&rows);
+        let result = flatten_response_rows(&rows);
 
         assert_eq!(result.len(), 3);
         assert_eq!(result[0].get("Symbol").unwrap(), &Some("AAPL".to_string()));
@@ -253,7 +229,7 @@ mod tests {
     #[test]
     fn test_flatten_empty_input() {
         let rows: Vec<Vec<ResponseValue>> = vec![];
-        let result = flatten_adhoc_screen_rows(&rows);
+        let result = flatten_response_rows(&rows);
         assert!(result.is_empty());
     }
 
@@ -268,7 +244,7 @@ mod tests {
             },
         ]];
 
-        let result = flatten_adhoc_screen_rows(&rows);
+        let result = flatten_response_rows(&rows);
 
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].len(), 1);

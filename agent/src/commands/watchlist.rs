@@ -1,10 +1,6 @@
 //! Watchlist data commands.
 
-use std::collections::BTreeMap;
-
 use clap::{Args, Subcommand};
-use marketsurge_client::screen::ResponseValue;
-use marketsurge_client::types::ResponseColumn;
 use marketsurge_client::watchlist::{WatchlistDetail, WatchlistSummary};
 use serde::Serialize;
 use tracing::instrument;
@@ -12,6 +8,7 @@ use tracing::instrument;
 use crate::cli::WatchlistArgs;
 use crate::common::auth::handle_api_error;
 use crate::common::command::{run_client_command, run_command};
+use crate::common::rows::{flatten_response_rows, response_columns};
 
 /// Watchlist subcommands.
 #[derive(Debug, Subcommand)]
@@ -147,36 +144,9 @@ async fn execute_symbols(args: &WatchlistSymbolsArgs, json_table: bool) -> i32 {
     .await
 }
 
-/// Converts screen response rows into flat key-value maps.
-///
-/// Each row becomes a `BTreeMap` mapping column name to cell value. Cells
-/// without a named `md_item` are skipped.
-fn flatten_watchlist_screen(
-    response_values: &[Vec<ResponseValue>],
-) -> Vec<BTreeMap<String, Option<String>>> {
-    response_values
-        .iter()
-        .map(|row| {
-            row.iter()
-                .filter_map(|cell| {
-                    let name = cell.md_item.as_ref().and_then(|m| m.name.clone())?;
-                    Some((name, cell.value.clone()))
-                })
-                .collect()
-        })
-        .collect()
-}
-
 #[instrument(skip_all)]
 async fn execute_screen(args: &WatchlistScreenArgs, json_table: bool) -> i32 {
-    let columns: Vec<ResponseColumn> = args
-        .columns
-        .iter()
-        .map(|name| ResponseColumn {
-            name: name.clone(),
-            sort_information: None,
-        })
-        .collect();
+    let columns = response_columns(&args.columns);
 
     run_command(
         &args.symbols,
@@ -194,7 +164,7 @@ async fn execute_screen(args: &WatchlistScreenArgs, json_table: bool) -> i32 {
                 .map(|result| &result.response_values)
                 .unwrap_or(&empty);
 
-            Ok(flatten_watchlist_screen(rows))
+            Ok(flatten_response_rows(rows))
         },
     )
     .await
@@ -202,7 +172,7 @@ async fn execute_screen(args: &WatchlistScreenArgs, json_table: bool) -> i32 {
 
 #[cfg(test)]
 mod tests {
-    use marketsurge_client::screen::MdItem;
+    use marketsurge_client::screen::{MdItem, ResponseValue};
     use marketsurge_client::watchlist::WatchlistItem;
 
     use super::*;
@@ -288,7 +258,7 @@ mod tests {
             },
         ]];
 
-        let records = flatten_watchlist_screen(&rows);
+        let records = flatten_response_rows(&rows);
 
         assert_eq!(records.len(), 1);
         assert_eq!(records[0].get("EPSRating"), Some(&Some("95".into())));
@@ -297,7 +267,7 @@ mod tests {
 
     #[test]
     fn flatten_screen_empty_rows() {
-        let records = flatten_watchlist_screen(&[]);
+        let records = flatten_response_rows(&[]);
         assert!(records.is_empty());
     }
 
@@ -317,7 +287,7 @@ mod tests {
             },
         ]];
 
-        let records = flatten_watchlist_screen(&rows);
+        let records = flatten_response_rows(&rows);
 
         assert_eq!(records.len(), 1);
         assert_eq!(records[0].len(), 1);
@@ -334,7 +304,7 @@ mod tests {
             }),
         }]];
 
-        let records = flatten_watchlist_screen(&rows);
+        let records = flatten_response_rows(&rows);
 
         assert_eq!(records.len(), 1);
         assert_eq!(records[0].get("CompRating"), Some(&None));

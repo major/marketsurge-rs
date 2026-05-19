@@ -25,6 +25,7 @@ agent/src/
     mod.rs          shared utilities (auth, command helpers)
     auth.rs         browser cookie auth, error-to-exit-code mapping
     command.rs      run_command() harness, zip_symbols() helper
+    rows.rs         row flattening and response column helpers
 ```
 
 ## Conventions
