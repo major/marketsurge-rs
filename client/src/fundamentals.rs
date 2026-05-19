@@ -1,6 +1,7 @@
 //! Fundamentals financial data endpoints.
 
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use crate::client::Client;
 use crate::types::symbols_to_owned;
@@ -146,9 +147,53 @@ pub type FundamentalsDateValue = crate::types::DateValue;
 #[serde(rename_all = "camelCase")]
 pub struct FundamentalsSymbology {
     /// Company information.
+    #[serde(default, deserialize_with = "deserialize_company")]
     pub company: Option<FundamentalsCompany>,
     /// Instrument information.
+    #[serde(default, deserialize_with = "deserialize_instrument")]
     pub instrument: Option<FundamentalsInstrument>,
+}
+
+fn deserialize_company<'de, D>(deserializer: D) -> Result<Option<FundamentalsCompany>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = Option::<Value>::deserialize(deserializer)?;
+
+    match value {
+        None | Some(Value::Null) => Ok(None),
+        Some(Value::Array(values)) if values.is_empty() => Ok(None),
+        Some(Value::Array(values)) => {
+            serde_json::from_value::<Vec<FundamentalsCompany>>(Value::Array(values))
+                .map(|companies| companies.into_iter().next())
+                .map_err(serde::de::Error::custom)
+        }
+        Some(value) => serde_json::from_value(value)
+            .map(Some)
+            .map_err(serde::de::Error::custom),
+    }
+}
+
+fn deserialize_instrument<'de, D>(
+    deserializer: D,
+) -> Result<Option<FundamentalsInstrument>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = Option::<Value>::deserialize(deserializer)?;
+
+    match value {
+        None | Some(Value::Null) => Ok(None),
+        Some(Value::Array(values)) if values.is_empty() => Ok(None),
+        Some(Value::Array(values)) => {
+            serde_json::from_value::<Vec<FundamentalsInstrument>>(Value::Array(values))
+                .map(|instruments| instruments.into_iter().next())
+                .map_err(serde::de::Error::custom)
+        }
+        Some(value) => serde_json::from_value(value)
+            .map(Some)
+            .map_err(serde::de::Error::custom),
+    }
 }
 
 /// Company profile information.
@@ -164,8 +209,28 @@ pub struct FundamentalsCompany {
 #[serde(rename_all = "camelCase")]
 pub struct FundamentalsInstrument {
     /// Available symbols.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_symbols")]
     pub symbols: Vec<FundamentalsSymbol>,
+}
+
+fn deserialize_symbols<'de, D>(deserializer: D) -> Result<Vec<FundamentalsSymbol>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = Option::<Value>::deserialize(deserializer)?;
+
+    match value {
+        None | Some(Value::Null) => Ok(Vec::new()),
+        Some(Value::Array(values)) => {
+            serde_json::from_value(Value::Array(values)).map_err(serde::de::Error::custom)
+        }
+        Some(Value::Object(map)) => serde_json::from_value(Value::Object(map))
+            .map(|symbol| vec![symbol])
+            .map_err(serde::de::Error::custom),
+        Some(value) => Err(serde::de::Error::custom(format!(
+            "expected symbol array or object, got {value}"
+        ))),
+    }
 }
 
 /// Symbol value and dialect type.
@@ -173,10 +238,40 @@ pub struct FundamentalsInstrument {
 #[serde(rename_all = "camelCase")]
 pub struct FundamentalsSymbol {
     /// Symbol ticker value.
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub value: Option<String>,
     /// Symbol dialect type (e.g. "CHARTING").
     #[serde(rename = "type")]
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub node_type: Option<String>,
+}
+
+fn deserialize_optional_string<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = Option::<Value>::deserialize(deserializer)?;
+
+    Ok(value.and_then(json_value_to_string))
+}
+
+fn json_value_to_string(value: Value) -> Option<String> {
+    match value {
+        Value::Null => None,
+        Value::String(value) => Some(value),
+        Value::Number(value) => Some(value.to_string()),
+        Value::Bool(value) => Some(value.to_string()),
+        Value::Array(values) => Some(Value::Array(values).to_string()),
+        Value::Object(map) => {
+            for key in ["value", "formattedValue", "displayValue", "name"] {
+                if let Some(value) = map.get(key).cloned().and_then(json_value_to_string) {
+                    return Some(value);
+                }
+            }
+
+            Some(Value::Object(map).to_string())
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -219,6 +314,7 @@ impl Client {
 
 #[cfg(test)]
 mod tests {
+    use super::{FundamentalsInstrument, FundamentalsSymbology};
     use crate::test_support::mock_test;
 
     #[tokio::test]
@@ -308,6 +404,67 @@ mod tests {
         assert_eq!(instrument.symbols[0].node_type.as_deref(), Some("CHARTING"));
 
         mock.assert();
+    }
+
+    #[test]
+    fn symbology_parses_empty_company_array_as_none() {
+        let symbology: FundamentalsSymbology = serde_json::from_str(
+            r#"{
+                "company": [],
+                "instrument": {
+                    "symbols": [
+                        {"value": "XNAS-AMD", "type": "DJ_KEY"}
+                    ]
+                }
+            }"#,
+        )
+        .expect("symbology should parse empty company array");
+
+        assert!(symbology.company.is_none());
+        assert_eq!(symbology.instrument.unwrap().symbols.len(), 1);
+    }
+
+    #[test]
+    fn instrument_parses_single_symbol_object() {
+        let instrument: FundamentalsInstrument = serde_json::from_str(
+            r#"{
+                "symbols": {"value": "XNAS-AMD", "type": "DJ_KEY"}
+            }"#,
+        )
+        .expect("instrument should parse single symbol object");
+
+        assert_eq!(instrument.symbols.len(), 1);
+        assert_eq!(instrument.symbols[0].value.as_deref(), Some("XNAS-AMD"));
+        assert_eq!(instrument.symbols[0].node_type.as_deref(), Some("DJ_KEY"));
+    }
+
+    #[test]
+    fn symbology_parses_array_wrapped_company_and_instrument() {
+        let symbology: FundamentalsSymbology = serde_json::from_str(
+            r#"{
+                "company": [{"companyName": "Advanced Micro Devices, Inc."}],
+                "instrument": [
+                    {
+                        "symbols": [
+                            {"value": "13-4698", "type": "DJ_KEY"},
+                            {"value": {"value": "AMD"}, "type": "TICKER"}
+                        ]
+                    }
+                ]
+            }"#,
+        )
+        .expect("symbology should parse array-wrapped company and instrument");
+
+        assert_eq!(
+            symbology.company.unwrap().company_name.as_deref(),
+            Some("Advanced Micro Devices, Inc.")
+        );
+
+        let symbols = symbology.instrument.unwrap().symbols;
+        assert_eq!(symbols.len(), 2);
+        assert_eq!(symbols[0].value.as_deref(), Some("13-4698"));
+        assert_eq!(symbols[0].node_type.as_deref(), Some("DJ_KEY"));
+        assert_eq!(symbols[1].value.as_deref(), Some("AMD"));
     }
 
     #[cfg(not(coverage))]
