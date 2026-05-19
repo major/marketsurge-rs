@@ -141,22 +141,7 @@ async fn execute_funds(args: &SymbolsArgs, json_table: bool) -> i32 {
                     .map_err(handle_api_error)?;
 
                 if let Some(result) = response.market_data_screen {
-                    for row in &result.response_values {
-                        records.push(FundOwnershipRecord {
-                            queried_symbol: symbol.to_string(),
-                            fund_symbol: cell_value(row, "Symbol"),
-                            fund_name: cell_value(row, "CompanyName"),
-                            holdings_pct: cell_value(row, "HoldingsPctFundAssetsHeld"),
-                            shares_held_1q_ago: cell_value(row, "NumberOfFunds1QAgo"),
-                            date_1q_ago: cell_value(row, "NumberOfFundsDate1QAgo"),
-                            shares_held_2q_ago: cell_value(row, "NumberOfFunds2QAgo"),
-                            date_2q_ago: cell_value(row, "NumberOfFundsDate2QAgo"),
-                            shares_held_3q_ago: cell_value(row, "NumberOfFunds3QAgo"),
-                            date_3q_ago: cell_value(row, "NumberOfFundsDate3QAgo"),
-                            shares_held_4q_ago: cell_value(row, "NumberOfFunds4QAgo"),
-                            date_4q_ago: cell_value(row, "NumberOfFundsDate4QAgo"),
-                        });
-                    }
+                    records.extend(flatten_fund_rows(symbol, &result.response_values));
                 }
             }
 
@@ -238,6 +223,33 @@ fn extract_dj_key(item: &FundamentalsItem) -> Option<&str> {
         .and_then(|s| s.value.as_deref())
 }
 
+/// Converts screen response rows into flat fund ownership records.
+///
+/// Each row in `response_values` becomes one [`FundOwnershipRecord`] tagged
+/// with the queried `symbol`. Missing or empty cells produce `None` fields.
+fn flatten_fund_rows(
+    symbol: &str,
+    response_values: &[Vec<ResponseValue>],
+) -> Vec<FundOwnershipRecord> {
+    response_values
+        .iter()
+        .map(|row| FundOwnershipRecord {
+            queried_symbol: symbol.to_string(),
+            fund_symbol: cell_value(row, "Symbol"),
+            fund_name: cell_value(row, "CompanyName"),
+            holdings_pct: cell_value(row, "HoldingsPctFundAssetsHeld"),
+            shares_held_1q_ago: cell_value(row, "NumberOfFunds1QAgo"),
+            date_1q_ago: cell_value(row, "NumberOfFundsDate1QAgo"),
+            shares_held_2q_ago: cell_value(row, "NumberOfFunds2QAgo"),
+            date_2q_ago: cell_value(row, "NumberOfFundsDate2QAgo"),
+            shares_held_3q_ago: cell_value(row, "NumberOfFunds3QAgo"),
+            date_3q_ago: cell_value(row, "NumberOfFundsDate3QAgo"),
+            shares_held_4q_ago: cell_value(row, "NumberOfFunds4QAgo"),
+            date_4q_ago: cell_value(row, "NumberOfFundsDate4QAgo"),
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use marketsurge_client::fundamentals::{
@@ -249,7 +261,7 @@ mod tests {
     };
     use marketsurge_client::screen::{MdItem, ResponseValue};
 
-    use super::{cell_value, extract_dj_key, flatten_ownership_summary};
+    use super::{cell_value, extract_dj_key, flatten_fund_rows, flatten_ownership_summary};
 
     fn response_value(name: &str, value: Option<&str>) -> ResponseValue {
         ResponseValue {
@@ -404,5 +416,67 @@ mod tests {
         };
 
         assert_eq!(extract_dj_key(&item), None);
+    }
+
+    // --- flatten_fund_rows tests ---
+
+    #[test]
+    fn test_flatten_fund_rows_two_rows() {
+        let rows = vec![
+            vec![
+                response_value("Symbol", Some("VFIAX")),
+                response_value("CompanyName", Some("Vanguard 500 Index")),
+                response_value("HoldingsPctFundAssetsHeld", Some("6.82")),
+                response_value("NumberOfFunds1QAgo", Some("1000")),
+                response_value("NumberOfFundsDate1QAgo", Some("2026-03-31")),
+            ],
+            vec![
+                response_value("Symbol", Some("FXAIX")),
+                response_value("CompanyName", Some("Fidelity 500 Index")),
+                response_value("HoldingsPctFundAssetsHeld", Some("5.10")),
+                response_value("NumberOfFunds1QAgo", Some("900")),
+                response_value("NumberOfFundsDate1QAgo", Some("2026-03-31")),
+            ],
+        ];
+
+        let records = flatten_fund_rows("AAPL", &rows);
+
+        assert_eq!(records.len(), 2);
+        assert_eq!(records[0].queried_symbol, "AAPL");
+        assert_eq!(records[0].fund_symbol.as_deref(), Some("VFIAX"));
+        assert_eq!(records[0].fund_name.as_deref(), Some("Vanguard 500 Index"));
+        assert_eq!(records[0].holdings_pct.as_deref(), Some("6.82"));
+        assert_eq!(records[0].shares_held_1q_ago.as_deref(), Some("1000"));
+        assert_eq!(records[0].date_1q_ago.as_deref(), Some("2026-03-31"));
+        assert_eq!(records[1].queried_symbol, "AAPL");
+        assert_eq!(records[1].fund_symbol.as_deref(), Some("FXAIX"));
+        assert_eq!(records[1].fund_name.as_deref(), Some("Fidelity 500 Index"));
+        assert_eq!(records[1].holdings_pct.as_deref(), Some("5.10"));
+    }
+
+    #[test]
+    fn test_flatten_fund_rows_empty() {
+        let rows: Vec<Vec<ResponseValue>> = Vec::new();
+
+        let records = flatten_fund_rows("AAPL", &rows);
+
+        assert!(records.is_empty());
+    }
+
+    #[test]
+    fn test_flatten_fund_rows_missing_cell() {
+        let rows = vec![vec![
+            response_value("Symbol", Some("VFIAX")),
+            // CompanyName deliberately absent
+            response_value("HoldingsPctFundAssetsHeld", Some("6.82")),
+        ]];
+
+        let records = flatten_fund_rows("AAPL", &rows);
+
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0].fund_symbol.as_deref(), Some("VFIAX"));
+        assert!(records[0].fund_name.is_none());
+        assert_eq!(records[0].holdings_pct.as_deref(), Some("6.82"));
+        assert!(records[0].shares_held_1q_ago.is_none());
     }
 }
