@@ -106,3 +106,91 @@ fn node_to_record(source: &str, node: &marketsurge_client::types::TreeNode) -> T
         reference_id: node.reference_id.clone(),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use marketsurge_client::types::{TreeChildNode, TreeNode};
+
+    #[test]
+    fn node_to_record_all_fields_populated() {
+        let node = TreeNode {
+            id: Some("123".to_string()),
+            name: Some("My Watchlist".to_string()),
+            parent_id: Some("0".to_string()),
+            node_type: Some("SYSTEM_FOLDER".to_string()),
+            children: vec![TreeChildNode {
+                id: Some("456".to_string()),
+                name: Some("Child".to_string()),
+                node_type: Some("STOCK_SCREEN".to_string()),
+            }],
+            content_type: Some("REPORTS".to_string()),
+            tree_type: Some("MSR_NAV".to_string()),
+            url: Some("/reports/123".to_string()),
+            reference_id: Some("ref-abc".to_string()),
+        };
+
+        let record = node_to_record("watchlist", &node);
+
+        assert_eq!(record.source, "watchlist");
+        assert_eq!(record.id.as_deref(), Some("123"));
+        assert_eq!(record.name.as_deref(), Some("My Watchlist"));
+        assert_eq!(record.parent_id.as_deref(), Some("0"));
+        assert_eq!(record.node_type.as_deref(), Some("SYSTEM_FOLDER"));
+        assert_eq!(record.content_type.as_deref(), Some("REPORTS"));
+        assert_eq!(record.tree_type.as_deref(), Some("MSR_NAV"));
+        assert_eq!(record.url.as_deref(), Some("/reports/123"));
+        assert_eq!(record.reference_id.as_deref(), Some("ref-abc"));
+    }
+
+    #[test]
+    fn node_to_record_all_optional_fields_none() {
+        let node = TreeNode {
+            id: None,
+            name: None,
+            parent_id: None,
+            node_type: None,
+            children: vec![],
+            content_type: None,
+            tree_type: None,
+            url: None,
+            reference_id: None,
+        };
+
+        let record = node_to_record("screen", &node);
+
+        assert_eq!(record.source, "screen");
+        assert!(record.id.is_none());
+        assert!(record.name.is_none());
+        assert!(record.parent_id.is_none());
+        assert!(record.node_type.is_none());
+        assert!(record.content_type.is_none());
+        assert!(record.tree_type.is_none());
+        assert!(record.url.is_none());
+        assert!(record.reference_id.is_none());
+    }
+
+    #[test]
+    fn node_to_record_source_string_mapping() {
+        let node = TreeNode {
+            id: Some("1".to_string()),
+            name: None,
+            parent_id: None,
+            node_type: None,
+            children: vec![],
+            content_type: None,
+            tree_type: None,
+            url: None,
+            reference_id: None,
+        };
+
+        let watchlist = node_to_record("watchlist", &node);
+        assert_eq!(watchlist.source, "watchlist");
+
+        let screen = node_to_record("screen", &node);
+        assert_eq!(screen.source, "screen");
+
+        let nav = node_to_record("nav", &node);
+        assert_eq!(nav.source, "nav");
+    }
+}
