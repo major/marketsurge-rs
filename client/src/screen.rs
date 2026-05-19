@@ -1,6 +1,7 @@
 //! Screen, Screens, RunScreen, and MarketDataScreen endpoints.
 
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use crate::client::Client;
 use crate::types::ResponseColumn;
@@ -65,9 +66,44 @@ struct MarketDataScreenVariables {
 #[serde(rename_all = "camelCase")]
 pub struct ResponseValue {
     /// Cell value (e.g. a ticker symbol, numeric string, or rating).
+    #[serde(default, deserialize_with = "deserialize_cell_value")]
     pub value: Option<String>,
     /// Market data item metadata for this cell.
     pub md_item: Option<MdItem>,
+}
+
+fn deserialize_cell_value<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = Option::<Value>::deserialize(deserializer)?;
+
+    Ok(value.and_then(cell_value_to_string))
+}
+
+fn cell_value_to_string(value: Value) -> Option<String> {
+    match value {
+        Value::Null => None,
+        Value::String(value) => Some(value),
+        Value::Number(value) => Some(value.to_string()),
+        Value::Bool(value) => Some(value.to_string()),
+        Value::Array(values) => Some(Value::Array(values).to_string()),
+        Value::Object(map) => {
+            for key in [
+                "formattedValue",
+                "value",
+                "displayValue",
+                "letterValue",
+                "name",
+            ] {
+                if let Some(value) = map.get(key).cloned().and_then(cell_value_to_string) {
+                    return Some(value);
+                }
+            }
+
+            Some(Value::Object(map).to_string())
+        }
+    }
 }
 
 /// Identifies a market data column in a screen response.
@@ -594,6 +630,41 @@ mod tests {
         assert_eq!(second_row.value.as_deref(), Some("GOOGL"));
 
         mock.assert();
+    }
+
+    #[test]
+    fn response_value_parses_object_value() {
+        let cell: ResponseValue = serde_json::from_str(
+            r#"{
+                "value": {
+                    "value": 12.34,
+                    "formattedValue": "12.34%"
+                },
+                "mdItem": {
+                    "mdItemID": 632,
+                    "name": "HoldingsPctFundAssetsHeld"
+                }
+            }"#,
+        )
+        .expect("response value should parse object value");
+
+        assert_eq!(cell.value.as_deref(), Some("12.34%"));
+    }
+
+    #[test]
+    fn response_value_parses_numeric_value() {
+        let cell: ResponseValue = serde_json::from_str(
+            r#"{
+                "value": 12345,
+                "mdItem": {
+                    "mdItemID": 453,
+                    "name": "NumberOfFunds1QAgo"
+                }
+            }"#,
+        )
+        .expect("response value should parse numeric value");
+
+        assert_eq!(cell.value.as_deref(), Some("12345"));
     }
 
     #[cfg(not(coverage))]
