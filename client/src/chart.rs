@@ -26,6 +26,8 @@ struct ChartMarketDataVariables {
     #[serde(rename = "where")]
     filter: TimeSeriesFilterInput,
     exchange_name: String,
+    holiday_start_date_time: String,
+    holiday_end_date_time: String,
 }
 
 #[derive(Serialize)]
@@ -233,6 +235,8 @@ impl Client {
                 include_intraday_data: include_intraday,
             },
             exchange_name: exchange_name.to_string(),
+            holiday_start_date_time: start_date_time.to_string(),
+            holiday_end_date_time: end_date_time.to_string(),
         };
 
         self.graphql_operation("ChartMarketData", variables, QUERY_CHART_MARKET_DATA)

@@ -3,6 +3,8 @@ query ChartMarketData(
   $symbolDialectType: MDSymbolDialectType!
   $where: TimeSeriesFilterInput!
   $exchangeName: String!
+  $holidayStartDateTime: String!
+  $holidayEndDateTime: String!
 ) {
   marketData(symbols: $symbols, symbolDialectType: $symbolDialectType) {
     id
@@ -60,8 +62,8 @@ query ChartMarketData(
     id
     holidays(
       where: {
-        startDateTime: { gt: "2021-12-02T07:00:00.000Z" }
-        endDateTime: { lt: "2026-03-27T23:55:25.000Z" }
+        startDateTime: { gt: $holidayStartDateTime }
+        endDateTime: { lt: $holidayEndDateTime }
       }
     ) {
       name
