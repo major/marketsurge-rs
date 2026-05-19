@@ -1,0 +1,27 @@
+query NavTree($site: Site!, $treeType: NavTreeTypeInput!) {
+  user {
+    navTree(site: $site, treeType: $treeType) {
+      ... on NavTreeFolder {
+        id
+        name
+        parentId
+        type
+        children {
+          ... on NavTreeFolder { id name type }
+          ... on NavTreeLeaf { id name type }
+        }
+        contentType
+        treeType
+      }
+      ... on NavTreeLeaf {
+        id
+        name
+        parentId
+        type
+        url
+        treeType
+        referenceId
+      }
+    }
+  }
+}

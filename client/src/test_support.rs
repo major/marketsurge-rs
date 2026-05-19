@@ -33,6 +33,47 @@ pub fn mock_graphql(
         .create()
 }
 
+/// Create a mock GraphQL endpoint with a raw status and response body.
+#[allow(dead_code)]
+pub fn mock_graphql_response(
+    server: &mut mockito::ServerGuard,
+    status: usize,
+    response_body: &str,
+) -> mockito::Mock {
+    server
+        .mock("POST", "/gateway/graphql")
+        .with_status(status)
+        .with_header("content-type", "application/json")
+        .with_body(response_body)
+        .create()
+}
+
+/// Create a mock GET endpoint with a raw status and response body.
+#[allow(dead_code)]
+pub fn mock_get_response(
+    server: &mut mockito::ServerGuard,
+    path: &str,
+    status: usize,
+    response_body: &str,
+) -> mockito::Mock {
+    server
+        .mock("GET", path)
+        .with_status(status)
+        .with_header("content-type", "application/json")
+        .with_body(response_body)
+        .create()
+}
+
+/// Create a [`Client`] for a mockito server.
+///
+/// # Panics
+///
+/// Panics if the client cannot be built.
+#[allow(dead_code)]
+pub fn test_client(server: &mockito::ServerGuard) -> crate::client::Client {
+    crate::client::Client::new(test_config(server)).expect("client should build")
+}
+
 /// Create a [`ClientConfig`] pointing at a mockito server's GraphQL endpoint.
 pub fn test_config(server: &mockito::ServerGuard) -> crate::client::ClientConfig {
     let graphql_url = url::Url::parse(&format!("{}/gateway/graphql", server.url()))
@@ -67,7 +108,7 @@ pub async fn mock_test_with_fixture(
     let mut server = mockito::Server::new_async().await;
     let response_body = load_fixture(fixture_endpoint, "response.json");
     let mock = mock_graphql(&mut server, operation, &response_body);
-    let client = crate::client::Client::new(test_config(&server)).expect("client should build");
+    let client = test_client(&server);
     (server, client, mock)
 }
 

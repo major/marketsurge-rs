@@ -3,37 +3,12 @@
 use serde::{Deserialize, Serialize};
 
 use crate::client::Client;
-use crate::graphql::GraphQLRequest;
 
 // ---------------------------------------------------------------------------
 // GraphQL query
 // ---------------------------------------------------------------------------
 
-const QUERY_FETCH_CHART_MARKUPS: &str = r#"query FetchChartMarkups($site: Site!, $dowJonesKey: String, $frequency: ChartMarkupFrequencyInput, $dateStart: String, $dateEnd: String, $cursorId: String, $limit: Int, $sortDir: SortDirInput) {
-  user {
-    chartMarkups(
-      site: $site
-      dowJonesKey: $dowJonesKey
-      frequency: $frequency
-      dateStart: $dateStart
-      dateEnd: $dateEnd
-      cursorId: $cursorId
-      limit: $limit
-      sortDir: $sortDir
-    ) {
-      cursorId
-      chartMarkups {
-        createdAt
-        data
-        frequency
-        id
-        name
-        site
-        updatedAt
-      }
-    }
-  }
-}"#;
+const QUERY_FETCH_CHART_MARKUPS: &str = include_str!("graphql/fetch_chart_markups.graphql");
 
 // ---------------------------------------------------------------------------
 // Wire variable types (serialization only)
@@ -137,13 +112,8 @@ impl Client {
             limit: None,
         };
 
-        let request = GraphQLRequest {
-            operation_name: "FetchChartMarkups".to_string(),
-            variables,
-            query: QUERY_FETCH_CHART_MARKUPS.to_string(),
-        };
-
-        self.graphql_post(&request).await
+        self.graphql_operation("FetchChartMarkups", variables, QUERY_FETCH_CHART_MARKUPS)
+            .await
     }
 }
 

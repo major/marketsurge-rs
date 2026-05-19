@@ -1,0 +1,14 @@
+query RunScreen($input: ScreenResultInput!) {
+  user {
+    runScreen(input: $input) {
+      numberOfMatchingInstruments
+      responseValues {
+        value
+        mdItem {
+          name
+          mdItemID
+        }
+      }
+    }
+  }
+}

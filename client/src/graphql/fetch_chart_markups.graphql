@@ -1,0 +1,25 @@
+query FetchChartMarkups($site: Site!, $dowJonesKey: String, $frequency: ChartMarkupFrequencyInput, $dateStart: String, $dateEnd: String, $cursorId: String, $limit: Int, $sortDir: SortDirInput) {
+  user {
+    chartMarkups(
+      site: $site
+      dowJonesKey: $dowJonesKey
+      frequency: $frequency
+      dateStart: $dateStart
+      dateEnd: $dateEnd
+      cursorId: $cursorId
+      limit: $limit
+      sortDir: $sortDir
+    ) {
+      cursorId
+      chartMarkups {
+        createdAt
+        data
+        frequency
+        id
+        name
+        site
+        updatedAt
+      }
+    }
+  }
+}

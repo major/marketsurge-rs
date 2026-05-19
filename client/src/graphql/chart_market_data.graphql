@@ -1,0 +1,76 @@
+query ChartMarketData(
+  $symbols: [String!]!
+  $symbolDialectType: MDSymbolDialectType!
+  $where: TimeSeriesFilterInput!
+  $exchangeName: String!
+  $holidayStartDateTime: String!
+  $holidayEndDateTime: String!
+) {
+  marketData(symbols: $symbols, symbolDialectType: $symbolDialectType) {
+    id
+    originRequest {
+      fromDialect
+      symbol
+    }
+    pricing {
+      timeSeries(where: $where) {
+        period
+        dataPoints {
+          startDateTime
+          endDateTime
+          volume { value }
+          last { value }
+          low { value }
+          high { value }
+          open { value }
+        }
+      }
+      quote {
+        tradeDateTime
+        timeliness
+        quoteType
+        volume { value formattedValue }
+        percentChange { value formattedValue }
+        netChange { value formattedValue }
+        last { value formattedValue }
+      }
+      premarketQuote {
+        last { value formattedValue }
+        tradeDateTime
+        timeliness
+        volume { value formattedValue }
+        percentChange { value formattedValue }
+        quoteType
+        netChange { value formattedValue }
+      }
+      postmarketQuote {
+        volume { value formattedValue }
+        tradeDateTime
+        timeliness
+        percentChange { formattedValue value }
+        netChange { value formattedValue }
+        quoteType
+        last { value formattedValue }
+      }
+      currentMarketState
+    }
+  }
+  exchangeData(exchangeName: $exchangeName) {
+    city
+    countryCode
+    exchangeISO
+    id
+    holidays(
+      where: {
+        startDateTime: { gt: $holidayStartDateTime }
+        endDateTime: { lt: $holidayEndDateTime }
+      }
+    ) {
+      name
+      holidayType
+      description
+      startDateTime
+      endDateTime
+    }
+  }
+}

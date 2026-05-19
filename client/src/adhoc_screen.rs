@@ -3,7 +3,6 @@
 use serde::{Deserialize, Serialize};
 
 use crate::client::Client;
-use crate::graphql::GraphQLRequest;
 pub use crate::screen::{MdItem, ResponseValue};
 use crate::types::ResponseColumn;
 
@@ -11,84 +10,10 @@ use crate::types::ResponseColumn;
 // GraphQL queries
 // ---------------------------------------------------------------------------
 
-const QUERY_MARKET_DATA_ADHOC_SCREEN: &str = r#"query MarketDataAdhocScreen(
-  $correlationTag: String!
-  $adhocQuery: MDAdhocQueryInput
-  $responseColumns: [MDAdhocScreenerDataItemInput!]!
-  $resultLimit: Int!
-  $pageSize: Int!
-  $pageSkip: Int
-  $includeSource: MDScreenerDataSourceInput!
-  $resultType: MDScreenerResultType
-) {
-  marketDataAdhocScreen(
-    correlationTag: $correlationTag
-    adhocQuery: $adhocQuery
-    resultLimit: $resultLimit
-    pageSize: $pageSize
-    pageSkip: $pageSkip
-    includeSource: $includeSource
-    responseDataPoints: $responseColumns
-    resultType: $resultType
-  ) {
-    correlationTag
-    elapsedTime
-    errorValues
-    numberOfInstrumentsInSource
-    numberOfMatchingInstruments
-    adhocQueryString
-    adhocQuery {
-      terms {
-        numberOfMatchingInstruments
-        ordinal
-        left {
-          name
-          mdItemID
-        }
-        operand
-        right {
-          value
-          maximumValue
-          minimumValue
-        }
-      }
-    }
-    responseValues {
-      value
-      mdItem {
-        mdItemID
-        name
-      }
-    }
-  }
-}"#;
+const QUERY_MARKET_DATA_ADHOC_SCREEN: &str =
+    include_str!("graphql/market_data_adhoc_screen.graphql");
 
-const QUERY_SCREENER_WATCHLIST: &str = r#"query ScreenerWatchlist($correlationTag: String!, $responseColumns: [MDAdhocScreenerDataItemInput!]!, $resultLimit: Int!, $pageSize: Int!, $pageSkip: Int, $includeSource: MDScreenerDataSourceInput!) {
-  marketDataAdhocScreen(
-    correlationTag: $correlationTag
-    resultLimit: $resultLimit
-    pageSize: $pageSize
-    pageSkip: $pageSkip
-    includeSource: $includeSource
-    responseDataPoints: $responseColumns
-  ) {
-    correlationTag
-    elapsedTime
-    errorValues
-    numberOfMatchingInstruments
-    numberOfInstrumentsInSource
-    responseValues {
-      value
-      mdItem {
-        mdItemID
-        name
-        __typename
-      }
-      __typename
-    }
-    __typename
-  }
-}"#;
+const QUERY_SCREENER_WATCHLIST: &str = include_str!("graphql/screener_watchlist.graphql");
 
 // ---------------------------------------------------------------------------
 // Wire variable types (serialization only)
@@ -277,13 +202,12 @@ impl Client {
             result_type: result_type.to_string(),
         };
 
-        let request = GraphQLRequest {
-            operation_name: "MarketDataAdhocScreen".to_string(),
+        self.graphql_operation(
+            "MarketDataAdhocScreen",
             variables,
-            query: QUERY_MARKET_DATA_ADHOC_SCREEN.to_string(),
-        };
-
-        self.graphql_post(&request).await
+            QUERY_MARKET_DATA_ADHOC_SCREEN,
+        )
+        .await
     }
 
     /// Fetches screener values for specific instruments via a watchlist query.
@@ -310,13 +234,8 @@ impl Client {
             include_source,
         };
 
-        let request = GraphQLRequest {
-            operation_name: "ScreenerWatchlist".to_string(),
-            variables,
-            query: QUERY_SCREENER_WATCHLIST.to_string(),
-        };
-
-        self.graphql_post(&request).await
+        self.graphql_operation("ScreenerWatchlist", variables, QUERY_SCREENER_WATCHLIST)
+            .await
     }
 }
 

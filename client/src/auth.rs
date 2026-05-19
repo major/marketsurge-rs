@@ -90,6 +90,7 @@ pub async fn exchange_jwt(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_support::mock_get_response;
 
     fn test_cookie_jar(base_url: &Url) -> Jar {
         let jar = Jar::default();
@@ -131,12 +132,7 @@ mod tests {
     async fn test_jwt_exchange_401() {
         let mut server = mockito::Server::new_async().await;
         let base_url = Url::parse(&server.url()).expect("mock server URL should parse");
-        server
-            .mock("GET", JWT_EXCHANGE_PATH)
-            .with_status(401)
-            .with_body("unauthorized")
-            .create_async()
-            .await;
+        mock_get_response(&mut server, JWT_EXCHANGE_PATH, 401, "unauthorized");
         let http = reqwest::Client::new();
         let jar = test_cookie_jar(&base_url);
 
@@ -157,13 +153,12 @@ mod tests {
     async fn test_jwt_exchange_rejects_logged_out_response() {
         let mut server = mockito::Server::new_async().await;
         let base_url = Url::parse(&server.url()).expect("mock server URL should parse");
-        server
-            .mock("GET", JWT_EXCHANGE_PATH)
-            .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body(r#"{"isLoggedIn":false,"jwt":"ignored"}"#)
-            .create_async()
-            .await;
+        mock_get_response(
+            &mut server,
+            JWT_EXCHANGE_PATH,
+            200,
+            r#"{"isLoggedIn":false,"jwt":"ignored"}"#,
+        );
         let http = reqwest::Client::new();
         let jar = test_cookie_jar(&base_url);
 
@@ -184,13 +179,12 @@ mod tests {
     async fn test_jwt_exchange_rejects_empty_jwt() {
         let mut server = mockito::Server::new_async().await;
         let base_url = Url::parse(&server.url()).expect("mock server URL should parse");
-        server
-            .mock("GET", JWT_EXCHANGE_PATH)
-            .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body(r#"{"isLoggedIn":true,"jwt":""}"#)
-            .create_async()
-            .await;
+        mock_get_response(
+            &mut server,
+            JWT_EXCHANGE_PATH,
+            200,
+            r#"{"isLoggedIn":true,"jwt":""}"#,
+        );
         let http = reqwest::Client::new();
         let jar = test_cookie_jar(&base_url);
 

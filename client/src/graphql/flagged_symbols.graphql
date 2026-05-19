@@ -1,0 +1,12 @@
+query FlaggedSymbols($pub: String!, $watchlistId: ID!) {
+  watchlist(pub: $pub, watchlistId: $watchlistId) {
+    id
+    name
+    lastModifiedDateUtc
+    description
+    items {
+      key
+      dowJonesKey
+    }
+  }
+}

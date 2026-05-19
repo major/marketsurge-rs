@@ -1,0 +1,37 @@
+query IndustryOverview($symbols: [String!]!, $symbolDialectType: MDSymbolDialectType!) {
+  marketData(symbols: $symbols, symbolDialectType: $symbolDialectType) {
+    id
+    industry {
+      name
+      indCode
+      newsCode
+      sector
+      groupMarketValueInBillions {
+        formattedValue
+      }
+      numNewHighsInGroup
+      numNewLowsInGroup
+      numberOfStocksInGroup
+      groupRanks(where: {periodOffset: {eq: CURRENT}}) {
+        value
+        period
+        periodOffset
+      }
+      pricePercentChangeVs(where: {subject: {in: [VS_YTD, VS_1D_AGO]}}) {
+        subject
+        formattedValue
+      }
+    }
+    ratings {
+      hasRatingsData
+      industry {
+        adRankInIndustryGroup
+        compRankInIndustryGroup
+        epsRankInIndustryGroup
+        numberOfStocksInGroup
+        rsRankInIndustryGroup
+        smrRankInIndustryGroup
+      }
+    }
+  }
+}

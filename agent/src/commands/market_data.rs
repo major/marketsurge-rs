@@ -5,10 +5,9 @@ use serde::Serialize;
 use tracing::instrument;
 
 use crate::cli::SymbolsArgs;
-use crate::common::auth::handle_api_error;
 use marketsurge_client::market_data::MdMarketDataItem;
 
-use crate::common::command::{run_command, zip_symbols};
+use crate::common::command::{api_call, run_command, zip_symbols};
 
 /// Flat output record for a single symbol's market data snapshot.
 ///
@@ -212,16 +211,14 @@ pub async fn handle(args: &SymbolsArgs, json_table: bool) -> i32 {
         &args.symbols,
         json_table,
         |client, symbol_refs| async move {
-            let response = client
-                .other_market_data(
-                    &symbol_refs,
-                    "CHARTING",
-                    "P12Q_AGO",
-                    "P24Q_AGO",
-                    "P4Q_FUTURE",
-                )
-                .await
-                .map_err(handle_api_error)?;
+            let response = api_call(client.other_market_data(
+                &symbol_refs,
+                "CHARTING",
+                "P12Q_AGO",
+                "P24Q_AGO",
+                "P4Q_FUTURE",
+            ))
+            .await?;
 
             Ok(flatten_market_data(&symbol_refs, &response.market_data))
         },

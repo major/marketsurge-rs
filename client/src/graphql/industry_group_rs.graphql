@@ -1,0 +1,12 @@
+query IndustryGroupRS($symbols: [String!]!, $symbolDialectType: MDSymbolDialectType!) {
+  marketData(symbols: $symbols, symbolDialectType: $symbolDialectType) {
+    originRequest {
+      symbol
+    }
+    industry {
+      groupRS(where: { periodOffset: { eq: CURRENT }, period: { eq: P6M } }) {
+        value
+      }
+    }
+  }
+}

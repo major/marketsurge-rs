@@ -12,6 +12,7 @@ client/src/
   auth.rs             JWT token exchange from session cookies
   browser_auth.rs     Firefox cookie extraction via rookie crate
   graphql.rs          GraphQL request/response envelope types
+  graphql/            embedded GraphQL operation documents used by include_str!
   types.rs            shared domain types (date wrappers, numeric types)
 
   # Endpoint modules (one per MarketSurge API operation)
@@ -48,7 +49,7 @@ The crate's public surface is defined in `lib.rs`:
 
 ### GraphQL Execution
 
-All API calls go through `Client::execute_graphql()`, which sends a POST with a `GraphQLRequest` body and parses the `GraphQLResponse<T>` envelope. Endpoint modules wrap this with typed methods (e.g., `client.get_watchlists()`).
+All API calls go through `Client::graphql_post()`, which sends a POST with a `GraphQLRequest` body and parses the `GraphQLResponse<T>` envelope. Endpoint modules keep typed methods thin by using the crate-private `Client::graphql_operation()` helper. GraphQL documents live under `client/src/graphql/` and are embedded with `include_str!`, so the crate has no runtime file dependency.
 
 ### Error Handling
 
@@ -91,7 +92,10 @@ All tests are colocated `#[cfg(test)] mod tests` at the bottom of each source fi
 Compiled only under `#[cfg(test)]`. Provides:
 - `load_fixture(endpoint, file)` - reads JSON from `testdata/<endpoint>/<file>`
 - `mock_graphql(server, response_body)` - sets up a mockito mock for the GraphQL endpoint
+- `mock_graphql_response(server, status, body)` - sets up a raw GraphQL mock response for client error-path tests
+- `mock_get_response(server, path, status, body)` - sets up a raw GET mock response for auth error-path tests
 - `test_config(server)` - creates a `ClientConfig` pointed at the mock server
+- `test_client(server)` - creates a `Client` pointed at the mock server
 - `mock_test(operation)` - full mock setup for a single operation (loads fixture, creates mock, returns client)
 - `mock_test_with_fixture(fixture_endpoint, operation)` - mock setup reusing another operation's fixture
 - `live_client()` - creates a real client for live integration tests

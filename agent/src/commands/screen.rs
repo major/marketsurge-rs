@@ -1,15 +1,13 @@
 //! Stock screen commands for listing, running, and querying screens.
 
-use std::collections::BTreeMap;
-
 use clap::{Args, Subcommand};
 use marketsurge_client::coach::{CoachTreeNode, CoachTreeResponse};
 use marketsurge_client::screen::{ResponseValue, ScreenEntry, ScreensResponse};
 use serde::Serialize;
 use tracing::instrument;
 
-use crate::common::auth::handle_api_error;
-use crate::common::command::run_client_command;
+use crate::common::command::{api_call, run_client_command};
+use crate::common::rows::flatten_response_rows;
 
 /// Screen subcommands.
 #[derive(Debug, Subcommand)]
@@ -74,24 +72,17 @@ pub async fn handle(args: &crate::cli::ScreenArgs, json_table: bool) -> i32 {
 }
 
 #[instrument(skip_all)]
+#[cfg(not(coverage))]
 async fn execute_list(args: &ListArgs, json_table: bool) -> i32 {
     let coach = args.coach;
 
     run_client_command(json_table, |client| async move {
         // Always include user screens.
-        let screens_response = client
-            .screens("marketsurge")
-            .await
-            .map_err(handle_api_error)?;
+        let screens_response = api_call(client.screens("marketsurge")).await?;
 
         // Optionally include coach screens.
         let coach_response = if coach {
-            Some(
-                client
-                    .coach_tree("marketsurge", "MSR_NAV")
-                    .await
-                    .map_err(handle_api_error)?,
-            )
+            Some(api_call(client.coach_tree("marketsurge", "MSR_NAV")).await?)
         } else {
             None
         };
@@ -105,6 +96,7 @@ async fn execute_list(args: &ListArgs, json_table: bool) -> i32 {
 }
 
 #[instrument(skip_all)]
+#[cfg(not(coverage))]
 async fn execute_run(args: &RunArgs, json_table: bool) -> i32 {
     let screen_id_or_name = args.screen_id.clone();
     let limit = args.limit;
@@ -127,7 +119,7 @@ async fn execute_run(args: &RunArgs, json_table: bool) -> i32 {
             response_columns: Vec::new(),
         };
 
-        let response = client.run_screen(input).await.map_err(handle_api_error)?;
+        let response = api_call(client.run_screen(input)).await?;
 
         let rows: &[Vec<ResponseValue>] = response
             .user
@@ -136,7 +128,7 @@ async fn execute_run(args: &RunArgs, json_table: bool) -> i32 {
             .map(|result| result.response_values.as_slice())
             .unwrap_or(&[]);
 
-        Ok(flatten_screen_rows(rows))
+        Ok(flatten_response_rows(rows))
     })
     .await
 }
@@ -195,26 +187,6 @@ fn map_coach_screen_node(node: &CoachTreeNode) -> ScreenListRecord {
     }
 }
 
-/// Converts screen response rows into flat key-value maps.
-///
-/// Each row becomes a `BTreeMap` mapping column name to cell value. Cells
-/// without a named `md_item` are skipped.
-fn flatten_screen_rows(
-    response_values: &[Vec<ResponseValue>],
-) -> Vec<BTreeMap<String, Option<String>>> {
-    response_values
-        .iter()
-        .map(|row| {
-            row.iter()
-                .filter_map(|cell| {
-                    let name = cell.md_item.as_ref().and_then(|m| m.name.clone())?;
-                    Some((name, cell.value.clone()))
-                })
-                .collect()
-        })
-        .collect()
-}
-
 /// Resolves a screen name to its ID by checking the coach tree.
 ///
 /// If a matching coach screen name is found, returns its `referenceId`.
@@ -236,8 +208,11 @@ async fn resolve_screen_id(client: &marketsurge_client::Client, id_or_name: &str
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::common::test_support::{
+        optional_response_value, response_value, response_value_without_md_item,
+    };
     use marketsurge_client::coach::{CoachTreeResponse, CoachTreeUser};
-    use marketsurge_client::screen::{MdItem, ScreensResponse, ScreensUser};
+    use marketsurge_client::screen::{ScreensResponse, ScreensUser};
 
     fn make_screen_entry(id: &str, name: &str) -> ScreenEntry {
         ScreenEntry {
@@ -264,16 +239,6 @@ mod tests {
             tree_type: Some("MSR_NAV".to_string()),
             url: None,
             reference_id: Some(reference_id.to_string()),
-        }
-    }
-
-    fn make_response_value(name: &str, value: &str) -> ResponseValue {
-        ResponseValue {
-            value: Some(value.to_string()),
-            md_item: Some(MdItem {
-                md_item_id: None,
-                name: Some(name.to_string()),
-            }),
         }
     }
 
@@ -306,19 +271,19 @@ mod tests {
     }
 
     #[test]
-    fn flatten_screen_rows_converts_two_rows() {
+    fn flatten_response_rows_converts_two_rows() {
         let rows = vec![
             vec![
-                make_response_value("Symbol", "AAPL"),
-                make_response_value("CompanyName", "Apple Inc"),
+                response_value("Symbol", Some("AAPL")),
+                response_value("CompanyName", Some("Apple Inc")),
             ],
             vec![
-                make_response_value("Symbol", "NVDA"),
-                make_response_value("CompanyName", "NVIDIA Corp"),
+                response_value("Symbol", Some("NVDA")),
+                response_value("CompanyName", Some("NVIDIA Corp")),
             ],
         ];
 
-        let result = flatten_screen_rows(&rows);
+        let result = flatten_response_rows(&rows);
         assert_eq!(result.len(), 2);
         assert_eq!(result[0].get("Symbol"), Some(&Some("AAPL".to_string())));
         assert_eq!(
@@ -328,29 +293,20 @@ mod tests {
     }
 
     #[test]
-    fn flatten_screen_rows_empty_input() {
-        let result = flatten_screen_rows(&[]);
+    fn flatten_response_rows_empty_input() {
+        let result = flatten_response_rows(&[]);
         assert!(result.is_empty());
     }
 
     #[test]
-    fn flatten_screen_rows_skips_cells_without_md_item_name() {
+    fn flatten_response_rows_skips_cells_without_md_item_name() {
         let rows = vec![vec![
-            make_response_value("Symbol", "TSLA"),
-            ResponseValue {
-                value: Some("ignored".to_string()),
-                md_item: None,
-            },
-            ResponseValue {
-                value: Some("also-ignored".to_string()),
-                md_item: Some(MdItem {
-                    md_item_id: None,
-                    name: None,
-                }),
-            },
+            response_value("Symbol", Some("TSLA")),
+            response_value_without_md_item(Some("ignored")),
+            optional_response_value(None, Some("also-ignored")),
         ]];
 
-        let result = flatten_screen_rows(&rows);
+        let result = flatten_response_rows(&rows);
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].len(), 1);
         assert_eq!(result[0].get("Symbol"), Some(&Some("TSLA".to_string())));

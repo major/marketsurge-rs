@@ -1,0 +1,19 @@
+query Screens($site: Site!, $type: ScreenType, $sortDir: SortDirInput) {
+  user {
+    screens(site: $site, type: $type, sortDir: $sortDir) {
+      site
+      id
+      name
+      type
+      source {
+        id
+        type
+        pub
+      }
+      updatedAt
+      filterCriteria
+      description
+      createdAt
+    }
+  }
+}

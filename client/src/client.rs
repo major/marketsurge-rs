@@ -205,6 +205,21 @@ impl Client {
 
         Ok(serde_json::from_value(serde_json::Value::Null)?)
     }
+
+    /// Sends a typed GraphQL operation with the shared request envelope.
+    pub(crate) async fn graphql_operation<V, T>(
+        &self,
+        operation_name: &str,
+        variables: V,
+        query: impl Into<String>,
+    ) -> Result<T>
+    where
+        V: Serialize,
+        T: DeserializeOwned,
+    {
+        let request = GraphQLRequest::new(operation_name, variables, query);
+        self.graphql_post(&request).await
+    }
 }
 
 fn default_headers(config: &ClientConfig) -> HeaderMap {
@@ -248,7 +263,7 @@ fn parse_static_url(raw: &str) -> Url {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_support::test_config;
+    use crate::test_support::{mock_graphql_response, test_client, test_config};
     use serde::Deserialize;
 
     #[derive(Debug, Deserialize, PartialEq)]
@@ -276,7 +291,7 @@ mod tests {
             .with_body(r#"{"data":{"value":42},"errors":null}"#)
             .create_async()
             .await;
-        let client = Client::new(test_config(&server)).expect("client should build");
+        let client = test_client(&server);
 
         let data: TestData = client
             .graphql_post(&request())
@@ -290,13 +305,8 @@ mod tests {
     #[tokio::test]
     async fn test_non_2xx_returns_status_error() {
         let mut server = mockito::Server::new_async().await;
-        server
-            .mock("POST", "/gateway/graphql")
-            .with_status(401)
-            .with_body("unauthorized")
-            .create_async()
-            .await;
-        let client = Client::new(test_config(&server)).expect("client should build");
+        mock_graphql_response(&mut server, 401, "unauthorized");
+        let client = test_client(&server);
 
         let error = client
             .graphql_post::<_, TestData>(&request())
@@ -315,13 +325,7 @@ mod tests {
     #[tokio::test]
     async fn test_body_limit_exceeded() {
         let mut server = mockito::Server::new_async().await;
-        server
-            .mock("POST", "/gateway/graphql")
-            .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body(r#"{"data":{"value":42},"errors":null}"#)
-            .create_async()
-            .await;
+        mock_graphql_response(&mut server, 200, r#"{"data":{"value":42},"errors":null}"#);
         let config = test_config(&server).with_body_limit(5);
         let client = Client::new(config).expect("client should build");
 
@@ -339,16 +343,12 @@ mod tests {
     #[tokio::test]
     async fn test_graphql_errors_returns_graphql_error() {
         let mut server = mockito::Server::new_async().await;
-        server
-            .mock("POST", "/gateway/graphql")
-            .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body(
-                r#"{"data":null,"errors":[{"message":"not found","path":null,"extensions":null}]}"#,
-            )
-            .create_async()
-            .await;
-        let client = Client::new(test_config(&server)).expect("client should build");
+        mock_graphql_response(
+            &mut server,
+            200,
+            r#"{"data":null,"errors":[{"message":"not found","path":null,"extensions":null}]}"#,
+        );
+        let client = test_client(&server);
 
         let error = client
             .graphql_post::<_, TestData>(&request())
@@ -367,14 +367,8 @@ mod tests {
     #[tokio::test]
     async fn test_json_decode_error() {
         let mut server = mockito::Server::new_async().await;
-        server
-            .mock("POST", "/gateway/graphql")
-            .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body("not json")
-            .create_async()
-            .await;
-        let client = Client::new(test_config(&server)).expect("client should build");
+        mock_graphql_response(&mut server, 200, "not json");
+        let client = test_client(&server);
 
         let error = client
             .graphql_post::<_, TestData>(&request())
@@ -454,14 +448,8 @@ mod tests {
     #[tokio::test]
     async fn test_null_data_without_errors_deserializes_null() {
         let mut server = mockito::Server::new_async().await;
-        server
-            .mock("POST", "/gateway/graphql")
-            .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body(r#"{"data":null,"errors":null}"#)
-            .create_async()
-            .await;
-        let client = Client::new(test_config(&server)).expect("client should build");
+        mock_graphql_response(&mut server, 200, r#"{"data":null,"errors":null}"#);
+        let client = test_client(&server);
 
         let data: Option<TestData> = client
             .graphql_post(&request())

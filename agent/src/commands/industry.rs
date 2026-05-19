@@ -7,8 +7,7 @@ use tracing::instrument;
 use marketsurge_client::industry::{IndustryGroupRsItem, IndustryOverviewItem};
 
 use crate::cli::{IndustryArgs, SymbolsArgs};
-use crate::common::auth::handle_api_error;
-use crate::common::command::{run_command, zip_symbols};
+use crate::common::command::{api_call, run_command, zip_symbols};
 
 /// Industry subcommands.
 #[derive(Debug, Subcommand)]
@@ -99,15 +98,13 @@ fn flatten_industry_rs(
 }
 
 #[instrument(skip_all)]
+#[cfg(not(coverage))]
 async fn execute_rs(args: &SymbolsArgs, json_table: bool) -> i32 {
     run_command(
         &args.symbols,
         json_table,
         |client, symbol_refs| async move {
-            let response = client
-                .industry_group_rs(&symbol_refs, None)
-                .await
-                .map_err(handle_api_error)?;
+            let response = api_call(client.industry_group_rs(&symbol_refs, None)).await?;
 
             Ok(flatten_industry_rs(&symbol_refs, &response.market_data))
         },
@@ -170,15 +167,13 @@ fn flatten_industry_overview(market_data: &[IndustryOverviewItem]) -> Vec<Indust
 }
 
 #[instrument(skip_all)]
+#[cfg(not(coverage))]
 async fn execute_overview(args: &SymbolsArgs, json_table: bool) -> i32 {
     run_command(
         &args.symbols,
         json_table,
         |client, symbol_refs| async move {
-            let response = client
-                .industry_overview(&symbol_refs, None)
-                .await
-                .map_err(handle_api_error)?;
+            let response = api_call(client.industry_overview(&symbol_refs, None)).await?;
 
             Ok(flatten_industry_overview(&response.market_data))
         },

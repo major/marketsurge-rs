@@ -3,30 +3,13 @@
 use serde::{Deserialize, Serialize};
 
 use crate::client::Client;
-use crate::graphql::GraphQLRequest;
 use crate::types::SymbolVariables;
 
 // ---------------------------------------------------------------------------
 // GraphQL query
 // ---------------------------------------------------------------------------
 
-const QUERY_OWNERSHIP: &str = r#"query Ownership($symbols: [String!]!, $symbolDialectType: MDSymbolDialectType!) {
-  marketData(symbols: $symbols, symbolDialectType: $symbolDialectType) {
-    ownership {
-      fundsFloatPercentHeld {
-        formattedValue
-      }
-      fundOwnershipSummary {
-        date {
-          value
-        }
-        numberOfFundsHeld {
-          formattedValue
-        }
-      }
-    }
-  }
-}"#;
+const QUERY_OWNERSHIP: &str = include_str!("graphql/ownership.graphql");
 
 // ---------------------------------------------------------------------------
 // Response types
@@ -93,13 +76,12 @@ impl Client {
     /// Returns an error if the GraphQL request fails or the response
     /// cannot be deserialized.
     pub async fn ownership(&self, symbols: &[&str]) -> crate::error::Result<OwnershipResponse> {
-        let request = GraphQLRequest {
-            operation_name: "Ownership".to_string(),
-            variables: SymbolVariables::new(symbols, None),
-            query: QUERY_OWNERSHIP.to_string(),
-        };
-
-        self.graphql_post(&request).await
+        self.graphql_operation(
+            "Ownership",
+            SymbolVariables::new(symbols, None),
+            QUERY_OWNERSHIP,
+        )
+        .await
     }
 }
 

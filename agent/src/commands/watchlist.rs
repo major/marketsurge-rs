@@ -1,17 +1,13 @@
 //! Watchlist data commands.
 
-use std::collections::BTreeMap;
-
 use clap::{Args, Subcommand};
-use marketsurge_client::screen::ResponseValue;
-use marketsurge_client::types::ResponseColumn;
 use marketsurge_client::watchlist::{WatchlistDetail, WatchlistSummary};
 use serde::Serialize;
 use tracing::instrument;
 
 use crate::cli::WatchlistArgs;
-use crate::common::auth::handle_api_error;
-use crate::common::command::{run_client_command, run_command};
+use crate::common::command::{api_call, run_client_command, run_command};
+use crate::common::rows::{flatten_response_rows, response_columns};
 
 /// Watchlist subcommands.
 #[derive(Debug, Subcommand)]
@@ -103,12 +99,10 @@ fn flatten_watchlist_list(watchlists: &[WatchlistSummary]) -> Vec<WatchlistRecor
 }
 
 #[instrument(skip_all)]
+#[cfg(not(coverage))]
 async fn execute_list(json_table: bool) -> i32 {
     run_client_command(json_table, |client| async move {
-        let response = client
-            .get_all_watchlist_names()
-            .await
-            .map_err(handle_api_error)?;
+        let response = api_call(client.get_all_watchlist_names()).await?;
 
         Ok(flatten_watchlist_list(&response.watchlists))
     })
@@ -133,59 +127,28 @@ fn flatten_watchlist_symbols(watchlist: Option<&WatchlistDetail>) -> Vec<Watchli
 }
 
 #[instrument(skip_all)]
+#[cfg(not(coverage))]
 async fn execute_symbols(args: &WatchlistSymbolsArgs, json_table: bool) -> i32 {
     let watchlist_id = args.watchlist_id.clone();
 
     run_client_command(json_table, |client| async move {
-        let response = client
-            .flagged_symbols(&watchlist_id)
-            .await
-            .map_err(handle_api_error)?;
+        let response = api_call(client.flagged_symbols(&watchlist_id)).await?;
 
         Ok(flatten_watchlist_symbols(response.watchlist.as_ref()))
     })
     .await
 }
 
-/// Converts screen response rows into flat key-value maps.
-///
-/// Each row becomes a `BTreeMap` mapping column name to cell value. Cells
-/// without a named `md_item` are skipped.
-fn flatten_watchlist_screen(
-    response_values: &[Vec<ResponseValue>],
-) -> Vec<BTreeMap<String, Option<String>>> {
-    response_values
-        .iter()
-        .map(|row| {
-            row.iter()
-                .filter_map(|cell| {
-                    let name = cell.md_item.as_ref().and_then(|m| m.name.clone())?;
-                    Some((name, cell.value.clone()))
-                })
-                .collect()
-        })
-        .collect()
-}
-
 #[instrument(skip_all)]
+#[cfg(not(coverage))]
 async fn execute_screen(args: &WatchlistScreenArgs, json_table: bool) -> i32 {
-    let columns: Vec<ResponseColumn> = args
-        .columns
-        .iter()
-        .map(|name| ResponseColumn {
-            name: name.clone(),
-            sort_information: None,
-        })
-        .collect();
+    let columns = response_columns(&args.columns);
 
     run_command(
         &args.symbols,
         json_table,
         |client, symbol_refs| async move {
-            let response = client
-                .screener_watchlist_items(&symbol_refs, columns)
-                .await
-                .map_err(handle_api_error)?;
+            let response = api_call(client.screener_watchlist_items(&symbol_refs, columns)).await?;
 
             let empty = Vec::new();
             let rows = response
@@ -194,7 +157,7 @@ async fn execute_screen(args: &WatchlistScreenArgs, json_table: bool) -> i32 {
                 .map(|result| &result.response_values)
                 .unwrap_or(&empty);
 
-            Ok(flatten_watchlist_screen(rows))
+            Ok(flatten_response_rows(rows))
         },
     )
     .await
@@ -202,7 +165,7 @@ async fn execute_screen(args: &WatchlistScreenArgs, json_table: bool) -> i32 {
 
 #[cfg(test)]
 mod tests {
-    use marketsurge_client::screen::MdItem;
+    use crate::common::test_support::{response_value, response_value_without_md_item};
     use marketsurge_client::watchlist::WatchlistItem;
 
     use super::*;
@@ -272,23 +235,11 @@ mod tests {
     #[test]
     fn flatten_screen_maps_named_cells() {
         let rows = vec![vec![
-            ResponseValue {
-                value: Some("95".into()),
-                md_item: Some(MdItem {
-                    md_item_id: None,
-                    name: Some("EPSRating".into()),
-                }),
-            },
-            ResponseValue {
-                value: Some("88".into()),
-                md_item: Some(MdItem {
-                    md_item_id: None,
-                    name: Some("RSRating".into()),
-                }),
-            },
+            response_value("EPSRating", Some("95")),
+            response_value("RSRating", Some("88")),
         ]];
 
-        let records = flatten_watchlist_screen(&rows);
+        let records = flatten_response_rows(&rows);
 
         assert_eq!(records.len(), 1);
         assert_eq!(records[0].get("EPSRating"), Some(&Some("95".into())));
@@ -297,27 +248,18 @@ mod tests {
 
     #[test]
     fn flatten_screen_empty_rows() {
-        let records = flatten_watchlist_screen(&[]);
+        let records = flatten_response_rows(&[]);
         assert!(records.is_empty());
     }
 
     #[test]
     fn flatten_screen_skips_missing_md_item() {
         let rows = vec![vec![
-            ResponseValue {
-                value: Some("99".into()),
-                md_item: None,
-            },
-            ResponseValue {
-                value: Some("A".into()),
-                md_item: Some(MdItem {
-                    md_item_id: None,
-                    name: Some("SMRRating".into()),
-                }),
-            },
+            response_value_without_md_item(Some("99")),
+            response_value("SMRRating", Some("A")),
         ]];
 
-        let records = flatten_watchlist_screen(&rows);
+        let records = flatten_response_rows(&rows);
 
         assert_eq!(records.len(), 1);
         assert_eq!(records[0].len(), 1);
@@ -326,15 +268,9 @@ mod tests {
 
     #[test]
     fn flatten_screen_none_value_preserved() {
-        let rows = vec![vec![ResponseValue {
-            value: None,
-            md_item: Some(MdItem {
-                md_item_id: None,
-                name: Some("CompRating".into()),
-            }),
-        }]];
+        let rows = vec![vec![response_value("CompRating", None)]];
 
-        let records = flatten_watchlist_screen(&rows);
+        let records = flatten_response_rows(&rows);
 
         assert_eq!(records.len(), 1);
         assert_eq!(records[0].get("CompRating"), Some(&None));

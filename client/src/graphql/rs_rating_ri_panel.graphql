@@ -1,0 +1,25 @@
+query RSRatingRIPanel(
+  $symbols: [String!]!
+  $symbolDialectType: MDSymbolDialectType!
+) {
+  marketData(symbols: $symbols, symbolDialectType: $symbolDialectType) {
+    id
+    originRequest {
+      fromDialect
+      symbol
+    }
+    ratings {
+      rsRating {
+        letterValue
+        period
+        periodOffset
+        value
+      }
+    }
+    pricingStatistics {
+      intradayStatistics {
+        rsLineNewHigh
+      }
+    }
+  }
+}

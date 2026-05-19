@@ -1,0 +1,86 @@
+query FundermentalDataBox(
+  $symbols: [String!]!
+  $symbolDialectType: MDSymbolDialectType!
+  $upToHistoricalPeriodOffset: MDUpToQueryPeriodOffsetHistorical!
+  $upToQueryPeriodOffset: MDUpToQueryPeriodOffsetFuture!
+  $reportedSalesUpToHistoricalPeriod2: MDUpToQueryPeriodOffsetHistorical!
+  $salesEstimatesUpToQueryPeriod2: MDUpToQueryPeriodOffsetFuture!
+) {
+  marketData(symbols: $symbols, symbolDialectType: $symbolDialectType) {
+    financials {
+      consensusFinancials {
+        eps {
+          reportedEarnings(upToHistoricalPeriodOffset: $upToHistoricalPeriodOffset) {
+            value {
+              formattedValue
+              value
+            }
+            percentChangeYOY {
+              formattedValue
+              value
+            }
+            periodOffset
+            periodEndDate {
+              value
+            }
+          }
+        }
+        sales {
+          reportedSales(upToHistoricalPeriodOffset: $reportedSalesUpToHistoricalPeriod2) {
+            value {
+              formattedValue
+              value
+            }
+            percentChangeYOY {
+              formattedValue
+              value
+            }
+            periodEndDate {
+              value
+            }
+            periodOffset
+          }
+        }
+      }
+      estimates {
+        epsEstimates(upToQueryPeriodOffset: $upToQueryPeriodOffset) {
+          value {
+            value
+            formattedValue
+          }
+          percentChangeYOY {
+            value
+            formattedValue
+          }
+          periodOffset
+          period
+          revisionDirection
+        }
+        salesEstimates(upToQueryPeriodOffset: $salesEstimatesUpToQueryPeriod2) {
+          value {
+            value
+            formattedValue
+          }
+          percentChangeYOY {
+            value
+            formattedValue
+          }
+          periodOffset
+          period
+        }
+      }
+    }
+    id
+    symbology {
+      company {
+        companyName
+      }
+      instrument {
+        symbols {
+          value
+          type
+        }
+      }
+    }
+  }
+}

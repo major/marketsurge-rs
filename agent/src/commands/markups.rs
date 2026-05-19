@@ -4,8 +4,7 @@ use serde::Serialize;
 use tracing::instrument;
 
 use crate::cli::MarkupsArgs;
-use crate::common::auth::handle_api_error;
-use crate::common::command::run_client_command;
+use crate::common::command::{api_call, run_client_command};
 use marketsurge_client::markups::FetchChartMarkupsResponse;
 
 /// Flat output record for a chart markup entry.
@@ -54,15 +53,13 @@ pub async fn handle(args: &MarkupsArgs, json_table: bool) -> i32 {
     let sort_dir = args.sort_dir.clone();
 
     run_client_command(json_table, |client| async move {
-        let response = client
-            .fetch_chart_markups(
-                "marketsurge",
-                &dow_jones_key,
-                frequency.as_deref(),
-                sort_dir.as_deref(),
-            )
-            .await
-            .map_err(handle_api_error)?;
+        let response = api_call(client.fetch_chart_markups(
+            "marketsurge",
+            &dow_jones_key,
+            frequency.as_deref(),
+            sort_dir.as_deref(),
+        ))
+        .await?;
 
         Ok(flatten_markups(response))
     })

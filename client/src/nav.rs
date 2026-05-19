@@ -3,39 +3,12 @@
 use serde::{Deserialize, Serialize};
 
 use crate::client::Client;
-use crate::graphql::GraphQLRequest;
 
 // ---------------------------------------------------------------------------
 // GraphQL query
 // ---------------------------------------------------------------------------
 
-const QUERY_NAV_TREE: &str = r#"query NavTree($site: Site!, $treeType: NavTreeTypeInput!) {
-  user {
-    navTree(site: $site, treeType: $treeType) {
-      ... on NavTreeFolder {
-        id
-        name
-        parentId
-        type
-        children {
-          ... on NavTreeFolder { id name type }
-          ... on NavTreeLeaf { id name type }
-        }
-        contentType
-        treeType
-      }
-      ... on NavTreeLeaf {
-        id
-        name
-        parentId
-        type
-        url
-        treeType
-        referenceId
-      }
-    }
-  }
-}"#;
+const QUERY_NAV_TREE: &str = include_str!("graphql/nav_tree.graphql");
 
 // ---------------------------------------------------------------------------
 // Wire variable types (serialization only)
@@ -96,13 +69,8 @@ impl Client {
             tree_type: tree_type.to_string(),
         };
 
-        let request = GraphQLRequest {
-            operation_name: "NavTree".to_string(),
-            variables,
-            query: QUERY_NAV_TREE.to_string(),
-        };
-
-        self.graphql_post(&request).await
+        self.graphql_operation("NavTree", variables, QUERY_NAV_TREE)
+            .await
     }
 }
 

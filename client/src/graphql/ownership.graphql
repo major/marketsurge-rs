@@ -1,0 +1,17 @@
+query Ownership($symbols: [String!]!, $symbolDialectType: MDSymbolDialectType!) {
+  marketData(symbols: $symbols, symbolDialectType: $symbolDialectType) {
+    ownership {
+      fundsFloatPercentHeld {
+        formattedValue
+      }
+      fundOwnershipSummary {
+        date {
+          value
+        }
+        numberOfFundsHeld {
+          formattedValue
+        }
+      }
+    }
+  }
+}

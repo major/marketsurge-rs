@@ -15,6 +15,18 @@ pub struct GraphQLRequest<V> {
     pub query: String,
 }
 
+impl<V> GraphQLRequest<V> {
+    /// Creates a GraphQL request envelope.
+    #[must_use]
+    pub fn new(operation_name: impl Into<String>, variables: V, query: impl Into<String>) -> Self {
+        Self {
+            operation_name: operation_name.into(),
+            variables,
+            query: query.into(),
+        }
+    }
+}
+
 /// GraphQL response envelope.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(bound(serialize = "T: Serialize", deserialize = "T: DeserializeOwned"))]

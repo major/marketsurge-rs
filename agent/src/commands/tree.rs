@@ -5,8 +5,7 @@ use serde::Serialize;
 use tracing::instrument;
 
 use crate::cli::TreeArgs;
-use crate::common::auth::handle_api_error;
-use crate::common::command::run_client_command;
+use crate::common::command::{api_call, run_client_command};
 
 /// Tree subcommands.
 #[derive(Debug, Subcommand)]
@@ -53,12 +52,10 @@ pub async fn handle(args: &TreeArgs, json_table: bool) -> i32 {
 }
 
 #[instrument(skip_all)]
+#[cfg(not(coverage))]
 async fn execute_coach(json_table: bool) -> i32 {
     run_client_command(json_table, |client| async move {
-        let response = client
-            .coach_tree("marketsurge", "MSR_NAV")
-            .await
-            .map_err(handle_api_error)?;
+        let response = api_call(client.coach_tree("marketsurge", "MSR_NAV")).await?;
 
         Ok(flatten_coach_tree(&response))
     })
@@ -66,12 +63,10 @@ async fn execute_coach(json_table: bool) -> i32 {
 }
 
 #[instrument(skip_all)]
+#[cfg(not(coverage))]
 async fn execute_nav(json_table: bool) -> i32 {
     run_client_command(json_table, |client| async move {
-        let response = client
-            .nav_tree("marketsurge", "MSR_NAV")
-            .await
-            .map_err(handle_api_error)?;
+        let response = api_call(client.nav_tree("marketsurge", "MSR_NAV")).await?;
 
         Ok(flatten_nav_tree(&response))
     })
@@ -127,6 +122,7 @@ fn node_to_record(source: &str, node: &marketsurge_client::types::TreeNode) -> T
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::common::test_support::tree_node;
     use marketsurge_client::coach::{CoachTreeResponse, CoachTreeUser};
     use marketsurge_client::nav::{NavTreeResponse, NavTreeUser};
     use marketsurge_client::types::{TreeChildNode, TreeNode};
@@ -213,29 +209,15 @@ mod tests {
         assert_eq!(nav.source, "nav");
     }
 
-    fn make_tree_node(id: &str, name: &str) -> TreeNode {
-        TreeNode {
-            id: Some(id.to_string()),
-            name: Some(name.to_string()),
-            parent_id: None,
-            node_type: None,
-            children: vec![],
-            content_type: None,
-            tree_type: None,
-            url: None,
-            reference_id: None,
-        }
-    }
-
     #[test]
     fn flatten_coach_tree_mixed_watchlists_and_screens() {
         let response = CoachTreeResponse {
             user: Some(CoachTreeUser {
                 watchlists: vec![
-                    make_tree_node("w1", "Watchlist 1"),
-                    make_tree_node("w2", "Watchlist 2"),
+                    tree_node("w1", "Watchlist 1"),
+                    tree_node("w2", "Watchlist 2"),
                 ],
-                screens: vec![make_tree_node("s1", "Screen 1")],
+                screens: vec![tree_node("s1", "Screen 1")],
             }),
         };
 
@@ -263,7 +245,7 @@ mod tests {
     fn flatten_nav_tree_multiple_nodes() {
         let response = NavTreeResponse {
             user: Some(NavTreeUser {
-                nav_tree: vec![make_tree_node("n1", "Nav 1"), make_tree_node("n2", "Nav 2")],
+                nav_tree: vec![tree_node("n1", "Nav 1"), tree_node("n2", "Nav 2")],
             }),
         };
 
