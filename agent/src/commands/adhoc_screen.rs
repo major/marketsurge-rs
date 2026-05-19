@@ -142,3 +142,76 @@ fn build_include_source(args: &AdhocScreenCommandArgs) -> AdhocScreenIncludeSour
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{AdhocScreenCommandArgs, build_include_source};
+
+    fn args(
+        screen_id: Option<i64>,
+        symbols: Option<Vec<String>>,
+        dialect: Option<&str>,
+    ) -> AdhocScreenCommandArgs {
+        AdhocScreenCommandArgs {
+            columns: vec!["Symbol".to_string(), "CompanyName".to_string()],
+            query: None,
+            screen_id,
+            symbols,
+            dialect: dialect.map(str::to_string),
+            page_size: 1000,
+            limit: 1_000_000,
+            skip: 0,
+        }
+    }
+
+    #[test]
+    fn test_build_include_source_empty_args() {
+        let include_source = build_include_source(&args(None, None, None));
+
+        assert!(include_source.screen_id.is_none());
+        assert!(include_source.instruments.is_none());
+    }
+
+    #[test]
+    fn test_build_include_source_screen_id_defaults_dialect() {
+        let include_source = build_include_source(&args(Some(123), None, None));
+
+        let screen_id = include_source.screen_id.as_ref().expect("screen_id");
+        assert_eq!(screen_id.id, 123);
+        assert_eq!(screen_id.dialect, "MS_LIST_ID");
+        assert!(include_source.instruments.is_none());
+    }
+
+    #[test]
+    fn test_build_include_source_symbols_defaults_dialect() {
+        let include_source =
+            build_include_source(&args(None, Some(vec!["AAPL".to_string()]), None));
+
+        let instruments = include_source.instruments.as_ref().expect("instruments");
+        assert_eq!(instruments.symbols, vec!["AAPL".to_string()]);
+        assert_eq!(instruments.dialect, "CHARTING");
+        assert!(include_source.screen_id.is_none());
+    }
+
+    #[test]
+    fn test_build_include_source_screen_id_takes_precedence() {
+        let include_source =
+            build_include_source(&args(Some(123), Some(vec!["AAPL".to_string()]), None));
+
+        let screen_id = include_source.screen_id.as_ref().expect("screen_id");
+        assert_eq!(screen_id.id, 123);
+        assert_eq!(screen_id.dialect, "MS_LIST_ID");
+        assert!(include_source.instruments.is_none());
+    }
+
+    #[test]
+    fn test_build_include_source_symbols_uses_custom_dialect() {
+        let include_source =
+            build_include_source(&args(None, Some(vec!["AAPL".to_string()]), Some("CUSTOM")));
+
+        let instruments = include_source.instruments.as_ref().expect("instruments");
+        assert_eq!(instruments.symbols, vec!["AAPL".to_string()]);
+        assert_eq!(instruments.dialect, "CUSTOM");
+        assert!(include_source.screen_id.is_none());
+    }
+}

@@ -217,3 +217,48 @@ fn cell_value(row: &[ResponseValue], name: &str) -> Option<String> {
         .and_then(|cell| cell.value.clone())
         .filter(|v| !v.is_empty())
 }
+
+#[cfg(test)]
+mod tests {
+    use marketsurge_client::screen::{MdItem, ResponseValue};
+
+    use super::cell_value;
+
+    fn response_value(name: &str, value: Option<&str>) -> ResponseValue {
+        ResponseValue {
+            value: value.map(str::to_string),
+            md_item: Some(MdItem {
+                md_item_id: None,
+                name: Some(name.to_string()),
+            }),
+        }
+    }
+
+    #[test]
+    fn test_cell_value_matching_value() {
+        let row = vec![response_value("Symbol", Some("AAPL"))];
+
+        assert_eq!(cell_value(&row, "Symbol"), Some("AAPL".to_string()));
+    }
+
+    #[test]
+    fn test_cell_value_matching_empty_string() {
+        let row = vec![response_value("Symbol", Some(""))];
+
+        assert_eq!(cell_value(&row, "Symbol"), None);
+    }
+
+    #[test]
+    fn test_cell_value_missing_column() {
+        let row = vec![response_value("CompanyName", Some("Apple"))];
+
+        assert_eq!(cell_value(&row, "Symbol"), None);
+    }
+
+    #[test]
+    fn test_cell_value_empty_row() {
+        let row: Vec<ResponseValue> = Vec::new();
+
+        assert_eq!(cell_value(&row, "Symbol"), None);
+    }
+}
