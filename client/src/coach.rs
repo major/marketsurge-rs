@@ -180,6 +180,7 @@ mod tests {
         mock.assert();
     }
 
+    #[cfg(not(coverage))]
     #[tokio::test]
     #[ignore]
     async fn integration_coach_tree() {

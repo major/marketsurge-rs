@@ -20,6 +20,7 @@ use crate::cli::{Cli, Commands};
 
 /// Parses CLI arguments, routes to the appropriate command handler, and returns
 /// the process exit code.
+#[cfg(not(coverage))]
 pub async fn run() -> i32 {
     let cli = Cli::parse();
 

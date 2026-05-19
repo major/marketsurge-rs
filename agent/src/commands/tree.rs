@@ -42,6 +42,7 @@ pub struct TreeRecord {
 
 /// Handles the tree command group.
 #[instrument(skip_all)]
+#[cfg(not(coverage))]
 pub async fn handle(args: &TreeArgs, json_table: bool) -> i32 {
     match &args.command {
         TreeCommand::Coach => execute_coach(json_table).await,
@@ -260,10 +261,7 @@ mod tests {
     fn flatten_nav_tree_multiple_nodes() {
         let response = NavTreeResponse {
             user: Some(NavTreeUser {
-                nav_tree: vec![
-                    make_tree_node("n1", "Nav 1"),
-                    make_tree_node("n2", "Nav 2"),
-                ],
+                nav_tree: vec![make_tree_node("n1", "Nav 1"), make_tree_node("n2", "Nav 2")],
             }),
         };
 

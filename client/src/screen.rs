@@ -690,6 +690,7 @@ mod tests {
         mock.assert();
     }
 
+    #[cfg(not(coverage))]
     #[tokio::test]
     #[ignore]
     async fn integration_screen() {
@@ -702,6 +703,7 @@ mod tests {
         assert!(resp.user.and_then(|user| user.screen).is_some());
     }
 
+    #[cfg(not(coverage))]
     #[tokio::test]
     #[ignore]
     async fn integration_screens() {
@@ -715,6 +717,7 @@ mod tests {
         assert!(!user.screens.is_empty());
     }
 
+    #[cfg(not(coverage))]
     #[tokio::test]
     #[ignore]
     async fn integration_run_screen() {
@@ -807,6 +810,7 @@ mod tests {
         mock.assert();
     }
 
+    #[cfg(not(coverage))]
     #[tokio::test]
     #[ignore]
     async fn integration_market_data_screen() {

@@ -297,6 +297,7 @@ mod tests {
         mock.assert();
     }
 
+    #[cfg(not(coverage))]
     #[tokio::test]
     #[ignore]
     async fn integration_watchlist() {
@@ -310,6 +311,7 @@ mod tests {
         assert!(!resp.watchlists.is_empty());
     }
 
+    #[cfg(not(coverage))]
     #[tokio::test]
     #[ignore]
     async fn integration_flagged_symbols() {

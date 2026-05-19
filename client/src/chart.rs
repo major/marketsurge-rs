@@ -493,6 +493,7 @@ mod tests {
         mock.assert();
     }
 
+    #[cfg(not(coverage))]
     #[tokio::test]
     #[ignore]
     async fn integration_chart_market_data() {
@@ -513,6 +514,7 @@ mod tests {
         assert!(!resp.market_data.is_empty());
     }
 
+    #[cfg(not(coverage))]
     #[tokio::test]
     #[ignore]
     async fn integration_chart_market_data_weekly() {

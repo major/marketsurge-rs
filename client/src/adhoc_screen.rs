@@ -461,6 +461,7 @@ mod tests {
         mock.assert();
     }
 
+    #[cfg(not(coverage))]
     #[tokio::test]
     #[ignore]
     async fn integration_adhoc_screen() {
@@ -487,6 +488,7 @@ mod tests {
         assert!(resp.market_data_adhoc_screen.is_some());
     }
 
+    #[cfg(not(coverage))]
     #[tokio::test]
     #[ignore]
     async fn integration_market_data_adhoc_screen() {

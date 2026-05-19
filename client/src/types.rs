@@ -111,6 +111,32 @@ pub struct TreeNode {
     pub reference_id: Option<String>,
 }
 
+#[cfg(test)]
+mod tests {
+    use super::{DEFAULT_SYMBOL_DIALECT_TYPE, SymbolVariables, symbols_to_owned};
+
+    #[test]
+    fn symbols_to_owned_preserves_order() {
+        assert_eq!(symbols_to_owned(&["AAPL", "MSFT"]), vec!["AAPL", "MSFT"]);
+    }
+
+    #[test]
+    fn symbol_variables_uses_default_dialect() {
+        let variables = SymbolVariables::new(&["AAPL"], None);
+
+        assert_eq!(variables.symbols, vec!["AAPL"]);
+        assert_eq!(variables.symbol_dialect_type, DEFAULT_SYMBOL_DIALECT_TYPE);
+    }
+
+    #[test]
+    fn symbol_variables_uses_custom_dialect() {
+        let variables = SymbolVariables::new(&["AAPL"], Some("CUSTOM"));
+
+        assert_eq!(variables.symbols, vec!["AAPL"]);
+        assert_eq!(variables.symbol_dialect_type, "CUSTOM");
+    }
+}
+
 /// A child node summary within a tree folder.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

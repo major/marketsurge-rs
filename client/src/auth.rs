@@ -152,4 +152,58 @@ mod tests {
             other => panic!("expected Status error, got {other:?}"),
         }
     }
+
+    #[tokio::test]
+    async fn test_jwt_exchange_rejects_logged_out_response() {
+        let mut server = mockito::Server::new_async().await;
+        let base_url = Url::parse(&server.url()).expect("mock server URL should parse");
+        server
+            .mock("GET", JWT_EXCHANGE_PATH)
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(r#"{"isLoggedIn":false,"jwt":"ignored"}"#)
+            .create_async()
+            .await;
+        let http = reqwest::Client::new();
+        let jar = test_cookie_jar(&base_url);
+
+        let error = exchange_jwt(&http, &base_url, &jar)
+            .await
+            .expect_err("logged-out exchange should fail");
+
+        match error {
+            ClientError::Status { status, body } => {
+                assert_eq!(status, 401);
+                assert!(body.contains("not logged in"));
+            }
+            other => panic!("expected Status error, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_jwt_exchange_rejects_empty_jwt() {
+        let mut server = mockito::Server::new_async().await;
+        let base_url = Url::parse(&server.url()).expect("mock server URL should parse");
+        server
+            .mock("GET", JWT_EXCHANGE_PATH)
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(r#"{"isLoggedIn":true,"jwt":""}"#)
+            .create_async()
+            .await;
+        let http = reqwest::Client::new();
+        let jar = test_cookie_jar(&base_url);
+
+        let error = exchange_jwt(&http, &base_url, &jar)
+            .await
+            .expect_err("empty JWT exchange should fail");
+
+        match error {
+            ClientError::Status { status, body } => {
+                assert_eq!(status, 401);
+                assert_eq!(body, "JWT not found in exchange response");
+            }
+            other => panic!("expected Status error, got {other:?}"),
+        }
+    }
 }
