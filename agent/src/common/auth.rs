@@ -28,3 +28,26 @@ pub fn handle_api_error(err: ClientError) -> i32 {
         1
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::handle_api_error;
+    use marketsurge_client::ClientError;
+
+    fn status_error(status: u16) -> ClientError {
+        ClientError::Status {
+            status,
+            body: String::new(),
+        }
+    }
+
+    #[test]
+    fn test_handle_api_error_auth_returns_2() {
+        assert_eq!(handle_api_error(status_error(401)), 2);
+    }
+
+    #[test]
+    fn test_handle_api_error_other_returns_1() {
+        assert_eq!(handle_api_error(status_error(500)), 1);
+    }
+}

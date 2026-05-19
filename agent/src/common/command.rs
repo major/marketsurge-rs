@@ -71,3 +71,62 @@ pub fn zip_symbols<'a, T>(
         .enumerate()
         .map(move |(i, item)| (*symbols.get(i).unwrap_or(&"???"), item))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::zip_symbols;
+
+    fn collect_pairs<'a, T>(symbols: &'a [&str], items: &'a [T]) -> Vec<(&'a str, &'a T)> {
+        zip_symbols(symbols, items).collect()
+    }
+
+    #[test]
+    fn test_zip_symbols_equal_length() {
+        let symbols = ["AAPL", "MSFT"];
+        let items = [1, 2];
+
+        let zipped = collect_pairs(&symbols, &items);
+
+        assert_eq!(zipped, vec![("AAPL", &1), ("MSFT", &2)]);
+    }
+
+    #[test]
+    fn test_zip_symbols_more_items_than_symbols() {
+        let symbols = ["AAPL"];
+        let items = [1, 2, 3];
+
+        let zipped = collect_pairs(&symbols, &items);
+
+        assert_eq!(zipped, vec![("AAPL", &1), ("???", &2), ("???", &3)]);
+    }
+
+    #[test]
+    fn test_zip_symbols_empty_symbols_non_empty_items() {
+        let symbols: [&str; 0] = [];
+        let items = [1, 2];
+
+        let zipped = collect_pairs(&symbols, &items);
+
+        assert_eq!(zipped, vec![("???", &1), ("???", &2)]);
+    }
+
+    #[test]
+    fn test_zip_symbols_empty_items() {
+        let symbols = ["AAPL"];
+        let items: [i32; 0] = [];
+
+        let zipped = collect_pairs(&symbols, &items);
+
+        assert!(zipped.is_empty());
+    }
+
+    #[test]
+    fn test_zip_symbols_both_empty() {
+        let symbols: [&str; 0] = [];
+        let items: [i32; 0] = [];
+
+        let zipped = collect_pairs(&symbols, &items);
+
+        assert_eq!(zipped, Vec::new());
+    }
+}

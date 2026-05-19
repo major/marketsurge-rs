@@ -6,6 +6,8 @@ use tracing::instrument;
 
 use crate::cli::SymbolsArgs;
 use crate::common::auth::handle_api_error;
+use marketsurge_client::market_data::MdMarketDataItem;
+
 use crate::common::command::{run_command, zip_symbols};
 
 /// Flat output record for a single symbol's market data snapshot.
@@ -60,6 +62,149 @@ pub struct MarketDataRecord {
     pub rd_pct_last_qtr: Option<String>,
 }
 
+/// Flattens nested [`MdMarketDataItem`] responses into flat
+/// [`MarketDataRecord`] rows, one per symbol.
+fn flatten_market_data(
+    symbols: &[&str],
+    market_data: &[MdMarketDataItem],
+) -> Vec<MarketDataRecord> {
+    let mut records = Vec::new();
+
+    for (symbol, item) in zip_symbols(symbols, market_data) {
+        let company_name = item
+            .symbology
+            .as_ref()
+            .and_then(|s| s.company.as_ref())
+            .and_then(|c| c.company_name.clone());
+
+        let instrument_type = item
+            .symbology
+            .as_ref()
+            .and_then(|s| s.instrument.as_ref())
+            .and_then(|i| i.sub_type.clone());
+
+        let ipo_date = item
+            .symbology
+            .as_ref()
+            .and_then(|s| s.instrument.as_ref())
+            .and_then(|i| i.ipo_date.as_ref())
+            .and_then(|d| d.value.clone());
+
+        // Ratings: take the first (CURRENT) entry for each.
+        let ratings = &item.ratings;
+        let comp_rating = ratings
+            .as_ref()
+            .and_then(|r| r.comp_rating.first())
+            .and_then(|r| r.value);
+        let rs_rating = ratings
+            .as_ref()
+            .and_then(|r| r.rs_rating.first())
+            .and_then(|r| r.value);
+        let eps_rating = ratings
+            .as_ref()
+            .and_then(|r| r.eps_rating.first())
+            .and_then(|r| r.value);
+        let smr_rating = ratings
+            .as_ref()
+            .and_then(|r| r.smr_rating.first())
+            .and_then(|r| r.letter_value.clone());
+        let ad_rating = ratings
+            .as_ref()
+            .and_then(|r| r.ad_rating.first())
+            .and_then(|r| r.letter_value.clone());
+
+        // Pricing statistics
+        let eod = item
+            .pricing_statistics
+            .as_ref()
+            .and_then(|p| p.end_of_day_statistics.as_ref());
+
+        let market_cap = eod
+            .and_then(|e| e.market_capitalization.as_ref())
+            .and_then(|v| v.formatted_value.clone());
+
+        let avg_dollar_volume_50d = eod
+            .and_then(|e| e.avg_dollar_volume_50_day.as_ref())
+            .and_then(|v| v.formatted_value.clone());
+
+        let up_down_volume_ratio = eod
+            .and_then(|e| e.up_down_volume_ratio.as_ref())
+            .and_then(|v| v.formatted_value.clone());
+
+        let short_interest_pct_float = eod
+            .and_then(|e| e.short_interest.as_ref())
+            .and_then(|si| si.percent_of_float.as_ref())
+            .and_then(|v| v.formatted_value.clone());
+
+        let short_interest_days_to_cover = eod
+            .and_then(|e| e.short_interest.as_ref())
+            .and_then(|si| si.days_to_cover.as_ref())
+            .and_then(|v| v.formatted_value.clone());
+
+        // Industry
+        let industry = &item.industry;
+        let industry_name = industry.as_ref().and_then(|i| i.name.clone());
+        let industry_sector = industry.as_ref().and_then(|i| i.sector.clone());
+        let industry_stocks_in_group =
+            industry.as_ref().and_then(|i| i.number_of_stocks_in_group);
+
+        // Ownership
+        let funds_pct_float_held = item
+            .ownership
+            .as_ref()
+            .and_then(|o| o.funds_float_percent_held.as_ref())
+            .and_then(|v| v.formatted_value.clone());
+
+        // Financials
+        let financials = &item.financials;
+        let eps_due_date = financials
+            .as_ref()
+            .and_then(|f| f.eps_due_date.as_ref())
+            .and_then(|d| d.formatted_value.clone());
+        let eps_due_date_status = financials
+            .as_ref()
+            .and_then(|f| f.eps_due_date_status.clone());
+
+        // Fundamentals
+        let fundamentals = &item.fundamentals;
+        let debt_pct = fundamentals
+            .as_ref()
+            .and_then(|f| f.debt_percent.as_ref())
+            .and_then(|v| v.formatted_value.clone());
+        let rd_pct_last_qtr = fundamentals
+            .as_ref()
+            .and_then(|f| f.research_and_development_percent_last_qtr.as_ref())
+            .and_then(|v| v.formatted_value.clone());
+
+        records.push(MarketDataRecord {
+            symbol: symbol.to_string(),
+            company_name,
+            instrument_type,
+            ipo_date,
+            comp_rating,
+            rs_rating,
+            eps_rating,
+            smr_rating,
+            ad_rating,
+            market_cap,
+            avg_dollar_volume_50d,
+            up_down_volume_ratio,
+            short_interest_pct_float,
+            short_interest_days_to_cover,
+            industry_name,
+            industry_sector,
+            industry_stocks_in_group,
+            funds_pct_float_held,
+            eps_due_date,
+            eps_due_date_status,
+            debt_pct,
+            rd_pct_last_qtr,
+        });
+    }
+
+    records
+}
+
 /// Handles the market-data command.
 #[instrument(skip_all)]
 pub async fn handle(args: &SymbolsArgs, json_table: bool) -> i32 {
@@ -78,142 +223,165 @@ pub async fn handle(args: &SymbolsArgs, json_table: bool) -> i32 {
                 .await
                 .map_err(handle_api_error)?;
 
-            let mut records = Vec::new();
-
-            for (symbol, item) in zip_symbols(&symbol_refs, &response.market_data) {
-                let company_name = item
-                    .symbology
-                    .as_ref()
-                    .and_then(|s| s.company.as_ref())
-                    .and_then(|c| c.company_name.clone());
-
-                let instrument_type = item
-                    .symbology
-                    .as_ref()
-                    .and_then(|s| s.instrument.as_ref())
-                    .and_then(|i| i.sub_type.clone());
-
-                let ipo_date = item
-                    .symbology
-                    .as_ref()
-                    .and_then(|s| s.instrument.as_ref())
-                    .and_then(|i| i.ipo_date.as_ref())
-                    .and_then(|d| d.value.clone());
-
-                // Ratings: take the first (CURRENT) entry for each.
-                let ratings = &item.ratings;
-                let comp_rating = ratings
-                    .as_ref()
-                    .and_then(|r| r.comp_rating.first())
-                    .and_then(|r| r.value);
-                let rs_rating = ratings
-                    .as_ref()
-                    .and_then(|r| r.rs_rating.first())
-                    .and_then(|r| r.value);
-                let eps_rating = ratings
-                    .as_ref()
-                    .and_then(|r| r.eps_rating.first())
-                    .and_then(|r| r.value);
-                let smr_rating = ratings
-                    .as_ref()
-                    .and_then(|r| r.smr_rating.first())
-                    .and_then(|r| r.letter_value.clone());
-                let ad_rating = ratings
-                    .as_ref()
-                    .and_then(|r| r.ad_rating.first())
-                    .and_then(|r| r.letter_value.clone());
-
-                // Pricing statistics
-                let eod = item
-                    .pricing_statistics
-                    .as_ref()
-                    .and_then(|p| p.end_of_day_statistics.as_ref());
-
-                let market_cap = eod
-                    .and_then(|e| e.market_capitalization.as_ref())
-                    .and_then(|v| v.formatted_value.clone());
-
-                let avg_dollar_volume_50d = eod
-                    .and_then(|e| e.avg_dollar_volume_50_day.as_ref())
-                    .and_then(|v| v.formatted_value.clone());
-
-                let up_down_volume_ratio = eod
-                    .and_then(|e| e.up_down_volume_ratio.as_ref())
-                    .and_then(|v| v.formatted_value.clone());
-
-                let short_interest_pct_float = eod
-                    .and_then(|e| e.short_interest.as_ref())
-                    .and_then(|si| si.percent_of_float.as_ref())
-                    .and_then(|v| v.formatted_value.clone());
-
-                let short_interest_days_to_cover = eod
-                    .and_then(|e| e.short_interest.as_ref())
-                    .and_then(|si| si.days_to_cover.as_ref())
-                    .and_then(|v| v.formatted_value.clone());
-
-                // Industry
-                let industry = &item.industry;
-                let industry_name = industry.as_ref().and_then(|i| i.name.clone());
-                let industry_sector = industry.as_ref().and_then(|i| i.sector.clone());
-                let industry_stocks_in_group =
-                    industry.as_ref().and_then(|i| i.number_of_stocks_in_group);
-
-                // Ownership
-                let funds_pct_float_held = item
-                    .ownership
-                    .as_ref()
-                    .and_then(|o| o.funds_float_percent_held.as_ref())
-                    .and_then(|v| v.formatted_value.clone());
-
-                // Financials
-                let financials = &item.financials;
-                let eps_due_date = financials
-                    .as_ref()
-                    .and_then(|f| f.eps_due_date.as_ref())
-                    .and_then(|d| d.formatted_value.clone());
-                let eps_due_date_status = financials
-                    .as_ref()
-                    .and_then(|f| f.eps_due_date_status.clone());
-
-                // Fundamentals
-                let fundamentals = &item.fundamentals;
-                let debt_pct = fundamentals
-                    .as_ref()
-                    .and_then(|f| f.debt_percent.as_ref())
-                    .and_then(|v| v.formatted_value.clone());
-                let rd_pct_last_qtr = fundamentals
-                    .as_ref()
-                    .and_then(|f| f.research_and_development_percent_last_qtr.as_ref())
-                    .and_then(|v| v.formatted_value.clone());
-
-                records.push(MarketDataRecord {
-                    symbol: symbol.to_string(),
-                    company_name,
-                    instrument_type,
-                    ipo_date,
-                    comp_rating,
-                    rs_rating,
-                    eps_rating,
-                    smr_rating,
-                    ad_rating,
-                    market_cap,
-                    avg_dollar_volume_50d,
-                    up_down_volume_ratio,
-                    short_interest_pct_float,
-                    short_interest_days_to_cover,
-                    industry_name,
-                    industry_sector,
-                    industry_stocks_in_group,
-                    funds_pct_float_held,
-                    eps_due_date,
-                    eps_due_date_status,
-                    debt_pct,
-                    rd_pct_last_qtr,
-                });
-            }
-
-            Ok(records)
+            Ok(flatten_market_data(&symbol_refs, &response.market_data))
         },
     )
     .await
+}
+
+#[cfg(test)]
+mod tests {
+    use marketsurge_client::market_data::{
+        MdCompany, MdIndustry, MdInstrument, MdMarketDataItem, MdRating, MdRatings, MdSymbology,
+    };
+    use marketsurge_client::types::DateValue;
+
+    use super::*;
+
+    /// Build an `MdMarketDataItem` with all fields set to `None`/empty.
+    fn empty_item() -> MdMarketDataItem {
+        MdMarketDataItem {
+            id: None,
+            origin_request: None,
+            ratings: None,
+            pricing_statistics: None,
+            corporate_actions: None,
+            symbology: None,
+            pattern_info: None,
+            financials: None,
+            industry: None,
+            ownership: None,
+            fundamentals: None,
+        }
+    }
+
+    #[test]
+    fn flatten_happy_path() {
+        let item = MdMarketDataItem {
+            symbology: Some(MdSymbology {
+                company: Some(MdCompany {
+                    company_name: Some("Apple Inc".to_string()),
+                    address: None,
+                    address2: None,
+                    phone: None,
+                    business_description: None,
+                    url: None,
+                    city: None,
+                    country: None,
+                    state_province: None,
+                }),
+                instrument: Some(MdInstrument {
+                    sub_type: Some("COMMON_STOCK".to_string()),
+                    ipo_date: Some(DateValue {
+                        value: Some("1980-12-12".to_string()),
+                    }),
+                    ipo_price: None,
+                }),
+            }),
+            ratings: Some(MdRatings {
+                comp_rating: vec![MdRating {
+                    value: Some(95),
+                    period_offset: None,
+                    period: None,
+                    letter_value: None,
+                }],
+                rs_rating: vec![MdRating {
+                    value: Some(92),
+                    period_offset: None,
+                    period: None,
+                    letter_value: None,
+                }],
+                eps_rating: vec![MdRating {
+                    value: Some(88),
+                    period_offset: None,
+                    period: None,
+                    letter_value: None,
+                }],
+                smr_rating: vec![MdRating {
+                    value: None,
+                    period_offset: None,
+                    period: None,
+                    letter_value: Some("A".to_string()),
+                }],
+                ad_rating: vec![MdRating {
+                    value: None,
+                    period_offset: None,
+                    period: None,
+                    letter_value: Some("B+".to_string()),
+                }],
+            }),
+            industry: Some(MdIndustry {
+                name: Some("Computers-Hardware".to_string()),
+                sector: Some("Technology".to_string()),
+                ind_code: None,
+                group_ranks: vec![],
+                group_rs: vec![],
+                number_of_stocks_in_group: Some(25),
+            }),
+            ..empty_item()
+        };
+
+        let records = flatten_market_data(&["AAPL"], &[item]);
+
+        assert_eq!(records.len(), 1);
+        let r = &records[0];
+        assert_eq!(r.symbol, "AAPL");
+        assert_eq!(r.company_name.as_deref(), Some("Apple Inc"));
+        assert_eq!(r.instrument_type.as_deref(), Some("COMMON_STOCK"));
+        assert_eq!(r.ipo_date.as_deref(), Some("1980-12-12"));
+        assert_eq!(r.comp_rating, Some(95));
+        assert_eq!(r.rs_rating, Some(92));
+        assert_eq!(r.eps_rating, Some(88));
+        assert_eq!(r.smr_rating.as_deref(), Some("A"));
+        assert_eq!(r.ad_rating.as_deref(), Some("B+"));
+        assert_eq!(r.industry_name.as_deref(), Some("Computers-Hardware"));
+        assert_eq!(r.industry_sector.as_deref(), Some("Technology"));
+        assert_eq!(r.industry_stocks_in_group, Some(25));
+    }
+
+    #[test]
+    fn flatten_partial_data() {
+        let item = MdMarketDataItem {
+            symbology: Some(MdSymbology {
+                company: Some(MdCompany {
+                    company_name: Some("Test Corp".to_string()),
+                    address: None,
+                    address2: None,
+                    phone: None,
+                    business_description: None,
+                    url: None,
+                    city: None,
+                    country: None,
+                    state_province: None,
+                }),
+                instrument: None,
+            }),
+            ..empty_item()
+        };
+
+        let records = flatten_market_data(&["TST"], &[item]);
+
+        assert_eq!(records.len(), 1);
+        let r = &records[0];
+        assert_eq!(r.symbol, "TST");
+        assert_eq!(r.company_name.as_deref(), Some("Test Corp"));
+        assert!(r.instrument_type.is_none());
+        assert!(r.ipo_date.is_none());
+        assert!(r.comp_rating.is_none());
+        assert!(r.rs_rating.is_none());
+        assert!(r.eps_rating.is_none());
+        assert!(r.smr_rating.is_none());
+        assert!(r.ad_rating.is_none());
+        assert!(r.market_cap.is_none());
+        assert!(r.industry_name.is_none());
+        assert!(r.funds_pct_float_held.is_none());
+        assert!(r.eps_due_date.is_none());
+        assert!(r.debt_pct.is_none());
+    }
+
+    #[test]
+    fn flatten_empty_vec() {
+        let records = flatten_market_data(&[], &[]);
+        assert!(records.is_empty());
+    }
 }
