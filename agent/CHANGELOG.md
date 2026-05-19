@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.1] - 2026-05-19
+
+### <!-- 4 -->🔧 Refactor
+
+- *(agent)* Share response row helpers
+- Centralize command and test helpers
+
+### <!-- 6 -->🧪 Testing
+
+- *(agent)* Cover shared command helpers
+
+
 ## [0.1.0] - 2026-05-19
 
 ### <!-- 0 -->🚀 Features
