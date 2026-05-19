@@ -3,8 +3,8 @@
 use std::collections::BTreeMap;
 
 use clap::{Args, Subcommand};
-use marketsurge_client::coach::CoachTreeNode;
-use marketsurge_client::screen::{ResponseValue, ScreenEntry};
+use marketsurge_client::coach::{CoachTreeNode, CoachTreeResponse};
+use marketsurge_client::screen::{ResponseValue, ScreenEntry, ScreensResponse};
 use serde::Serialize;
 use tracing::instrument;
 
@@ -71,36 +71,28 @@ async fn execute_list(args: &ListArgs, json_table: bool) -> i32 {
     let coach = args.coach;
 
     run_client_command(json_table, |client| async move {
-        let mut records = Vec::new();
-
         // Always include user screens.
-        let response = client
+        let screens_response = client
             .screens("marketsurge")
             .await
             .map_err(handle_api_error)?;
 
-        for entry in response.user.iter().flat_map(|u| &u.screens) {
-            records.push(map_user_screen_entry(entry));
-        }
-
         // Optionally include coach screens.
-        if coach {
-            let coach_response = client
-                .coach_tree("marketsurge", "MSR_NAV")
-                .await
-                .map_err(handle_api_error)?;
+        let coach_response = if coach {
+            Some(
+                client
+                    .coach_tree("marketsurge", "MSR_NAV")
+                    .await
+                    .map_err(handle_api_error)?,
+            )
+        } else {
+            None
+        };
 
-            for node in coach_response
-                .user
-                .iter()
-                .flat_map(|u| &u.screens)
-                .filter(|n| n.reference_id.is_some())
-            {
-                records.push(map_coach_screen_node(node));
-            }
-        }
-
-        Ok(records)
+        Ok(flatten_screen_list(
+            &screens_response,
+            coach_response.as_ref(),
+        ))
     })
     .await
 }
@@ -140,6 +132,34 @@ async fn execute_run(args: &RunArgs, json_table: bool) -> i32 {
         Ok(flatten_screen_rows(rows))
     })
     .await
+}
+
+/// Assembles a flat list of screen records from user and optional coach responses.
+///
+/// User screens are always included. Coach screens are included only when
+/// `coach_response` is `Some`, and only nodes with a `reference_id` are kept.
+fn flatten_screen_list(
+    screens_response: &ScreensResponse,
+    coach_response: Option<&CoachTreeResponse>,
+) -> Vec<ScreenListRecord> {
+    let mut records = Vec::new();
+
+    for entry in screens_response.user.iter().flat_map(|u| &u.screens) {
+        records.push(map_user_screen_entry(entry));
+    }
+
+    if let Some(coach) = coach_response {
+        for node in coach
+            .user
+            .iter()
+            .flat_map(|u| &u.screens)
+            .filter(|n| n.reference_id.is_some())
+        {
+            records.push(map_coach_screen_node(node));
+        }
+    }
+
+    records
 }
 
 /// Maps a user screen entry to a flat output record.
@@ -209,7 +229,8 @@ async fn resolve_screen_id(client: &marketsurge_client::Client, id_or_name: &str
 #[cfg(test)]
 mod tests {
     use super::*;
-    use marketsurge_client::screen::MdItem;
+    use marketsurge_client::coach::{CoachTreeResponse, CoachTreeUser};
+    use marketsurge_client::screen::{MdItem, ScreensResponse, ScreensUser};
 
     fn make_screen_entry(id: &str, name: &str) -> ScreenEntry {
         ScreenEntry {
@@ -332,5 +353,76 @@ mod tests {
             result[0].get("Symbol"),
             Some(&Some("TSLA".to_string()))
         );
+    }
+
+    fn make_screens_response(entries: Vec<ScreenEntry>) -> ScreensResponse {
+        ScreensResponse {
+            user: Some(ScreensUser { screens: entries }),
+        }
+    }
+
+    fn make_coach_response(nodes: Vec<CoachTreeNode>) -> CoachTreeResponse {
+        CoachTreeResponse {
+            user: Some(CoachTreeUser {
+                watchlists: vec![],
+                screens: nodes,
+            }),
+        }
+    }
+
+    #[test]
+    fn flatten_screen_list_user_only() {
+        let resp = make_screens_response(vec![
+            make_screen_entry("scr-1", "Growth"),
+            make_screen_entry("scr-2", "Value"),
+        ]);
+
+        let records = flatten_screen_list(&resp, None);
+
+        assert_eq!(records.len(), 2);
+        assert_eq!(records[0].source, "user");
+        assert_eq!(records[0].id.as_deref(), Some("scr-1"));
+        assert_eq!(records[1].source, "user");
+        assert_eq!(records[1].name.as_deref(), Some("Value"));
+    }
+
+    #[test]
+    fn flatten_screen_list_with_coach() {
+        let resp = make_screens_response(vec![make_screen_entry("scr-1", "My Screen")]);
+        let coach = make_coach_response(vec![make_coach_node("IBD 50", "ref-ibd50")]);
+
+        let records = flatten_screen_list(&resp, Some(&coach));
+
+        assert_eq!(records.len(), 2);
+        assert_eq!(records[0].source, "user");
+        assert_eq!(records[0].id.as_deref(), Some("scr-1"));
+        assert_eq!(records[1].source, "coach");
+        assert_eq!(records[1].id.as_deref(), Some("ref-ibd50"));
+        assert_eq!(records[1].name.as_deref(), Some("IBD 50"));
+    }
+
+    #[test]
+    fn flatten_screen_list_skips_coach_without_reference_id() {
+        let resp = make_screens_response(vec![]);
+        let coach = make_coach_response(vec![
+            make_coach_node("IBD 50", "ref-ibd50"),
+            CoachTreeNode {
+                id: Some("node-2".to_string()),
+                name: Some("Folder Node".to_string()),
+                parent_id: None,
+                node_type: Some("FOLDER".to_string()),
+                children: vec![],
+                content_type: None,
+                tree_type: None,
+                url: None,
+                reference_id: None,
+            },
+        ]);
+
+        let records = flatten_screen_list(&resp, Some(&coach));
+
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0].source, "coach");
+        assert_eq!(records[0].id.as_deref(), Some("ref-ibd50"));
     }
 }
