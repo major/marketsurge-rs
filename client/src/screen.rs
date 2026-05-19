@@ -87,7 +87,11 @@ fn cell_value_to_string(value: Value) -> Option<String> {
         Value::String(value) => Some(value),
         Value::Number(value) => Some(value.to_string()),
         Value::Bool(value) => Some(value.to_string()),
-        Value::Array(values) => Some(Value::Array(values).to_string()),
+        Value::Array(mut values) => match values.len() {
+            0 => None,
+            1 => values.pop().and_then(cell_value_to_string),
+            _ => Some(Value::Array(values).to_string()),
+        },
         Value::Object(map) => {
             for key in [
                 "formattedValue",
@@ -665,6 +669,38 @@ mod tests {
         .expect("response value should parse numeric value");
 
         assert_eq!(cell.value.as_deref(), Some("12345"));
+    }
+
+    #[test]
+    fn response_value_unwraps_single_value_array() {
+        let cell: ResponseValue = serde_json::from_str(
+            r#"{
+                "value": [{"formattedValue": "12.34%"}],
+                "mdItem": {
+                    "mdItemID": 632,
+                    "name": "HoldingsPctFundAssetsHeld"
+                }
+            }"#,
+        )
+        .expect("response value should parse single-value array");
+
+        assert_eq!(cell.value.as_deref(), Some("12.34%"));
+    }
+
+    #[test]
+    fn response_value_parses_empty_array_as_none() {
+        let cell: ResponseValue = serde_json::from_str(
+            r#"{
+                "value": [],
+                "mdItem": {
+                    "mdItemID": 632,
+                    "name": "HoldingsPctFundAssetsHeld"
+                }
+            }"#,
+        )
+        .expect("response value should parse empty array");
+
+        assert!(cell.value.is_none());
     }
 
     #[cfg(not(coverage))]
