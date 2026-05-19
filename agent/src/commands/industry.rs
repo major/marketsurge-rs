@@ -13,9 +13,11 @@ use crate::common::command::{run_command, zip_symbols};
 /// Industry subcommands.
 #[derive(Debug, Subcommand)]
 pub enum IndustryCommand {
-    /// Fetch industry group relative strength rating.
+    /// Fetch industry group relative strength ratings for symbols.
+    #[command(after_help = "Examples:\n  marketsurge-agent industry rs AAPL MSFT")]
     Rs(SymbolsArgs),
-    /// Fetch industry overview with rankings and sector data.
+    /// Fetch industry rankings, sector, and breadth data for symbols.
+    #[command(after_help = "Examples:\n  marketsurge-agent industry overview AAPL MSFT")]
     Overview(SymbolsArgs),
 }
 

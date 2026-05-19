@@ -17,9 +17,11 @@ const FUND_OWNERSHIP_SCREEN: &str = "MarketSurge.RelatedInformation.MUTIFundOwne
 /// Ownership subcommands.
 #[derive(Debug, Subcommand)]
 pub enum OwnershipCommand {
-    /// Fetch fund ownership summary for one or more symbols.
+    /// Fetch quarterly fund ownership summary rows for symbols.
+    #[command(after_help = "Examples:\n  marketsurge-agent ownership summary AAPL MSFT")]
     Summary(SymbolsArgs),
-    /// Fetch individual fund holdings for one or more symbols.
+    /// Fetch individual fund holders and share history for symbols.
+    #[command(after_help = "Examples:\n  marketsurge-agent ownership funds AAPL MSFT")]
     Funds(SymbolsArgs),
 }
 

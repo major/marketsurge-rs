@@ -11,9 +11,11 @@ use crate::common::command::run_client_command;
 /// Tree subcommands.
 #[derive(Debug, Subcommand)]
 pub enum TreeCommand {
-    /// Fetch the coach tree (watchlists and screens).
+    /// Fetch the coach tree of watchlists and screens.
+    #[command(after_help = "Examples:\n  marketsurge-agent tree coach")]
     Coach,
-    /// Fetch the navigation tree.
+    /// Fetch the site navigation tree.
+    #[command(after_help = "Examples:\n  marketsurge-agent tree nav")]
     Nav,
 }
 
