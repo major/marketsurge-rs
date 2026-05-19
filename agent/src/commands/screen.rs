@@ -14,16 +14,22 @@ use crate::common::command::run_client_command;
 /// Screen subcommands.
 #[derive(Debug, Subcommand)]
 pub enum ScreenCommand {
-    /// List screens. Use --coach to include predefined screens (e.g. IBD 50).
+    /// List user screens, optionally including predefined coach screens.
+    #[command(
+        after_help = "Examples:\n  marketsurge-agent screen list\n  marketsurge-agent screen list --coach"
+    )]
     List(ListArgs),
     /// Run a screen by ID or name and return matching instruments.
+    #[command(
+        after_help = "Examples:\n  marketsurge-agent screen run 'IBD 50'\n  marketsurge-agent screen run 'screen-Peter Lynch' --limit 250"
+    )]
     Run(RunArgs),
 }
 
 /// Arguments for listing screens.
 #[derive(Debug, Args)]
 pub struct ListArgs {
-    /// Include predefined coach screens (e.g. IBD 50, Recent Breakouts).
+    /// Include predefined coach screens such as IBD 50.
     #[arg(long)]
     pub coach: bool,
 }
@@ -31,9 +37,9 @@ pub struct ListArgs {
 /// Arguments for running a saved screen.
 #[derive(Debug, Args)]
 pub struct RunArgs {
-    /// Screen ID or name (e.g. "screen-Peter Lynch" or "IBD 50").
+    /// Screen ID or screen name, for example IBD 50.
     pub screen_id: String,
-    /// Maximum number of results to return.
+    /// Maximum rows returned.
     #[arg(long, default_value = "1000")]
     pub limit: i64,
 }

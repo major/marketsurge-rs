@@ -15,35 +15,35 @@ use crate::common::command::run_client_command;
 /// Arguments for the adhoc-screen command.
 #[derive(Debug, Args)]
 pub struct AdhocScreenCommandArgs {
-    /// Data columns to include in results (comma-separated).
+    /// Output columns, comma-separated.
     #[arg(long, value_delimiter = ',', default_value = "Symbol,CompanyName")]
     pub columns: Vec<String>,
 
-    /// JSON adhoc query filter string.
+    /// Screener filter as raw JSON.
     #[arg(long)]
     pub query: Option<String>,
 
-    /// Predefined screen ID to use as instrument source.
+    /// Use symbols from this saved screen ID.
     #[arg(long, conflicts_with = "symbols")]
     pub screen_id: Option<i64>,
 
-    /// Ticker symbols to screen (comma-separated, alternative to --screen-id).
+    /// Screen these comma-separated ticker symbols.
     #[arg(long, value_delimiter = ',', conflicts_with = "screen_id")]
     pub symbols: Option<Vec<String>>,
 
-    /// Symbol dialect (defaults to "MS_LIST_ID" for --screen-id, "CHARTING" for --symbols).
+    /// Symbol dialect. Defaults depend on --screen-id or --symbols.
     #[arg(long)]
     pub dialect: Option<String>,
 
-    /// Maximum results per page.
+    /// API page size.
     #[arg(long, default_value = "1000")]
     pub page_size: i64,
 
-    /// Maximum total results.
+    /// Maximum rows returned.
     #[arg(long, default_value = "1000000")]
     pub limit: i64,
 
-    /// Number of results to skip.
+    /// Rows to skip before returning results.
     #[arg(long, default_value = "0")]
     pub skip: i64,
 }

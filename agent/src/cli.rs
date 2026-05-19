@@ -13,19 +13,14 @@ use crate::commands::watchlist::WatchlistCommand;
 #[command(
     name = "marketsurge-agent",
     version,
-    about = "CLI tool for querying MarketSurge market data",
-    long_about = "marketsurge-agent queries market data from MarketSurge.\n\n\
-        Use it for fund ownership summaries and other market intelligence.\n\n\
-        Auth: reads browser cookies automatically. If auth fails with exit code 2,\n\
-        log in at https://marketsurge.investors.com in your browser, then retry.\n\n\
-        Output: compact JSON to stdout. Pipe through jq for pretty-printing.\n\
-        Errors and logs go to stderr.",
-    arg_required_else_help = true,
-    propagate_version = true
+    about = "Query MarketSurge data as compact JSON",
+    long_about = "Query MarketSurge data as compact JSON. Auth reads browser cookies, so log in at https://marketsurge.investors.com first. Use --json-objects for object rows instead of compact table rows.",
+    after_help = "Examples:\n  marketsurge-agent ratings AAPL MSFT\n  marketsurge-agent --json-objects ownership summary AAPL\n  marketsurge-agent completions zsh > _marketsurge-agent",
+    arg_required_else_help = true
 )]
 pub struct Cli {
-    /// Emit array-of-objects instead of the default array-of-arrays table format.
-    #[arg(long, global = true)]
+    /// Output rows as JSON objects instead of compact table arrays.
+    #[arg(long)]
     pub json_objects: bool,
 
     /// Subcommand to run.
@@ -36,36 +31,66 @@ pub struct Cli {
 /// Top-level command groups.
 #[derive(Debug, Subcommand)]
 pub enum Commands {
-    /// Run an ad-hoc screen query against the MarketSurge screener.
+    /// Run an ad-hoc screener query and return matching rows.
+    #[command(
+        after_help = "Examples:\n  marketsurge-agent adhoc-screen --symbols AAPL,MSFT --columns Symbol,CompanyName,EPSRating\n  marketsurge-agent adhoc-screen --screen-id 12345 --limit 100"
+    )]
     AdhocScreen(AdhocScreenCommandArgs),
-    /// Fetch OHLCV chart data (daily by default, weekly with --weekly).
+    /// Fetch daily or weekly OHLCV bars for symbols.
+    #[command(
+        after_help = "Examples:\n  marketsurge-agent chart AAPL MSFT\n  marketsurge-agent chart --weekly AAPL"
+    )]
     Chart(ChartArgs),
-    /// Fetch fundamental financial data (EPS, sales, estimates).
+    /// Fetch EPS, sales, and estimate fundamentals for symbols.
+    #[command(after_help = "Examples:\n  marketsurge-agent fundamentals AAPL MSFT")]
     Fundamentals(SymbolsArgs),
-    /// Industry group data commands (RS rating, overview).
+    /// Fetch industry group RS and overview data.
+    #[command(
+        after_help = "Examples:\n  marketsurge-agent industry rs AAPL\n  marketsurge-agent industry overview AAPL"
+    )]
     Industry(IndustryArgs),
-    /// Fetch broad market data snapshot (ratings, pricing, industry, fundamentals).
+    /// Fetch broad rating, price, industry, and fundamental snapshot data.
+    #[command(after_help = "Examples:\n  marketsurge-agent market-data AAPL MSFT")]
     MarketData(SymbolsArgs),
-    /// Fetch user-saved chart markups for a symbol.
+    /// Fetch saved chart markups by Dow Jones symbol key.
+    #[command(
+        after_help = "Examples:\n  marketsurge-agent markups 13-5320\n  marketsurge-agent markups 13-5320 --frequency DAILY --sort-dir DESC"
+    )]
     Markups(MarkupsArgs),
-    /// Fund ownership data commands.
+    /// Fetch fund ownership summaries and fund holdings.
+    #[command(
+        after_help = "Examples:\n  marketsurge-agent ownership summary AAPL\n  marketsurge-agent ownership funds AAPL"
+    )]
     Ownership(OwnershipArgs),
-    /// Fetch RS rating and relative strength data.
+    /// Fetch relative strength ratings for symbols.
+    #[command(after_help = "Examples:\n  marketsurge-agent ratings AAPL MSFT")]
     Ratings(SymbolsArgs),
-    /// Stock screen commands (list, run). Supports predefined coach screens by name.
+    /// List or run stock screens, including coach screens.
+    #[command(
+        after_help = "Examples:\n  marketsurge-agent screen list --coach\n  marketsurge-agent screen run 'IBD 50'"
+    )]
     Screen(ScreenArgs),
-    /// Navigation and coaching tree commands (coach, nav).
+    /// Fetch coach or navigation trees.
+    #[command(
+        after_help = "Examples:\n  marketsurge-agent tree coach\n  marketsurge-agent tree nav"
+    )]
     Tree(TreeArgs),
-    /// Watchlist data commands (list, symbols, screen).
+    /// List watchlists, read symbols, or screen symbols.
+    #[command(
+        after_help = "Examples:\n  marketsurge-agent watchlist list\n  marketsurge-agent watchlist symbols 12345"
+    )]
     Watchlist(WatchlistArgs),
-    /// Generate shell completions.
+    /// Generate shell completion scripts.
+    #[command(
+        after_help = "Examples:\n  marketsurge-agent completions zsh > _marketsurge-agent\n  marketsurge-agent completions bash > marketsurge-agent.bash"
+    )]
     Completions(CompletionsArgs),
 }
 
 /// Arguments for the chart command.
 #[derive(Debug, Args)]
 pub struct ChartArgs {
-    /// Fetch weekly data instead of daily.
+    /// Use weekly bars instead of daily bars.
     #[arg(long)]
     pub weekly: bool,
 
@@ -117,14 +142,14 @@ pub struct WatchlistArgs {
 /// Arguments for the markups command.
 #[derive(Debug, Args)]
 pub struct MarkupsArgs {
-    /// Dow Jones key for the symbol (e.g. "13-5320").
+    /// Dow Jones symbol key, for example 13-5320.
     pub dow_jones_key: String,
 
-    /// Filter by frequency (e.g. "DAILY", "WEEKLY").
+    /// Keep only this frequency, for example DAILY or WEEKLY.
     #[arg(long)]
     pub frequency: Option<String>,
 
-    /// Sort direction (e.g. "ASC", "DESC").
+    /// Sort direction, ASC or DESC.
     #[arg(long)]
     pub sort_dir: Option<String>,
 }
@@ -132,26 +157,34 @@ pub struct MarkupsArgs {
 /// Arguments for shell completion generation.
 #[derive(Debug, Args)]
 pub struct CompletionsArgs {
-    /// Shell to generate completions for.
+    /// Target shell for completion output.
     pub shell: Shell,
 }
 
 /// Arguments containing one or more ticker symbols.
 #[derive(Debug, Args)]
 pub struct SymbolsArgs {
-    /// Ticker symbols to query (e.g. AAPL MSFT).
+    /// One or more ticker symbols, for example AAPL MSFT.
     #[arg(required = true)]
     pub symbols: Vec<String>,
 }
 
 #[cfg(test)]
 mod tests {
-    use clap::CommandFactory;
+    use clap::{CommandFactory, Parser};
 
-    use super::Cli;
+    use super::{Cli, Commands};
 
     #[test]
     fn command_tree_is_valid() {
         Cli::command().debug_assert();
+    }
+
+    #[test]
+    fn json_objects_can_precede_subcommands() {
+        let cli = Cli::parse_from(["marketsurge-agent", "--json-objects", "ratings", "AAPL"]);
+
+        assert!(cli.json_objects);
+        assert!(matches!(cli.command, Commands::Ratings(_)));
     }
 }

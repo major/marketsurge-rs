@@ -16,29 +16,34 @@ use crate::common::command::{run_client_command, run_command};
 /// Watchlist subcommands.
 #[derive(Debug, Subcommand)]
 pub enum WatchlistCommand {
-    /// List all saved watchlists.
+    /// List saved watchlists.
+    #[command(after_help = "Examples:\n  marketsurge-agent watchlist list")]
     List,
     /// Fetch symbols in a watchlist by ID.
+    #[command(after_help = "Examples:\n  marketsurge-agent watchlist symbols 12345")]
     Symbols(WatchlistSymbolsArgs),
-    /// Screen watchlist symbols with specified data columns.
+    /// Screen symbols with selected MarketSurge data columns.
+    #[command(
+        after_help = "Examples:\n  marketsurge-agent watchlist screen AAPL MSFT\n  marketsurge-agent watchlist screen AAPL --columns Symbol,EPSRating,RSRating"
+    )]
     Screen(WatchlistScreenArgs),
 }
 
 /// Arguments for the watchlist symbols subcommand.
 #[derive(Debug, Args)]
 pub struct WatchlistSymbolsArgs {
-    /// Watchlist ID to fetch symbols from.
+    /// Watchlist ID from `watchlist list`.
     pub watchlist_id: String,
 }
 
 /// Arguments for the watchlist screen subcommand.
 #[derive(Debug, Args)]
 pub struct WatchlistScreenArgs {
-    /// Ticker symbols to screen (e.g. AAPL MSFT).
+    /// Symbols to screen, for example AAPL MSFT.
     #[arg(required = true)]
     pub symbols: Vec<String>,
 
-    /// Data columns to include (e.g. EPSRating,RSRating,AccDisRating).
+    /// Output columns, comma-separated.
     #[arg(
         long,
         value_delimiter = ',',
