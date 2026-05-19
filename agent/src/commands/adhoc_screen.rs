@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 use clap::Args;
 use marketsurge_client::adhoc_screen::{
-    AdhocScreenId, AdhocScreenIncludeSource, AdhocScreenInstruments,
+    AdhocScreenId, AdhocScreenIncludeSource, AdhocScreenInstruments, ResponseValue,
 };
 use marketsurge_client::types::ResponseColumn;
 use tracing::instrument;
@@ -92,23 +92,13 @@ pub async fn handle(args: &AdhocScreenCommandArgs, json_table: bool) -> i32 {
             .await
             .map_err(handle_api_error)?;
 
-        let records: Vec<BTreeMap<String, Option<String>>> = response
+        let response_values = response
             .market_data_adhoc_screen
             .as_ref()
-            .map(|result| &result.response_values)
-            .unwrap_or(&Vec::new())
-            .iter()
-            .map(|row| {
-                row.iter()
-                    .filter_map(|cell| {
-                        let name = cell.md_item.as_ref().and_then(|m| m.name.clone())?;
-                        Some((name, cell.value.clone()))
-                    })
-                    .collect()
-            })
-            .collect();
+            .map(|result| &result.response_values[..])
+            .unwrap_or(&[]);
 
-        Ok(records)
+        Ok(flatten_adhoc_screen_rows(response_values))
     })
     .await
 }
@@ -143,9 +133,26 @@ fn build_include_source(args: &AdhocScreenCommandArgs) -> AdhocScreenIncludeSour
     }
 }
 
+fn flatten_adhoc_screen_rows(
+    response_values: &[Vec<ResponseValue>],
+) -> Vec<BTreeMap<String, Option<String>>> {
+    response_values
+        .iter()
+        .map(|row| {
+            row.iter()
+                .filter_map(|cell| {
+                    let name = cell.md_item.as_ref().and_then(|m| m.name.clone())?;
+                    Some((name, cell.value.clone()))
+                })
+                .collect()
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{AdhocScreenCommandArgs, build_include_source};
+    use super::{AdhocScreenCommandArgs, build_include_source, flatten_adhoc_screen_rows};
+    use marketsurge_client::adhoc_screen::{MdItem, ResponseValue};
 
     fn args(
         screen_id: Option<i64>,
@@ -213,5 +220,57 @@ mod tests {
         assert_eq!(instruments.symbols, vec!["AAPL".to_string()]);
         assert_eq!(instruments.dialect, "CUSTOM");
         assert!(include_source.screen_id.is_none());
+    }
+
+    fn rv(name: Option<&str>, value: Option<&str>) -> ResponseValue {
+        ResponseValue {
+            value: value.map(str::to_string),
+            md_item: Some(MdItem {
+                md_item_id: None,
+                name: name.map(str::to_string),
+            }),
+        }
+    }
+
+    #[test]
+    fn test_flatten_multiple_rows() {
+        let rows = vec![
+            vec![rv(Some("Symbol"), Some("AAPL")), rv(Some("RS"), Some("95"))],
+            vec![rv(Some("Symbol"), Some("NVDA")), rv(Some("RS"), Some("99"))],
+            vec![rv(Some("Symbol"), Some("TSLA")), rv(Some("RS"), Some("80"))],
+        ];
+
+        let result = flatten_adhoc_screen_rows(&rows);
+
+        assert_eq!(result.len(), 3);
+        assert_eq!(result[0].get("Symbol").unwrap(), &Some("AAPL".to_string()));
+        assert_eq!(result[0].get("RS").unwrap(), &Some("95".to_string()));
+        assert_eq!(result[1].get("Symbol").unwrap(), &Some("NVDA".to_string()));
+        assert_eq!(result[2].get("Symbol").unwrap(), &Some("TSLA".to_string()));
+    }
+
+    #[test]
+    fn test_flatten_empty_input() {
+        let rows: Vec<Vec<ResponseValue>> = vec![];
+        let result = flatten_adhoc_screen_rows(&rows);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_flatten_missing_md_item_name_omits_key() {
+        let rows = vec![vec![
+            rv(Some("Symbol"), Some("AAPL")),
+            rv(None, Some("orphan_value")),
+            ResponseValue {
+                value: Some("no_metadata".to_string()),
+                md_item: None,
+            },
+        ]];
+
+        let result = flatten_adhoc_screen_rows(&rows);
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].len(), 1);
+        assert_eq!(result[0].get("Symbol").unwrap(), &Some("AAPL".to_string()));
     }
 }
