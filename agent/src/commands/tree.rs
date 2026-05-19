@@ -57,18 +57,7 @@ async fn execute_coach(json_table: bool) -> i32 {
             .await
             .map_err(handle_api_error)?;
 
-        let mut records = Vec::new();
-
-        if let Some(user) = &response.user {
-            for node in &user.watchlists {
-                records.push(node_to_record("watchlist", node));
-            }
-            for node in &user.screens {
-                records.push(node_to_record("screen", node));
-            }
-        }
-
-        Ok(records)
+        Ok(flatten_coach_tree(&response))
     })
     .await
 }
@@ -81,16 +70,41 @@ async fn execute_nav(json_table: bool) -> i32 {
             .await
             .map_err(handle_api_error)?;
 
-        let records: Vec<TreeRecord> = response
-            .user
-            .iter()
-            .flat_map(|u| &u.nav_tree)
-            .map(|node| node_to_record("nav", node))
-            .collect();
-
-        Ok(records)
+        Ok(flatten_nav_tree(&response))
     })
     .await
+}
+
+/// Flattens a coach tree response into a list of records.
+///
+/// Watchlist nodes get source `"watchlist"`, screen nodes get `"screen"`.
+/// Returns an empty `Vec` when the response has no user data.
+fn flatten_coach_tree(response: &marketsurge_client::coach::CoachTreeResponse) -> Vec<TreeRecord> {
+    let Some(user) = &response.user else {
+        return Vec::new();
+    };
+
+    let mut records = Vec::new();
+    for node in &user.watchlists {
+        records.push(node_to_record("watchlist", node));
+    }
+    for node in &user.screens {
+        records.push(node_to_record("screen", node));
+    }
+    records
+}
+
+/// Flattens a nav tree response into a list of records.
+///
+/// All nodes get source `"nav"`.
+/// Returns an empty `Vec` when the response has no user data.
+fn flatten_nav_tree(response: &marketsurge_client::nav::NavTreeResponse) -> Vec<TreeRecord> {
+    response
+        .user
+        .iter()
+        .flat_map(|u| &u.nav_tree)
+        .map(|node| node_to_record("nav", node))
+        .collect()
 }
 
 fn node_to_record(source: &str, node: &marketsurge_client::types::TreeNode) -> TreeRecord {
@@ -110,6 +124,8 @@ fn node_to_record(source: &str, node: &marketsurge_client::types::TreeNode) -> T
 #[cfg(test)]
 mod tests {
     use super::*;
+    use marketsurge_client::coach::{CoachTreeResponse, CoachTreeUser};
+    use marketsurge_client::nav::{NavTreeResponse, NavTreeUser};
     use marketsurge_client::types::{TreeChildNode, TreeNode};
 
     #[test]
@@ -192,5 +208,80 @@ mod tests {
 
         let nav = node_to_record("nav", &node);
         assert_eq!(nav.source, "nav");
+    }
+
+    fn make_tree_node(id: &str, name: &str) -> TreeNode {
+        TreeNode {
+            id: Some(id.to_string()),
+            name: Some(name.to_string()),
+            parent_id: None,
+            node_type: None,
+            children: vec![],
+            content_type: None,
+            tree_type: None,
+            url: None,
+            reference_id: None,
+        }
+    }
+
+    #[test]
+    fn flatten_coach_tree_mixed_watchlists_and_screens() {
+        let response = CoachTreeResponse {
+            user: Some(CoachTreeUser {
+                watchlists: vec![
+                    make_tree_node("w1", "Watchlist 1"),
+                    make_tree_node("w2", "Watchlist 2"),
+                ],
+                screens: vec![make_tree_node("s1", "Screen 1")],
+            }),
+        };
+
+        let records = flatten_coach_tree(&response);
+
+        assert_eq!(records.len(), 3);
+        assert_eq!(records[0].source, "watchlist");
+        assert_eq!(records[0].id.as_deref(), Some("w1"));
+        assert_eq!(records[1].source, "watchlist");
+        assert_eq!(records[1].id.as_deref(), Some("w2"));
+        assert_eq!(records[2].source, "screen");
+        assert_eq!(records[2].id.as_deref(), Some("s1"));
+    }
+
+    #[test]
+    fn flatten_coach_tree_none_user_returns_empty() {
+        let response = CoachTreeResponse { user: None };
+
+        let records = flatten_coach_tree(&response);
+
+        assert!(records.is_empty());
+    }
+
+    #[test]
+    fn flatten_nav_tree_multiple_nodes() {
+        let response = NavTreeResponse {
+            user: Some(NavTreeUser {
+                nav_tree: vec![
+                    make_tree_node("n1", "Nav 1"),
+                    make_tree_node("n2", "Nav 2"),
+                ],
+            }),
+        };
+
+        let records = flatten_nav_tree(&response);
+
+        assert_eq!(records.len(), 2);
+        assert_eq!(records[0].source, "nav");
+        assert_eq!(records[0].id.as_deref(), Some("n1"));
+        assert_eq!(records[1].source, "nav");
+        assert_eq!(records[1].id.as_deref(), Some("n2"));
+    }
+
+    #[test]
+    fn flatten_nav_tree_none_user_returns_empty() {
+        let response = NavTreeResponse { user: None };
+
+        let records = flatten_nav_tree(&response);
+
+        assert!(records.is_empty());
     }
 }
