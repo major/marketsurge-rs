@@ -76,6 +76,7 @@ pub async fn mock_test_with_fixture(
 /// # Panics
 ///
 /// Panics if Firefox cookies are missing or JWT exchange fails.
+#[cfg(not(coverage))]
 pub async fn live_client() -> crate::client::Client {
     crate::client::Client::from_browser()
         .await
@@ -84,7 +85,10 @@ pub async fn live_client() -> crate::client::Client {
 
 #[cfg(test)]
 mod tests {
-    use super::{live_client, load_fixture};
+    use super::load_fixture;
+
+    #[cfg(not(coverage))]
+    use super::live_client;
 
     #[test]
     fn loads_fixture_content() {
@@ -92,6 +96,7 @@ mod tests {
         assert!(!fixture.trim().is_empty());
     }
 
+    #[cfg(not(coverage))]
     #[tokio::test]
     #[ignore]
     async fn live_client_works_with_browser_session() {

@@ -402,4 +402,78 @@ mod tests {
         assert_eq!(config.jwt, None);
         assert!(config.extra_headers.is_empty());
     }
+
+    #[test]
+    fn config_builders_override_defaults() {
+        let graphql_url = Url::parse("https://example.test/graphql").unwrap();
+        let investors_base_url = Url::parse("https://investors.example.test").unwrap();
+        let header_name = HeaderName::from_static("x-test-header");
+        let header_value = HeaderValue::from_static("header-value");
+
+        let config = ClientConfig::default()
+            .with_graphql_url(graphql_url.clone())
+            .with_investors_base_url(investors_base_url.clone())
+            .with_user_agent("test-agent")
+            .with_body_limit(42)
+            .with_timeout(Duration::from_secs(7))
+            .with_jwt("jwt-token")
+            .with_header(header_name.clone(), header_value.clone());
+
+        assert_eq!(config.graphql_url, graphql_url);
+        assert_eq!(config.investors_base_url, investors_base_url);
+        assert_eq!(config.user_agent, "test-agent");
+        assert_eq!(config.body_limit, 42);
+        assert_eq!(config.timeout, Duration::from_secs(7));
+        assert_eq!(config.jwt.as_deref(), Some("jwt-token"));
+        assert_eq!(config.extra_headers.get(header_name), Some(&header_value));
+    }
+
+    #[test]
+    fn default_headers_include_jwt_and_extra_headers() {
+        let config = ClientConfig::default().with_jwt("jwt-token").with_header(
+            HeaderName::from_static("x-extra"),
+            HeaderValue::from_static("extra"),
+        );
+
+        let headers = default_headers(&config);
+
+        assert_eq!(headers.get(AUTHORIZATION).unwrap(), "Bearer jwt-token");
+        assert_eq!(headers.get("x-extra").unwrap(), "extra");
+        assert_eq!(headers.get(USER_AGENT).unwrap(), DEFAULT_USER_AGENT);
+    }
+
+    #[test]
+    fn insert_header_value_drops_invalid_values() {
+        let mut headers = HeaderMap::new();
+
+        insert_header_value(&mut headers, USER_AGENT, "bad\nvalue");
+
+        assert!(!headers.contains_key(USER_AGENT));
+    }
+
+    #[tokio::test]
+    async fn test_null_data_without_errors_deserializes_null() {
+        let mut server = mockito::Server::new_async().await;
+        server
+            .mock("POST", "/gateway/graphql")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(r#"{"data":null,"errors":null}"#)
+            .create_async()
+            .await;
+        let client = Client::new(test_config(&server)).expect("client should build");
+
+        let data: Option<TestData> = client
+            .graphql_post(&request())
+            .await
+            .expect("null GraphQL data should deserialize");
+
+        assert_eq!(data, None);
+    }
+
+    #[test]
+    #[should_panic(expected = "invalid static URL")]
+    fn parse_static_url_panics_for_invalid_constants() {
+        parse_static_url("not a url");
+    }
 }

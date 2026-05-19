@@ -37,7 +37,8 @@ pub fn build_cookie_jar(cookies: &[Cookie]) -> crate::error::Result<Jar> {
 
 #[cfg(test)]
 mod tests {
-    use super::{build_cookie_jar, extract_cookies};
+    use super::build_cookie_jar;
+    use super::extract_cookies;
     use rookie::common::enums::Cookie;
 
     #[test]
@@ -50,6 +51,13 @@ mod tests {
         let _fn_ptr: fn(&[Cookie]) -> crate::error::Result<reqwest::cookie::Jar> = build_cookie_jar;
     }
 
+    #[test]
+    fn build_cookie_jar_accepts_empty_cookie_list() {
+        let jar = build_cookie_jar(&[]).expect("empty cookie jar should build");
+        let _ = jar;
+    }
+
+    #[cfg(not(coverage))]
     #[test]
     #[ignore]
     fn extract_cookies_works_with_live_firefox_session() {

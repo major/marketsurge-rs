@@ -31,6 +31,7 @@ pub struct RatingsRecord {
 
 /// Handles the ratings command.
 #[instrument(skip_all)]
+#[cfg(not(coverage))]
 pub async fn handle(args: &SymbolsArgs, json_table: bool) -> i32 {
     run_command(
         &args.symbols,

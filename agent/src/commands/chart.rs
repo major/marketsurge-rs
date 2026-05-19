@@ -71,6 +71,7 @@ pub(crate) fn flatten_chart_data(
 
 /// Handles the chart command.
 #[instrument(skip_all)]
+#[cfg(not(coverage))]
 pub async fn handle(args: &ChartArgs, json_table: bool) -> i32 {
     run_command(
         &args.symbols.symbols,

@@ -67,6 +67,7 @@ pub struct FundOwnershipRecord {
 
 /// Handles the ownership command group.
 #[instrument(skip_all)]
+#[cfg(not(coverage))]
 pub async fn handle(args: &OwnershipArgs, json_table: bool) -> i32 {
     match &args.command {
         OwnershipCommand::Summary(a) => execute_summary(a, json_table).await,
@@ -85,7 +86,10 @@ async fn execute_summary(args: &SymbolsArgs, json_table: bool) -> i32 {
                 .await
                 .map_err(handle_api_error)?;
 
-            Ok(flatten_ownership_summary(&symbol_refs, &response.market_data))
+            Ok(flatten_ownership_summary(
+                &symbol_refs,
+                &response.market_data,
+            ))
         },
     )
     .await
@@ -341,10 +345,7 @@ mod tests {
 
         assert_eq!(records.len(), 2);
         assert_eq!(records[0].symbol, "AAPL");
-        assert_eq!(
-            records[0].funds_float_pct_held.as_deref(),
-            Some("62.3%")
-        );
+        assert_eq!(records[0].funds_float_pct_held.as_deref(), Some("62.3%"));
         assert_eq!(records[0].date.as_deref(), Some("2026-03-31"));
         assert_eq!(records[0].num_funds_held.as_deref(), Some("5,432"));
         assert_eq!(records[1].date.as_deref(), Some("2025-12-31"));

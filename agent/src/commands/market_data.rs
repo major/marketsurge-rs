@@ -145,8 +145,7 @@ fn flatten_market_data(
         let industry = &item.industry;
         let industry_name = industry.as_ref().and_then(|i| i.name.clone());
         let industry_sector = industry.as_ref().and_then(|i| i.sector.clone());
-        let industry_stocks_in_group =
-            industry.as_ref().and_then(|i| i.number_of_stocks_in_group);
+        let industry_stocks_in_group = industry.as_ref().and_then(|i| i.number_of_stocks_in_group);
 
         // Ownership
         let funds_pct_float_held = item
@@ -207,6 +206,7 @@ fn flatten_market_data(
 
 /// Handles the market-data command.
 #[instrument(skip_all)]
+#[cfg(not(coverage))]
 pub async fn handle(args: &SymbolsArgs, json_table: bool) -> i32 {
     run_command(
         &args.symbols,

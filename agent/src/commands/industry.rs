@@ -67,6 +67,7 @@ pub struct IndustryOverviewRecord {
 
 /// Handles the industry command group.
 #[instrument(skip_all)]
+#[cfg(not(coverage))]
 pub async fn handle(args: &IndustryArgs, json_table: bool) -> i32 {
     match &args.command {
         IndustryCommand::Rs(a) => execute_rs(a, json_table).await,

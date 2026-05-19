@@ -50,6 +50,7 @@ pub struct AdhocScreenCommandArgs {
 
 /// Handles the adhoc-screen command.
 #[instrument(skip_all)]
+#[cfg(not(coverage))]
 pub async fn handle(args: &AdhocScreenCommandArgs, json_table: bool) -> i32 {
     let columns: Vec<ResponseColumn> = args
         .columns

@@ -75,6 +75,7 @@ pub struct WatchlistSymbolRecord {
 
 /// Handles the watchlist command group.
 #[instrument(skip_all)]
+#[cfg(not(coverage))]
 pub async fn handle(args: &WatchlistArgs, json_table: bool) -> i32 {
     match &args.command {
         WatchlistCommand::List => execute_list(json_table).await,

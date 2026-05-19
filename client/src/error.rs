@@ -119,4 +119,16 @@ mod tests {
             None
         );
     }
+
+    #[test]
+    fn retry_after_is_currently_unset() {
+        assert_eq!(
+            ClientError::Status {
+                status: 429,
+                body: String::new()
+            }
+            .retry_after(),
+            None
+        );
+    }
 }

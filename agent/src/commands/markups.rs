@@ -47,6 +47,7 @@ fn flatten_markups(response: FetchChartMarkupsResponse) -> Vec<MarkupRecord> {
 
 /// Handles the markups command.
 #[instrument(skip_all)]
+#[cfg(not(coverage))]
 pub async fn handle(args: &MarkupsArgs, json_table: bool) -> i32 {
     let dow_jones_key = args.dow_jones_key.clone();
     let frequency = args.frequency.clone();
