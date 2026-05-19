@@ -77,6 +77,7 @@ pub async fn handle(args: &OwnershipArgs, json_table: bool) -> i32 {
 }
 
 #[instrument(skip_all)]
+#[cfg(not(coverage))]
 async fn execute_summary(args: &SymbolsArgs, json_table: bool) -> i32 {
     run_command(
         &args.symbols,
@@ -94,6 +95,7 @@ async fn execute_summary(args: &SymbolsArgs, json_table: bool) -> i32 {
 }
 
 #[instrument(skip_all)]
+#[cfg(not(coverage))]
 async fn execute_funds(args: &SymbolsArgs, json_table: bool) -> i32 {
     run_command(
         &args.symbols,

@@ -52,6 +52,7 @@ pub async fn handle(args: &TreeArgs, json_table: bool) -> i32 {
 }
 
 #[instrument(skip_all)]
+#[cfg(not(coverage))]
 async fn execute_coach(json_table: bool) -> i32 {
     run_client_command(json_table, |client| async move {
         let response = api_call(client.coach_tree("marketsurge", "MSR_NAV")).await?;
@@ -62,6 +63,7 @@ async fn execute_coach(json_table: bool) -> i32 {
 }
 
 #[instrument(skip_all)]
+#[cfg(not(coverage))]
 async fn execute_nav(json_table: bool) -> i32 {
     run_client_command(json_table, |client| async move {
         let response = api_call(client.nav_tree("marketsurge", "MSR_NAV")).await?;

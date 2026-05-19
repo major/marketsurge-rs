@@ -82,7 +82,9 @@ pub fn zip_symbols<'a, T>(
 
 #[cfg(test)]
 mod tests {
-    use super::zip_symbols;
+    use marketsurge_client::ClientError;
+
+    use super::{api_call, zip_symbols};
 
     fn collect_pairs<'a, T>(symbols: &'a [&str], items: &'a [T]) -> Vec<(&'a str, &'a T)> {
         zip_symbols(symbols, items).collect()
@@ -136,5 +138,25 @@ mod tests {
         let zipped = collect_pairs(&symbols, &items);
 
         assert_eq!(zipped, Vec::new());
+    }
+
+    #[tokio::test]
+    async fn api_call_returns_success_value() {
+        let result = api_call(async { Ok::<_, ClientError>(42) }).await;
+
+        assert_eq!(result, Ok(42));
+    }
+
+    #[tokio::test]
+    async fn api_call_maps_client_error_to_exit_code() {
+        let result = api_call(async {
+            Err::<u32, _>(ClientError::Status {
+                status: 500,
+                body: "boom".to_string(),
+            })
+        })
+        .await;
+
+        assert_eq!(result, Err(1));
     }
 }

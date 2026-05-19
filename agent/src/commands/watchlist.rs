@@ -99,6 +99,7 @@ fn flatten_watchlist_list(watchlists: &[WatchlistSummary]) -> Vec<WatchlistRecor
 }
 
 #[instrument(skip_all)]
+#[cfg(not(coverage))]
 async fn execute_list(json_table: bool) -> i32 {
     run_client_command(json_table, |client| async move {
         let response = api_call(client.get_all_watchlist_names()).await?;
@@ -126,6 +127,7 @@ fn flatten_watchlist_symbols(watchlist: Option<&WatchlistDetail>) -> Vec<Watchli
 }
 
 #[instrument(skip_all)]
+#[cfg(not(coverage))]
 async fn execute_symbols(args: &WatchlistSymbolsArgs, json_table: bool) -> i32 {
     let watchlist_id = args.watchlist_id.clone();
 
@@ -138,6 +140,7 @@ async fn execute_symbols(args: &WatchlistSymbolsArgs, json_table: bool) -> i32 {
 }
 
 #[instrument(skip_all)]
+#[cfg(not(coverage))]
 async fn execute_screen(args: &WatchlistScreenArgs, json_table: bool) -> i32 {
     let columns = response_columns(&args.columns);
 

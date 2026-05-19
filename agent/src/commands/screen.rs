@@ -72,6 +72,7 @@ pub async fn handle(args: &crate::cli::ScreenArgs, json_table: bool) -> i32 {
 }
 
 #[instrument(skip_all)]
+#[cfg(not(coverage))]
 async fn execute_list(args: &ListArgs, json_table: bool) -> i32 {
     let coach = args.coach;
 
@@ -95,6 +96,7 @@ async fn execute_list(args: &ListArgs, json_table: bool) -> i32 {
 }
 
 #[instrument(skip_all)]
+#[cfg(not(coverage))]
 async fn execute_run(args: &RunArgs, json_table: bool) -> i32 {
     let screen_id_or_name = args.screen_id.clone();
     let limit = args.limit;

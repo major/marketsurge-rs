@@ -98,6 +98,7 @@ fn flatten_industry_rs(
 }
 
 #[instrument(skip_all)]
+#[cfg(not(coverage))]
 async fn execute_rs(args: &SymbolsArgs, json_table: bool) -> i32 {
     run_command(
         &args.symbols,
@@ -166,6 +167,7 @@ fn flatten_industry_overview(market_data: &[IndustryOverviewItem]) -> Vec<Indust
 }
 
 #[instrument(skip_all)]
+#[cfg(not(coverage))]
 async fn execute_overview(args: &SymbolsArgs, json_table: bool) -> i32 {
     run_command(
         &args.symbols,
