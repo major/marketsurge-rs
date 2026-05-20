@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] - 2026-05-20
+
+### <!-- 1 -->🐛 Bug Fixes
+
+- Remove chart markup support
+- Handle MarketSurge schema edge cases
+
+### <!-- 6 -->🧪 Testing
+
+- Cover screen not found messages
+
+
 ## [0.1.1] - 2026-05-19
 
 ### <!-- 4 -->🔧 Refactor
