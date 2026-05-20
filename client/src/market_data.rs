@@ -3,6 +3,7 @@
 
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use crate::client::Client;
 use crate::types::symbols_to_owned;
@@ -57,8 +58,10 @@ pub type MdDateValue = crate::types::DateValue;
 #[serde(rename_all = "camelCase")]
 pub struct MdFormattedString {
     /// Raw string value.
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub value: Option<String>,
     /// Display-formatted string.
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub formatted_value: Option<String>,
 }
 
@@ -72,8 +75,10 @@ pub struct MdCurrencySymbolInfo {
     /// Decimal precision for the mantissa.
     pub mantissa_precision: Option<i64>,
     /// Currency unit symbol (e.g. "$").
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub unit_symbol: Option<String>,
     /// ISO 4217 currency code (e.g. "USD").
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub iso_currency_code: Option<String>,
     /// Whether the symbol appears after the value.
     pub is_suffix: Option<bool>,
@@ -102,8 +107,48 @@ pub struct MdCurrencyValue {
 #[serde(rename_all = "camelCase")]
 pub struct OtherMarketDataResponse {
     /// Per-symbol market data items.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_market_data_items")]
     pub market_data: Vec<MdMarketDataItem>,
+}
+
+fn deserialize_market_data_items<'de, D>(deserializer: D) -> Result<Vec<MdMarketDataItem>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let values = Vec::<Value>::deserialize(deserializer)?;
+
+    Ok(values
+        .into_iter()
+        .map(|value| {
+            serde_json::from_value(value.clone()).unwrap_or_else(|error| {
+                let mut item = empty_market_data_item();
+                item.id = value.get("id").cloned().and_then(json_value_to_string);
+                item.origin_request = value
+                    .get("originRequest")
+                    .cloned()
+                    .and_then(|value| serde_json::from_value(value).ok());
+                item.decode_error = Some(error.to_string());
+                item
+            })
+        })
+        .collect())
+}
+
+fn empty_market_data_item() -> MdMarketDataItem {
+    MdMarketDataItem {
+        id: None,
+        origin_request: None,
+        ratings: None,
+        pricing_statistics: None,
+        corporate_actions: None,
+        symbology: None,
+        pattern_info: None,
+        financials: None,
+        industry: None,
+        ownership: None,
+        fundamentals: None,
+        decode_error: None,
+    }
 }
 
 /// Market data for a single symbol.
@@ -132,6 +177,9 @@ pub struct MdMarketDataItem {
     pub ownership: Option<MdOwnership>,
     /// Fundamental financial data.
     pub fundamentals: Option<MdFundamentals>,
+    /// Per-item decode error captured when a row has an unsupported shape.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub decode_error: Option<String>,
 }
 
 // ---------------------------------------------------------------------------
@@ -143,8 +191,10 @@ pub struct MdMarketDataItem {
 #[serde(rename_all = "camelCase")]
 pub struct MdOriginRequest {
     /// Symbol dialect used (e.g. "CHARTING").
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub from_dialect: Option<String>,
     /// Requested symbol.
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub symbol: Option<String>,
 }
 
@@ -180,10 +230,13 @@ pub struct MdRating {
     /// Numeric rating value.
     pub value: Option<i64>,
     /// Period offset (e.g. "CURRENT").
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub period_offset: Option<String>,
     /// Period identifier (e.g. "P12M").
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub period: Option<String>,
     /// Letter grade value (e.g. "A", "B+").
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub letter_value: Option<String>,
 }
 
@@ -417,22 +470,31 @@ pub struct MdSymbology {
 #[serde(rename_all = "camelCase")]
 pub struct MdCompany {
     /// Company name.
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub company_name: Option<String>,
     /// Primary address line.
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub address: Option<String>,
     /// Secondary address line.
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub address2: Option<String>,
     /// Phone number.
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub phone: Option<String>,
     /// Business description.
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub business_description: Option<String>,
     /// Company website URL.
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub url: Option<String>,
     /// City.
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub city: Option<String>,
     /// Country code.
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub country: Option<String>,
     /// State or province.
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub state_province: Option<String>,
 }
 
@@ -441,6 +503,7 @@ pub struct MdCompany {
 #[serde(rename_all = "camelCase")]
 pub struct MdInstrument {
     /// Instrument sub-type (e.g. "COMMON_STOCK").
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub sub_type: Option<String>,
     /// IPO date.
     pub ipo_date: Option<MdDateValue>,
@@ -702,10 +765,13 @@ pub struct MdEstimate {
 #[serde(rename_all = "camelCase")]
 pub struct MdIndustry {
     /// Industry group name.
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub name: Option<String>,
     /// Sector name.
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub sector: Option<String>,
     /// Industry group code.
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub ind_code: Option<String>,
     /// Industry group rank values.
     #[serde(default)]
@@ -772,6 +838,38 @@ pub struct MdFundamentals {
     pub debt_percent: Option<MdFormattedFloat>,
 }
 
+fn deserialize_optional_string<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = Option::<Value>::deserialize(deserializer)?;
+
+    Ok(value.and_then(json_value_to_string))
+}
+
+fn json_value_to_string(value: Value) -> Option<String> {
+    match value {
+        Value::Null => None,
+        Value::String(value) => Some(value),
+        Value::Number(value) => Some(value.to_string()),
+        Value::Bool(value) => Some(value.to_string()),
+        Value::Array(mut values) => match values.len() {
+            0 => None,
+            1 => values.pop().and_then(json_value_to_string),
+            _ => Some(Value::Array(values).to_string()),
+        },
+        Value::Object(map) => {
+            for key in ["value", "formattedValue", "displayValue", "name"] {
+                if let Some(value) = map.get(key).cloned().and_then(json_value_to_string) {
+                    return Some(value);
+                }
+            }
+
+            Some(Value::Object(map).to_string())
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Client methods
 // ---------------------------------------------------------------------------
@@ -821,7 +919,7 @@ impl Client {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_support::mock_test;
+    use crate::test_support::{load_fixture, mock_test};
 
     #[tokio::test]
     async fn other_market_data_parses_response() {
@@ -974,6 +1072,90 @@ mod tests {
         );
 
         mock.assert();
+    }
+
+    #[test]
+    fn other_market_data_accepts_mixed_string_shapes() {
+        let fixture = load_fixture("OtherMarketDataMixedShape", "response.json");
+        let resp: super::OtherMarketDataResponse =
+            serde_json::from_str(&fixture).expect("mixed string shapes should parse");
+
+        assert_eq!(resp.market_data.len(), 1);
+        let item = &resp.market_data[0];
+        assert!(item.decode_error.is_none());
+        assert_eq!(
+            item.origin_request
+                .as_ref()
+                .and_then(|origin| origin.symbol.as_deref()),
+            Some("APLD")
+        );
+        assert_eq!(
+            item.ratings
+                .as_ref()
+                .and_then(|ratings| ratings.smr_rating.first())
+                .and_then(|rating| rating.letter_value.as_deref()),
+            Some("A")
+        );
+        assert_eq!(
+            item.symbology
+                .as_ref()
+                .and_then(|symbology| symbology.company.as_ref())
+                .and_then(|company| company.company_name.as_deref()),
+            Some("Applied Digital Corp")
+        );
+        assert_eq!(
+            item.industry
+                .as_ref()
+                .and_then(|industry| industry.ind_code.as_deref()),
+            Some("G3620")
+        );
+    }
+
+    #[test]
+    fn other_market_data_keeps_rows_when_one_item_fails_to_decode() {
+        let resp: super::OtherMarketDataResponse = serde_json::from_value(serde_json::json!({
+            "marketData": [
+                {"id": "GOOD", "originRequest": {"symbol": "GOOD"}},
+                {
+                    "id": "BAD",
+                    "originRequest": {"symbol": "BAD"},
+                    "ratings": {"compRating": {"value": 99}}
+                }
+            ]
+        }))
+        .expect("per-item decode failures should not fail whole response");
+
+        assert_eq!(resp.market_data.len(), 2);
+        assert_eq!(resp.market_data[0].id.as_deref(), Some("GOOD"));
+        assert!(resp.market_data[0].decode_error.is_none());
+        assert_eq!(resp.market_data[1].id.as_deref(), Some("BAD"));
+        assert_eq!(
+            resp.market_data[1]
+                .origin_request
+                .as_ref()
+                .and_then(|origin| origin.symbol.as_deref()),
+            Some("BAD")
+        );
+        assert!(
+            resp.market_data[1]
+                .decode_error
+                .as_deref()
+                .is_some_and(|error| error.contains("invalid type"))
+        );
+    }
+
+    #[test]
+    fn json_value_to_string_handles_array_and_object_fallbacks() {
+        assert_eq!(super::json_value_to_string(serde_json::json!(null)), None);
+        assert_eq!(super::json_value_to_string(serde_json::json!([])), None);
+        assert_eq!(
+            super::json_value_to_string(serde_json::json!(["A", "B"])).as_deref(),
+            Some("[\"A\",\"B\"]")
+        );
+        assert_eq!(
+            super::json_value_to_string(serde_json::json!({"unexpected": 1})).as_deref(),
+            Some("{\"unexpected\":1}")
+        );
     }
 
     #[cfg(not(coverage))]

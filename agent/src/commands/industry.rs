@@ -32,8 +32,10 @@ pub struct IndustryRsRecord {
 /// Flat output record for industry overview data.
 #[derive(Debug, Clone, Serialize)]
 pub struct IndustryOverviewRecord {
-    /// Symbol identifier.
-    pub symbol: String,
+    /// Requested ticker symbol.
+    pub ticker: String,
+    /// MarketSurge industry identifier returned by the API.
+    pub industry_id: String,
     /// Industry group name.
     pub name: Option<String>,
     /// Sector name.
@@ -113,11 +115,13 @@ async fn execute_rs(args: &SymbolsArgs, json_table: bool) -> i32 {
 }
 
 /// Transforms raw industry overview response items into flat output records.
-fn flatten_industry_overview(market_data: &[IndustryOverviewItem]) -> Vec<IndustryOverviewRecord> {
-    market_data
-        .iter()
-        .map(|item| {
-            let symbol = item.id.clone().unwrap_or_default();
+fn flatten_industry_overview(
+    symbols: &[&str],
+    market_data: &[IndustryOverviewItem],
+) -> Vec<IndustryOverviewRecord> {
+    zip_symbols(symbols, market_data)
+        .map(|(symbol, item)| {
+            let industry_id = item.id.clone().unwrap_or_default();
             let industry = item.industry.as_ref();
             let ratings = item.ratings.as_ref();
             let rank = ratings.and_then(|r| r.industry.as_ref());
@@ -143,7 +147,8 @@ fn flatten_industry_overview(market_data: &[IndustryOverviewItem]) -> Vec<Indust
                 .and_then(|v| v.formatted_value.clone());
 
             IndustryOverviewRecord {
-                symbol,
+                ticker: symbol.to_string(),
+                industry_id,
                 name: industry.and_then(|i| i.name.clone()),
                 sector: industry.and_then(|i| i.sector.clone()),
                 ind_code: industry.and_then(|i| i.ind_code),
@@ -175,7 +180,10 @@ async fn execute_overview(args: &SymbolsArgs, json_table: bool) -> i32 {
         |client, symbol_refs| async move {
             let response = api_call(client.industry_overview(&symbol_refs, None)).await?;
 
-            Ok(flatten_industry_overview(&response.market_data))
+            Ok(flatten_industry_overview(
+                &symbol_refs,
+                &response.market_data,
+            ))
         },
     )
     .await
@@ -189,6 +197,7 @@ mod tests {
         IndustryOverviewRatings, IndustryRankInGroup,
     };
     use marketsurge_client::market_data::{MdGroupRank, MdPercentChangeVs};
+    use marketsurge_client::types::FormattedFloat;
 
     // -----------------------------------------------------------------------
     // flatten_industry_rs
@@ -291,11 +300,12 @@ mod tests {
             }),
         }];
 
-        let records = flatten_industry_overview(&items);
+        let records = flatten_industry_overview(&["AAPL"], &items);
 
         assert_eq!(records.len(), 1);
         let r = &records[0];
-        assert_eq!(r.symbol, "13-4698");
+        assert_eq!(r.ticker, "AAPL");
+        assert_eq!(r.industry_id, "13-4698");
         assert_eq!(r.name.as_deref(), Some("Elec-Semicondctor Fablss"));
         assert_eq!(r.sector.as_deref(), Some("CHIPS"));
         assert_eq!(r.ind_code, Some(7010));
@@ -310,7 +320,7 @@ mod tests {
 
     #[test]
     fn flatten_industry_overview_empty_market_data() {
-        let records = flatten_industry_overview(&[]);
+        let records = flatten_industry_overview(&[], &[]);
         assert!(records.is_empty());
     }
 
@@ -322,11 +332,12 @@ mod tests {
             ratings: None,
         }];
 
-        let records = flatten_industry_overview(&items);
+        let records = flatten_industry_overview(&["AAPL"], &items);
 
         assert_eq!(records.len(), 1);
         let r = &records[0];
-        assert_eq!(r.symbol, "");
+        assert_eq!(r.ticker, "AAPL");
+        assert_eq!(r.industry_id, "");
         assert!(r.name.is_none());
         assert!(r.sector.is_none());
         assert!(r.group_rank.is_none());
@@ -360,10 +371,50 @@ mod tests {
             ratings: None,
         }];
 
-        let records = flatten_industry_overview(&items);
+        let records = flatten_industry_overview(&["TEST"], &items);
 
         assert_eq!(records.len(), 1);
         assert!(records[0].pct_change_1d.is_none());
         assert_eq!(records[0].pct_change_ytd.as_deref(), Some("15.00%"));
+    }
+
+    #[test]
+    fn flatten_industry_overview_keeps_market_value_with_missing_rank_details() {
+        let items = vec![IndustryOverviewItem {
+            id: Some("13-4698".to_string()),
+            industry: Some(IndustryOverviewIndustry {
+                name: None,
+                ind_code: None,
+                news_code: None,
+                sector: None,
+                group_market_value_in_billions: Some(FormattedFloat {
+                    value: Some(12.34),
+                    formatted_value: Some("$12.34B".to_string()),
+                }),
+                num_new_highs_in_group: Some(3),
+                num_new_lows_in_group: Some(1),
+                number_of_stocks_in_group: Some(45),
+                group_ranks: vec![],
+                price_percent_change_vs: vec![],
+            }),
+            ratings: Some(IndustryOverviewRatings {
+                has_ratings_data: Some(false),
+                industry: None,
+            }),
+        }];
+
+        let records = flatten_industry_overview(&["AAPL", "EXTRA"], &items);
+
+        assert_eq!(records.len(), 1);
+        let r = &records[0];
+        assert_eq!(r.ticker, "AAPL");
+        assert_eq!(r.industry_id, "13-4698");
+        assert_eq!(r.group_market_value_billions.as_deref(), Some("$12.34B"));
+        assert_eq!(r.num_new_highs, Some(3));
+        assert_eq!(r.num_new_lows, Some(1));
+        assert_eq!(r.num_stocks, Some(45));
+        assert!(r.group_rank.is_none());
+        assert!(r.eps_rank.is_none());
+        assert!(r.comp_rank.is_none());
     }
 }
