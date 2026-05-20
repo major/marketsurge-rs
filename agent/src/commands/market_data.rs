@@ -59,6 +59,8 @@ pub struct MarketDataRecord {
     pub debt_pct: Option<String>,
     /// R&D percent last quarter (formatted).
     pub rd_pct_last_qtr: Option<String>,
+    /// Per-symbol market-data decode error, when only this row failed.
+    pub decode_error: Option<String>,
 }
 
 /// Flattens nested [`MdMarketDataItem`] responses into flat
@@ -197,6 +199,7 @@ fn flatten_market_data(
             eps_due_date_status,
             debt_pct,
             rd_pct_last_qtr,
+            decode_error: item.decode_error.clone(),
         });
     }
 
@@ -229,9 +232,11 @@ pub async fn handle(args: &SymbolsArgs, json_table: bool) -> i32 {
 #[cfg(test)]
 mod tests {
     use marketsurge_client::market_data::{
-        MdCompany, MdIndustry, MdInstrument, MdMarketDataItem, MdRating, MdRatings, MdSymbology,
+        MdCompany, MdEndOfDayStatistics, MdFinancials, MdFormattedString, MdFundamentals,
+        MdIndustry, MdInstrument, MdMarketDataItem, MdOwnership, MdPricingStatistics, MdRating,
+        MdRatings, MdScaledFloat, MdShortInterest, MdSymbology,
     };
-    use marketsurge_client::types::DateValue;
+    use marketsurge_client::types::{DateValue, FormattedFloat};
 
     use super::*;
 
@@ -249,6 +254,7 @@ mod tests {
             industry: None,
             ownership: None,
             fundamentals: None,
+            decode_error: None,
         }
     }
 
@@ -334,6 +340,7 @@ mod tests {
         assert_eq!(r.industry_name.as_deref(), Some("Computers-Hardware"));
         assert_eq!(r.industry_sector.as_deref(), Some("Technology"));
         assert_eq!(r.industry_stocks_in_group, Some(25));
+        assert!(r.decode_error.is_none());
     }
 
     #[test]
@@ -374,6 +381,119 @@ mod tests {
         assert!(r.funds_pct_float_held.is_none());
         assert!(r.eps_due_date.is_none());
         assert!(r.debt_pct.is_none());
+        assert!(r.decode_error.is_none());
+    }
+
+    #[test]
+    fn flatten_includes_per_symbol_decode_error() {
+        let item = MdMarketDataItem {
+            decode_error: Some("invalid type: map, expected a string".to_string()),
+            ..empty_item()
+        };
+
+        let records = flatten_market_data(&["APLD"], &[item]);
+
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0].symbol, "APLD");
+        assert_eq!(
+            records[0].decode_error.as_deref(),
+            Some("invalid type: map, expected a string")
+        );
+    }
+
+    #[test]
+    fn flatten_includes_nested_statistics_and_fundamentals() {
+        let item = MdMarketDataItem {
+            pricing_statistics: Some(MdPricingStatistics {
+                end_of_day_statistics: Some(MdEndOfDayStatistics {
+                    historical_price_statistics: vec![],
+                    pricing_start_date: None,
+                    pricing_end_date: None,
+                    volume_moving_averages: vec![],
+                    avg_dollar_volume_50_day: Some(FormattedFloat {
+                        value: Some(25_000_000.0),
+                        formatted_value: Some("25.0M".to_string()),
+                    }),
+                    market_capitalization: Some(FormattedFloat {
+                        value: Some(1_500_000_000.0),
+                        formatted_value: Some("1.5B".to_string()),
+                    }),
+                    average_true_range_percent: vec![],
+                    ant_events: vec![],
+                    up_down_volume_ratio: Some(MdScaledFloat {
+                        value: Some(1.4),
+                        scaling_factor: None,
+                        formatted_value: Some("1.4".to_string()),
+                    }),
+                    alpha: None,
+                    beta: None,
+                    short_interest: Some(MdShortInterest {
+                        days_to_cover: Some(FormattedFloat {
+                            value: Some(2.5),
+                            formatted_value: Some("2.5".to_string()),
+                        }),
+                        days_to_cover_percent_change: None,
+                        percent_of_float: Some(MdScaledFloat {
+                            value: Some(7.5),
+                            scaling_factor: None,
+                            formatted_value: Some("7.5%".to_string()),
+                        }),
+                        volume: None,
+                    }),
+                    blue_dot_daily_events: vec![],
+                    blue_dot_weekly_events: vec![],
+                }),
+                intraday_statistics: None,
+            }),
+            financials: Some(MdFinancials {
+                eps_due_date: Some(MdFormattedString {
+                    value: Some("2026-01-30".to_string()),
+                    formatted_value: Some("Jan 30, 2026".to_string()),
+                }),
+                eps_due_date_status: Some("CONFIRMED".to_string()),
+                eps_last_reported_date: None,
+                consensus_financials: None,
+                cash_flow_per_share_last_year: None,
+                profit_margin_values: vec![],
+                estimates: None,
+            }),
+            ownership: Some(MdOwnership {
+                funds_float_percent_held: Some(MdScaledFloat {
+                    value: Some(62.5),
+                    scaling_factor: None,
+                    formatted_value: Some("62.5%".to_string()),
+                }),
+            }),
+            fundamentals: Some(MdFundamentals {
+                research_and_development_percent_last_qtr: Some(MdScaledFloat {
+                    value: Some(4.2),
+                    scaling_factor: None,
+                    formatted_value: Some("4.2%".to_string()),
+                }),
+                new_ceo_date: None,
+                debt_percent: Some(FormattedFloat {
+                    value: Some(12.3),
+                    formatted_value: Some("12.3%".to_string()),
+                }),
+            }),
+            ..empty_item()
+        };
+
+        let records = flatten_market_data(&["APLD", "EXTRA"], &[item]);
+
+        assert_eq!(records.len(), 1);
+        let r = &records[0];
+        assert_eq!(r.symbol, "APLD");
+        assert_eq!(r.market_cap.as_deref(), Some("1.5B"));
+        assert_eq!(r.avg_dollar_volume_50d.as_deref(), Some("25.0M"));
+        assert_eq!(r.up_down_volume_ratio.as_deref(), Some("1.4"));
+        assert_eq!(r.short_interest_pct_float.as_deref(), Some("7.5%"));
+        assert_eq!(r.short_interest_days_to_cover.as_deref(), Some("2.5"));
+        assert_eq!(r.funds_pct_float_held.as_deref(), Some("62.5%"));
+        assert_eq!(r.eps_due_date.as_deref(), Some("Jan 30, 2026"));
+        assert_eq!(r.eps_due_date_status.as_deref(), Some("CONFIRMED"));
+        assert_eq!(r.debt_pct.as_deref(), Some("12.3%"));
+        assert_eq!(r.rd_pct_last_qtr.as_deref(), Some("4.2%"));
     }
 
     #[test]

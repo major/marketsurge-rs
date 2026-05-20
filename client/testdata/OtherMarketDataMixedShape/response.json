@@ -1,0 +1,46 @@
+{
+  "marketData": [
+    {
+      "id": "APLD",
+      "originRequest": {
+        "fromDialect": "CHARTING",
+        "symbol": {
+          "value": "APLD"
+        }
+      },
+      "ratings": {
+        "smrRating": [
+          {
+            "letterValue": {
+              "formattedValue": "A"
+            },
+            "period": ["P12M"],
+            "periodOffset": true
+          }
+        ]
+      },
+      "symbology": {
+        "company": {
+          "companyName": {
+            "name": "Applied Digital Corp"
+          },
+          "city": 12345
+        },
+        "instrument": {
+          "subType": {
+            "value": "COMMON_STOCK"
+          }
+        }
+      },
+      "industry": {
+        "name": {
+          "value": "Computer Services"
+        },
+        "sector": null,
+        "indCode": {
+          "value": "G3620"
+        }
+      }
+    }
+  ]
+}

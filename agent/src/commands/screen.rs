@@ -1,13 +1,16 @@
 //! Stock screen commands for listing, running, and querying screens.
 
 use clap::{Args, Subcommand};
+use marketsurge_client::ClientError;
 use marketsurge_client::coach::{CoachTreeNode, CoachTreeResponse};
 use marketsurge_client::screen::{ResponseValue, ScreenEntry, ScreensResponse};
 use serde::Serialize;
-use tracing::instrument;
+use tracing::{error, instrument};
 
 use crate::common::command::{api_call, run_client_command};
 use crate::common::rows::flatten_response_rows;
+
+const IBD_50_LIMITATION: &str = "MarketSurge did not expose an official IBD 50 screen in the coach tree. Try `screen list --coach` or `tree coach` for currently exposed lists such as EF-50.";
 
 /// Screen subcommands.
 #[derive(Debug, Subcommand)]
@@ -103,7 +106,10 @@ async fn execute_run(args: &RunArgs, json_table: bool) -> i32 {
 
     run_client_command(json_table, |client| async move {
         // Resolve name to ID via coach tree; falls back to input as-is.
-        let screen_id = resolve_screen_id(&client, &screen_id_or_name).await;
+        let Some(screen_id) = resolve_screen_id(&client, &screen_id_or_name).await? else {
+            error!("{IBD_50_LIMITATION}");
+            return Err(1);
+        };
 
         let input = marketsurge_client::screen::RunScreenInput {
             correlation_tag: "marketsurge".to_string(),
@@ -119,7 +125,14 @@ async fn execute_run(args: &RunArgs, json_table: bool) -> i32 {
             response_columns: Vec::new(),
         };
 
-        let response = api_call(client.run_screen(input)).await?;
+        let response = match client.run_screen(input).await {
+            Ok(response) => response,
+            Err(err) if is_ibd_50_name(&screen_id_or_name) && is_not_found_error(&err) => {
+                error!("{IBD_50_LIMITATION}");
+                return Err(1);
+            }
+            Err(err) => return Err(crate::common::auth::handle_api_error(err)),
+        };
 
         let rows: &[Vec<ResponseValue>] = response
             .user
@@ -190,19 +203,69 @@ fn map_coach_screen_node(node: &CoachTreeNode) -> ScreenListRecord {
 /// Resolves a screen name to its ID by checking the coach tree.
 ///
 /// If a matching coach screen name is found, returns its `referenceId`.
-/// Otherwise returns the input unchanged (assumed to be a raw screen ID).
-async fn resolve_screen_id(client: &marketsurge_client::Client, id_or_name: &str) -> String {
-    let Ok(response) = client.coach_tree("marketsurge", "MSR_NAV").await else {
-        return id_or_name.to_string();
-    };
+/// Otherwise returns the input unchanged, except for known stable aliases that
+/// must be discoverable before they can be run.
+#[cfg(not(coverage))]
+async fn resolve_screen_id(
+    client: &marketsurge_client::Client,
+    id_or_name: &str,
+) -> Result<Option<String>, i32> {
+    let response = client
+        .coach_tree("marketsurge", "MSR_NAV")
+        .await
+        .map_err(crate::common::auth::handle_api_error)?;
+
+    Ok(resolve_screen_id_from_response(&response, id_or_name))
+}
+
+fn resolve_screen_id_from_response(
+    response: &CoachTreeResponse,
+    id_or_name: &str,
+) -> Option<String> {
+    find_coach_screen_reference_id(response, id_or_name)
+        .or_else(|| (!is_ibd_50_name(id_or_name)).then(|| id_or_name.to_string()))
+}
+
+fn find_coach_screen_reference_id(
+    response: &CoachTreeResponse,
+    id_or_name: &str,
+) -> Option<String> {
+    let normalized_target = normalized_screen_name(id_or_name);
 
     response
         .user
         .iter()
         .flat_map(|u| &u.screens)
-        .find(|node| node.name.as_deref() == Some(id_or_name))
+        .find(|node| {
+            node.name
+                .as_deref()
+                .is_some_and(|name| normalized_screen_name(name) == normalized_target)
+        })
         .and_then(|node| node.reference_id.clone())
-        .unwrap_or_else(|| id_or_name.to_string())
+}
+
+fn normalized_screen_name(name: &str) -> String {
+    name.chars()
+        .filter(|ch| ch.is_ascii_alphanumeric())
+        .flat_map(char::to_lowercase)
+        .collect()
+}
+
+fn is_ibd_50_name(name: &str) -> bool {
+    normalized_screen_name(name) == "ibd50"
+}
+
+fn is_not_found_error(err: &ClientError) -> bool {
+    match err {
+        ClientError::GraphQL { errors } => errors.iter().any(|error| {
+            error.message.contains("NOT_FOUND")
+                || error
+                    .extensions
+                    .as_ref()
+                    .is_some_and(|extensions| extensions.to_string().contains("NOT_FOUND"))
+        }),
+        _ => false,
+    }
 }
 
 #[cfg(test)]
@@ -212,6 +275,7 @@ mod tests {
         optional_response_value, response_value, response_value_without_md_item,
     };
     use marketsurge_client::coach::{CoachTreeResponse, CoachTreeUser};
+    use marketsurge_client::graphql::GraphQLFieldError;
     use marketsurge_client::screen::{ScreensResponse, ScreensUser};
 
     fn make_screen_entry(id: &str, name: &str) -> ScreenEntry {
@@ -381,5 +445,111 @@ mod tests {
         assert_eq!(records.len(), 1);
         assert_eq!(records[0].source, "coach");
         assert_eq!(records[0].id.as_deref(), Some("ref-ibd50"));
+    }
+
+    #[test]
+    fn flatten_screen_list_handles_missing_user_screens() {
+        let resp = ScreensResponse { user: None };
+        let coach = make_coach_response(vec![make_coach_node("IBD 50", "ref-ibd50")]);
+
+        let records = flatten_screen_list(&resp, Some(&coach));
+
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0].source, "coach");
+        assert_eq!(records[0].id.as_deref(), Some("ref-ibd50"));
+    }
+
+    #[test]
+    fn resolve_screen_id_from_response_handles_stable_aliases_and_raw_ids() {
+        let coach = make_coach_response(vec![make_coach_node("IBD 50", "ref-ibd50")]);
+
+        assert_eq!(
+            resolve_screen_id_from_response(&coach, "IBD50").as_deref(),
+            Some("ref-ibd50")
+        );
+        assert_eq!(
+            resolve_screen_id_from_response(&coach, "screen-custom").as_deref(),
+            Some("screen-custom")
+        );
+    }
+
+    #[test]
+    fn resolve_screen_id_from_response_requires_ibd_50_discovery() {
+        let coach = make_coach_response(vec![make_coach_node("EF-50", "ref-ef50")]);
+
+        assert!(resolve_screen_id_from_response(&coach, "IBD 50").is_none());
+        assert_eq!(
+            resolve_screen_id_from_response(&coach, "EF 50").as_deref(),
+            Some("ref-ef50")
+        );
+    }
+
+    #[test]
+    fn find_coach_screen_reference_id_matches_stable_ibd_50_aliases() {
+        let coach = make_coach_response(vec![make_coach_node("IBD 50", "ref-ibd50")]);
+
+        assert_eq!(
+            find_coach_screen_reference_id(&coach, "IBD50").as_deref(),
+            Some("ref-ibd50")
+        );
+        assert_eq!(
+            find_coach_screen_reference_id(&coach, "ibd 50").as_deref(),
+            Some("ref-ibd50")
+        );
+    }
+
+    #[test]
+    fn find_coach_screen_reference_id_keeps_similar_lists_distinct() {
+        let coach = make_coach_response(vec![make_coach_node("EF-50", "ref-ef50")]);
+
+        assert!(find_coach_screen_reference_id(&coach, "IBD 50").is_none());
+        assert_eq!(
+            find_coach_screen_reference_id(&coach, "EF 50").as_deref(),
+            Some("ref-ef50")
+        );
+    }
+
+    #[test]
+    fn ibd_50_name_recognizes_only_ibd_50() {
+        assert!(is_ibd_50_name("IBD 50"));
+        assert!(is_ibd_50_name("ibd50"));
+        assert!(!is_ibd_50_name("EF-50"));
+        assert!(!is_ibd_50_name("IBD Live Watch"));
+    }
+
+    #[test]
+    fn not_found_error_recognizes_graphql_not_found() {
+        let err = ClientError::GraphQL {
+            errors: vec![GraphQLFieldError {
+                message: "screen lookup failed".to_string(),
+                path: None,
+                extensions: Some(serde_json::json!({"code": "NOT_FOUND"})),
+            }],
+        };
+
+        assert!(is_not_found_error(&err));
+    }
+
+    #[test]
+    fn not_found_error_ignores_other_graphql_errors() {
+        let err = ClientError::GraphQL {
+            errors: vec![GraphQLFieldError {
+                message: "permission denied".to_string(),
+                path: None,
+                extensions: Some(serde_json::json!({"code": "FORBIDDEN"})),
+            }],
+        };
+
+        assert!(!is_not_found_error(&err));
+    }
+
+    #[test]
+    fn not_found_error_ignores_non_graphql_errors() {
+        let err = ClientError::BodyLimit {
+            limit: 1024,
+            actual: 2048,
+        };
+
+        assert!(!is_not_found_error(&err));
     }
 }
