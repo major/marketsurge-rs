@@ -52,11 +52,6 @@ pub enum Commands {
     /// Fetch broad rating, price, industry, and fundamental snapshot data.
     #[command(after_help = "Examples:\n  marketsurge-agent market-data AAPL MSFT")]
     MarketData(SymbolsArgs),
-    /// Fetch saved chart markups by Dow Jones symbol key.
-    #[command(
-        after_help = "Examples:\n  marketsurge-agent markups 13-5320\n  marketsurge-agent markups 13-5320 --frequency DAILY --sort-dir DESC"
-    )]
-    Markups(MarkupsArgs),
     /// Fetch fund ownership summaries and fund holdings.
     #[command(
         after_help = "Examples:\n  marketsurge-agent ownership summary AAPL\n  marketsurge-agent ownership funds AAPL"
@@ -137,21 +132,6 @@ pub struct WatchlistArgs {
     /// Watchlist subcommand to run.
     #[command(subcommand)]
     pub command: WatchlistCommand,
-}
-
-/// Arguments for the markups command.
-#[derive(Debug, Args)]
-pub struct MarkupsArgs {
-    /// Dow Jones symbol key, for example 13-5320.
-    pub dow_jones_key: String,
-
-    /// Keep only this frequency, for example DAILY or WEEKLY.
-    #[arg(long)]
-    pub frequency: Option<String>,
-
-    /// Sort direction, ASC or DESC.
-    #[arg(long)]
-    pub sort_dir: Option<String>,
 }
 
 /// Arguments for shell completion generation.

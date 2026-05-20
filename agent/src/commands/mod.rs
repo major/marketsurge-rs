@@ -12,8 +12,6 @@ pub mod fundamentals;
 pub mod industry;
 /// Broad market data command.
 pub mod market_data;
-/// Chart markup retrieval command.
-pub mod markups;
 /// Fund ownership data commands.
 pub mod ownership;
 /// RS rating data command.

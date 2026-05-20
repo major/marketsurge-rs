@@ -32,7 +32,6 @@ pub async fn run() -> i32 {
         Commands::Fundamentals(args) => commands::fundamentals::handle(args, json_table).await,
         Commands::Industry(args) => commands::industry::handle(args, json_table).await,
         Commands::MarketData(args) => commands::market_data::handle(args, json_table).await,
-        Commands::Markups(args) => commands::markups::handle(args, json_table).await,
         Commands::Ownership(args) => commands::ownership::handle(args, json_table).await,
         Commands::Ratings(args) => commands::ratings::handle(args, json_table).await,
         Commands::Screen(args) => commands::screen::handle(args, json_table).await,
