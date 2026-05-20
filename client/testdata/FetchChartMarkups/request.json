@@ -1,7 +1,0 @@
-{
-  "operationName": "FetchChartMarkups",
-  "variables": {
-    "site": "marketsurge",
-    "dowJonesKey": "13-5320"
-  }
-}

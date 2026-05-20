@@ -29,7 +29,6 @@ pub mod fundamentals;
 pub mod graphql;
 pub mod industry;
 pub mod market_data;
-pub mod markups;
 pub mod nav;
 pub mod ownership;
 pub mod ratings;

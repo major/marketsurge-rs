@@ -6,7 +6,7 @@ Unofficial HTTP client library for the MarketSurge GraphQL API. Not affiliated w
 
 ```text
 client/src/
-  lib.rs              public API surface: Client, ClientConfig, ClientError, Result, 16 endpoint modules
+  lib.rs              public API surface: Client, ClientConfig, ClientError, Result, 15 endpoint modules
   client.rs           core Client struct, ClientConfig builder, GraphQL request/response execution
   error.rs            thiserror-based ClientError (Status, BodyLimit, GraphQL, Http, Json)
   auth.rs             JWT token exchange from session cookies
@@ -22,7 +22,6 @@ client/src/
   fundamentals.rs     fundamental stock data
   industry.rs         industry group rankings
   market_data.rs      broad market data
-  markups.rs          chart markup annotations
   nav.rs              navigation/menu data
   ownership.rs        institutional ownership
   ratings.rs          stock ratings
