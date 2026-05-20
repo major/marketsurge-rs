@@ -1,6 +1,6 @@
 [package]
 name = "marketsurge-agent"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2024"
 rust-version = "1.95.0"
 description = "Unofficial agent-oriented CLI for MarketSurge data"
@@ -21,7 +21,7 @@ serde_json = "1"
 tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread"] }
 tracing = "0.1"
 tracing-subscriber = "0.3"
-marketsurge-client = { version = "0.1.1", path = "../client" }
+marketsurge-client = { version = "0.2.0", path = "../client" }
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage)'] }

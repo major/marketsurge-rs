@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] - 2026-05-20
+
+### <!-- 1 -->🐛 Bug Fixes
+
+- *(client)* Tolerate polymorphic ownership data
+- *(client)* Address Copilot deserialization feedback
+- Remove chart markup support
+- Handle MarketSurge schema edge cases
+
+### <!-- 2 -->📚 Documentation
+
+- Correct client endpoint count
+
+
 ## [0.1.1] - 2026-05-19
 
 ### <!-- 1 -->🐛 Bug Fixes
