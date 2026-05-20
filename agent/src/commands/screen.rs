@@ -531,6 +531,19 @@ mod tests {
     }
 
     #[test]
+    fn not_found_error_recognizes_graphql_message_not_found() {
+        let err = ClientError::GraphQL {
+            errors: vec![GraphQLFieldError {
+                message: "Screen NOT_FOUND".to_string(),
+                path: None,
+                extensions: None,
+            }],
+        };
+
+        assert!(is_not_found_error(&err));
+    }
+
+    #[test]
     fn not_found_error_ignores_other_graphql_errors() {
         let err = ClientError::GraphQL {
             errors: vec![GraphQLFieldError {
