@@ -62,7 +62,7 @@ pub enum Commands {
     Ratings(SymbolsArgs),
     /// List or run stock screens, including coach screens.
     #[command(
-        after_help = "Examples:\n  marketsurge-agent screen list --coach\n  marketsurge-agent screen run 'IBD 50'"
+        after_help = "Examples:\n  marketsurge-agent screen list --query ibd\n  marketsurge-agent screen list --coach\n  marketsurge-agent screen run 'IBD 50'"
     )]
     Screen(ScreenArgs),
     /// Fetch coach or navigation trees.
@@ -72,7 +72,7 @@ pub enum Commands {
     Tree(TreeArgs),
     /// List watchlists, read symbols, or screen symbols.
     #[command(
-        after_help = "Examples:\n  marketsurge-agent watchlist list\n  marketsurge-agent watchlist symbols 12345"
+        after_help = "Examples:\n  marketsurge-agent watchlist list --query ibd\n  marketsurge-agent watchlist symbols 12345"
     )]
     Watchlist(WatchlistArgs),
     /// Generate shell completion scripts.

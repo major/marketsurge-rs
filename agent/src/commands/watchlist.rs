@@ -13,8 +13,10 @@ use crate::common::rows::{flatten_response_rows, response_columns};
 #[derive(Debug, Subcommand)]
 pub enum WatchlistCommand {
     /// List saved watchlists.
-    #[command(after_help = "Examples:\n  marketsurge-agent watchlist list")]
-    List,
+    #[command(
+        after_help = "Examples:\n  marketsurge-agent watchlist list\n  marketsurge-agent watchlist list --query ibd"
+    )]
+    List(WatchlistListArgs),
     /// Fetch symbols in a watchlist by ID.
     #[command(after_help = "Examples:\n  marketsurge-agent watchlist symbols 12345")]
     Symbols(WatchlistSymbolsArgs),
@@ -23,6 +25,14 @@ pub enum WatchlistCommand {
         after_help = "Examples:\n  marketsurge-agent watchlist screen AAPL MSFT\n  marketsurge-agent watchlist screen AAPL --columns Symbol,EPSRating,RSRating"
     )]
     Screen(WatchlistScreenArgs),
+}
+
+/// Arguments for the watchlist list subcommand.
+#[derive(Debug, Args)]
+pub struct WatchlistListArgs {
+    /// Filter watchlists by ID, name, or description.
+    #[arg(long, short)]
+    pub query: Option<String>,
 }
 
 /// Arguments for the watchlist symbols subcommand.
@@ -79,7 +89,7 @@ pub struct WatchlistSymbolRecord {
 #[cfg(not(coverage))]
 pub async fn handle(args: &WatchlistArgs, fields: &[String]) -> i32 {
     match &args.command {
-        WatchlistCommand::List => execute_list(fields).await,
+        WatchlistCommand::List(a) => execute_list(a, fields).await,
         WatchlistCommand::Symbols(a) => execute_symbols(a, fields).await,
         WatchlistCommand::Screen(a) => execute_screen(a, fields).await,
     }
@@ -98,13 +108,56 @@ fn flatten_watchlist_list(watchlists: &[WatchlistSummary]) -> Vec<WatchlistRecor
         .collect()
 }
 
+fn filter_watchlist_list(
+    records: Vec<WatchlistRecord>,
+    normalized_query: Option<&str>,
+) -> Vec<WatchlistRecord> {
+    let Some(normalized_query) = normalized_query else {
+        return records;
+    };
+
+    records
+        .into_iter()
+        .filter(|record| watchlist_record_matches(record, normalized_query))
+        .collect()
+}
+
+fn normalized_watchlist_query(query: Option<&str>) -> Option<String> {
+    query
+        .map(normalized_watchlist_name)
+        .filter(|query| !query.is_empty())
+}
+
+fn watchlist_record_matches(record: &WatchlistRecord, normalized_query: &str) -> bool {
+    [
+        record.id.as_deref(),
+        record.name.as_deref(),
+        record.description.as_deref(),
+    ]
+    .into_iter()
+    .flatten()
+    .any(|value| normalized_watchlist_name(value).contains(normalized_query))
+}
+
+fn normalized_watchlist_name(name: &str) -> String {
+    name.chars()
+        .filter(|ch| ch.is_ascii_alphanumeric())
+        .flat_map(char::to_lowercase)
+        .collect()
+}
+
 #[instrument(skip_all)]
 #[cfg(not(coverage))]
-async fn execute_list(fields: &[String]) -> i32 {
+async fn execute_list(args: &WatchlistListArgs, fields: &[String]) -> i32 {
+    let query = normalized_watchlist_query(args.query.as_deref());
+
     run_client_command(fields, |client| async move {
         let response = api_call(client.get_all_watchlist_names()).await?;
 
-        Ok(flatten_watchlist_list(&response.watchlists))
+        Ok(filter_watchlist_list(
+            flatten_watchlist_list(&response.watchlists),
+            query.as_deref(),
+        ))
     })
     .await
 }
@@ -191,6 +244,82 @@ mod tests {
     fn flatten_list_empty() {
         let records = flatten_watchlist_list(&[]);
         assert!(records.is_empty());
+    }
+
+    #[test]
+    fn filter_list_matches_name_without_punctuation() {
+        let records = flatten_watchlist_list(&[
+            WatchlistSummary {
+                id: Some("1".into()),
+                name: Some("EF-50".into()),
+                last_modified_date_utc: None,
+                description: None,
+            },
+            WatchlistSummary {
+                id: Some("2".into()),
+                name: Some("IBD 50".into()),
+                last_modified_date_utc: None,
+                description: None,
+            },
+        ]);
+
+        let filtered = filter_watchlist_list(records, Some("ibd50"));
+
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].id.as_deref(), Some("2"));
+    }
+
+    #[test]
+    fn filter_list_matches_description() {
+        let records = flatten_watchlist_list(&[WatchlistSummary {
+            id: Some("1".into()),
+            name: Some("Growth".into()),
+            last_modified_date_utc: None,
+            description: Some("IBD leaders".into()),
+        }]);
+
+        let filtered = filter_watchlist_list(records, Some("ibd"));
+
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].id.as_deref(), Some("1"));
+    }
+
+    #[test]
+    fn filter_list_matches_id() {
+        let records = flatten_watchlist_list(&[WatchlistSummary {
+            id: Some("watchlist-ibd-50".into()),
+            name: Some("Growth".into()),
+            last_modified_date_utc: None,
+            description: None,
+        }]);
+
+        let filtered = filter_watchlist_list(records, Some("ibd50"));
+
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].id.as_deref(), Some("watchlist-ibd-50"));
+    }
+
+    #[test]
+    fn filter_list_without_query_returns_all_records() {
+        let records = flatten_watchlist_list(&[WatchlistSummary {
+            id: Some("1".into()),
+            name: Some("Growth".into()),
+            last_modified_date_utc: None,
+            description: None,
+        }]);
+
+        let filtered = filter_watchlist_list(records, None);
+
+        assert_eq!(filtered.len(), 1);
+    }
+
+    #[test]
+    fn normalized_watchlist_query_ignores_empty_normalized_query() {
+        assert_eq!(normalized_watchlist_query(Some(" -- ")), None);
+        assert_eq!(
+            normalized_watchlist_query(Some("IBD 50")).as_deref(),
+            Some("ibd50")
+        );
     }
 
     #[test]
