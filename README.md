@@ -51,6 +51,10 @@ marketsurge-agent ownership summary AAPL
 # Limit output to selected top-level fields
 marketsurge-agent --fields symbol,num_funds_held ownership summary AAPL
 
+# Find saved watchlists or screens by ID or name, including punctuation-insensitive matches like IBD 50
+marketsurge-agent watchlist list --query ibd
+marketsurge-agent screen list --query ibd
+
 # Generate shell completions
 marketsurge-agent completions zsh > _marketsurge-agent
 ```

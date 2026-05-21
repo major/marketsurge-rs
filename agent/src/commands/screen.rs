@@ -10,14 +10,14 @@ use tracing::{error, instrument};
 use crate::common::command::{api_call, run_client_command};
 use crate::common::rows::flatten_response_rows;
 
-const IBD_50_LIMITATION: &str = "MarketSurge did not expose an official IBD 50 screen in the coach tree. Try `screen list --coach` or `tree coach` for currently exposed lists such as EF-50.";
+const IBD_50_LIMITATION: &str = "MarketSurge did not expose an official IBD 50 screen in the coach tree. Try `screen list --query ibd`, `screen list --coach`, or `tree coach` for currently exposed lists such as EF-50.";
 
 /// Screen subcommands.
 #[derive(Debug, Subcommand)]
 pub enum ScreenCommand {
     /// List user screens, optionally including predefined coach screens.
     #[command(
-        after_help = "Examples:\n  marketsurge-agent screen list\n  marketsurge-agent screen list --coach"
+        after_help = "Examples:\n  marketsurge-agent screen list\n  marketsurge-agent screen list --coach\n  marketsurge-agent screen list --query ibd"
     )]
     List(ListArgs),
     /// Run a screen by ID or name and return matching instruments.
@@ -33,6 +33,9 @@ pub struct ListArgs {
     /// Include predefined coach screens such as IBD 50.
     #[arg(long)]
     pub coach: bool,
+    /// Filter screens by ID, name, or description. Automatically searches coach screens too.
+    #[arg(long, short)]
+    pub query: Option<String>,
 }
 
 /// Arguments for running a saved screen.
@@ -77,7 +80,8 @@ pub async fn handle(args: &crate::cli::ScreenArgs, fields: &[String]) -> i32 {
 #[instrument(skip_all)]
 #[cfg(not(coverage))]
 async fn execute_list(args: &ListArgs, fields: &[String]) -> i32 {
-    let coach = args.coach;
+    let query = normalized_screen_query(args.query.as_deref());
+    let coach = args.coach || query.is_some();
 
     run_client_command(fields, |client| async move {
         // Always include user screens.
@@ -90,9 +94,9 @@ async fn execute_list(args: &ListArgs, fields: &[String]) -> i32 {
             None
         };
 
-        Ok(flatten_screen_list(
-            &screens_response,
-            coach_response.as_ref(),
+        Ok(filter_screen_list(
+            flatten_screen_list(&screens_response, coach_response.as_ref()),
+            query.as_deref(),
         ))
     })
     .await
@@ -172,6 +176,37 @@ fn flatten_screen_list(
     }
 
     records
+}
+
+fn filter_screen_list(
+    records: Vec<ScreenListRecord>,
+    normalized_query: Option<&str>,
+) -> Vec<ScreenListRecord> {
+    let Some(normalized_query) = normalized_query else {
+        return records;
+    };
+
+    records
+        .into_iter()
+        .filter(|record| screen_record_matches(record, normalized_query))
+        .collect()
+}
+
+fn normalized_screen_query(query: Option<&str>) -> Option<String> {
+    query
+        .map(normalized_screen_name)
+        .filter(|query| !query.is_empty())
+}
+
+fn screen_record_matches(record: &ScreenListRecord, normalized_query: &str) -> bool {
+    [
+        record.id.as_deref(),
+        record.name.as_deref(),
+        record.description.as_deref(),
+    ]
+    .into_iter()
+    .flatten()
+    .any(|value| normalized_screen_name(value).contains(normalized_query))
 }
 
 /// Maps a user screen entry to a flat output record.
@@ -457,6 +492,60 @@ mod tests {
         assert_eq!(records.len(), 1);
         assert_eq!(records[0].source, "coach");
         assert_eq!(records[0].id.as_deref(), Some("ref-ibd50"));
+    }
+
+    #[test]
+    fn filter_screen_list_matches_name_without_punctuation() {
+        let records = vec![
+            map_coach_screen_node(&make_coach_node("EF-50", "ref-ef50")),
+            map_coach_screen_node(&make_coach_node("IBD 50", "ref-ibd50")),
+        ];
+
+        let filtered = filter_screen_list(records, Some("ibd50"));
+
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].id.as_deref(), Some("ref-ibd50"));
+    }
+
+    #[test]
+    fn filter_screen_list_matches_description() {
+        let records = vec![map_user_screen_entry(&make_screen_entry("scr-1", "Growth"))];
+
+        let filtered = filter_screen_list(records, Some("testscreen"));
+
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].id.as_deref(), Some("scr-1"));
+    }
+
+    #[test]
+    fn filter_screen_list_matches_id() {
+        let records = vec![map_user_screen_entry(&make_screen_entry(
+            "screen-ibd-50",
+            "Growth",
+        ))];
+
+        let filtered = filter_screen_list(records, Some("ibd50"));
+
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].id.as_deref(), Some("screen-ibd-50"));
+    }
+
+    #[test]
+    fn filter_screen_list_without_query_returns_all_records() {
+        let records = vec![map_user_screen_entry(&make_screen_entry("scr-1", "Growth"))];
+
+        let filtered = filter_screen_list(records, None);
+
+        assert_eq!(filtered.len(), 1);
+    }
+
+    #[test]
+    fn normalized_screen_query_ignores_empty_normalized_query() {
+        assert_eq!(normalized_screen_query(Some(" -- ")), None);
+        assert_eq!(
+            normalized_screen_query(Some("IBD 50")).as_deref(),
+            Some("ibd50")
+        );
     }
 
     #[test]
