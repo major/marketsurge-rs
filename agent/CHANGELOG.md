@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2026-05-21
+
+### <!-- 0 -->🚀 Features
+
+- *(agent)* Add list query filters
+
+### <!-- 1 -->🐛 Bug Fixes
+
+- *(client)* Handle wrapped market-data instruments
+- *(agent)* Restore standard JSON output
+
+### <!-- 4 -->🔧 Refactor
+
+- *(agent)* Split market data flattening
+- *(agent)* Isolate ownership fund keys
+
+
 ## [0.2.0] - 2026-05-20
 
 ### <!-- 1 -->🐛 Bug Fixes
