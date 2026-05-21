@@ -69,85 +69,77 @@ pub struct FundOwnershipRecord {
 /// Handles the ownership command group.
 #[instrument(skip_all)]
 #[cfg(not(coverage))]
-pub async fn handle(args: &OwnershipArgs, json_table: bool) -> i32 {
+pub async fn handle(args: &OwnershipArgs, fields: &[String]) -> i32 {
     match &args.command {
-        OwnershipCommand::Summary(a) => execute_summary(a, json_table).await,
-        OwnershipCommand::Funds(a) => execute_funds(a, json_table).await,
+        OwnershipCommand::Summary(a) => execute_summary(a, fields).await,
+        OwnershipCommand::Funds(a) => execute_funds(a, fields).await,
     }
 }
 
 #[instrument(skip_all)]
 #[cfg(not(coverage))]
-async fn execute_summary(args: &SymbolsArgs, json_table: bool) -> i32 {
-    run_command(
-        &args.symbols,
-        json_table,
-        |client, symbol_refs| async move {
-            let response = api_call(client.ownership(&symbol_refs)).await?;
+async fn execute_summary(args: &SymbolsArgs, fields: &[String]) -> i32 {
+    run_command(&args.symbols, fields, |client, symbol_refs| async move {
+        let response = api_call(client.ownership(&symbol_refs)).await?;
 
-            Ok(flatten_ownership_summary(
-                &symbol_refs,
-                &response.market_data,
-            ))
-        },
-    )
+        Ok(flatten_ownership_summary(
+            &symbol_refs,
+            &response.market_data,
+        ))
+    })
     .await
 }
 
 #[instrument(skip_all)]
 #[cfg(not(coverage))]
-async fn execute_funds(args: &SymbolsArgs, json_table: bool) -> i32 {
-    run_command(
-        &args.symbols,
-        json_table,
-        |client, symbol_refs| async move {
-            // Resolve DJ_KEY for each symbol via the fundamentals API symbology.
-            let fundamentals = api_call(client.fundamentals(
-                &symbol_refs,
-                "CHARTING",
-                "P7Y_AGO",
-                "P2Y_FUTURE",
-                "P7Y_AGO",
-                "P2Y_FUTURE",
-            ))
-            .await?;
+async fn execute_funds(args: &SymbolsArgs, fields: &[String]) -> i32 {
+    run_command(&args.symbols, fields, |client, symbol_refs| async move {
+        // Resolve DJ_KEY for each symbol via the fundamentals API symbology.
+        let fundamentals = api_call(client.fundamentals(
+            &symbol_refs,
+            "CHARTING",
+            "P7Y_AGO",
+            "P2Y_FUTURE",
+            "P7Y_AGO",
+            "P2Y_FUTURE",
+        ))
+        .await?;
 
-            let mut records = Vec::new();
+        let mut records = Vec::new();
 
-            for (symbol, item) in zip_symbols(&symbol_refs, &fundamentals.market_data) {
-                // Extract DJ_KEY from symbology and split into exchange + id.
-                let dj_key = extract_dj_key(item);
+        for (symbol, item) in zip_symbols(&symbol_refs, &fundamentals.market_data) {
+            // Extract DJ_KEY from symbology and split into exchange + id.
+            let dj_key = extract_dj_key(item);
 
-                let (exchange, id) = match dj_key.and_then(|k| k.split_once('-')) {
-                    Some(pair) => pair,
-                    None => {
-                        tracing::warn!(%symbol, "no DJ_KEY found, skipping fund lookup");
-                        continue;
-                    }
-                };
-
-                let parameters = vec![
-                    ScreenerParameter {
-                        name: "DowJonesExchange".to_string(),
-                        value: exchange.to_string(),
-                    },
-                    ScreenerParameter {
-                        name: "DowJonesId".to_string(),
-                        value: id.to_string(),
-                    },
-                ];
-
-                let response =
-                    api_call(client.market_data_screen(FUND_OWNERSHIP_SCREEN, parameters)).await?;
-
-                if let Some(result) = response.market_data_screen {
-                    records.extend(flatten_fund_rows(symbol, &result.response_values));
+            let (exchange, id) = match dj_key.and_then(|k| k.split_once('-')) {
+                Some(pair) => pair,
+                None => {
+                    tracing::warn!(%symbol, "no DJ_KEY found, skipping fund lookup");
+                    continue;
                 }
-            }
+            };
 
-            Ok(records)
-        },
-    )
+            let parameters = vec![
+                ScreenerParameter {
+                    name: "DowJonesExchange".to_string(),
+                    value: exchange.to_string(),
+                },
+                ScreenerParameter {
+                    name: "DowJonesId".to_string(),
+                    value: id.to_string(),
+                },
+            ];
+
+            let response =
+                api_call(client.market_data_screen(FUND_OWNERSHIP_SCREEN, parameters)).await?;
+
+            if let Some(result) = response.market_data_screen {
+                records.extend(flatten_fund_rows(symbol, &result.response_values));
+            }
+        }
+
+        Ok(records)
+    })
     .await
 }
 

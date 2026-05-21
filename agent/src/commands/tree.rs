@@ -44,17 +44,17 @@ pub struct TreeRecord {
 /// Handles the tree command group.
 #[instrument(skip_all)]
 #[cfg(not(coverage))]
-pub async fn handle(args: &TreeArgs, json_table: bool) -> i32 {
+pub async fn handle(args: &TreeArgs, fields: &[String]) -> i32 {
     match &args.command {
-        TreeCommand::Coach => execute_coach(json_table).await,
-        TreeCommand::Nav => execute_nav(json_table).await,
+        TreeCommand::Coach => execute_coach(fields).await,
+        TreeCommand::Nav => execute_nav(fields).await,
     }
 }
 
 #[instrument(skip_all)]
 #[cfg(not(coverage))]
-async fn execute_coach(json_table: bool) -> i32 {
-    run_client_command(json_table, |client| async move {
+async fn execute_coach(fields: &[String]) -> i32 {
+    run_client_command(fields, |client| async move {
         let response = api_call(client.coach_tree("marketsurge", "MSR_NAV")).await?;
 
         Ok(flatten_coach_tree(&response))
@@ -64,8 +64,8 @@ async fn execute_coach(json_table: bool) -> i32 {
 
 #[instrument(skip_all)]
 #[cfg(not(coverage))]
-async fn execute_nav(json_table: bool) -> i32 {
-    run_client_command(json_table, |client| async move {
+async fn execute_nav(fields: &[String]) -> i32 {
+    run_client_command(fields, |client| async move {
         let response = api_call(client.nav_tree("marketsurge", "MSR_NAV")).await?;
 
         Ok(flatten_nav_tree(&response))

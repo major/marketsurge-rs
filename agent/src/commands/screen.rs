@@ -67,19 +67,19 @@ pub struct ScreenListRecord {
 /// Handles the screen command group.
 #[instrument(skip_all)]
 #[cfg(not(coverage))]
-pub async fn handle(args: &crate::cli::ScreenArgs, json_table: bool) -> i32 {
+pub async fn handle(args: &crate::cli::ScreenArgs, fields: &[String]) -> i32 {
     match &args.command {
-        ScreenCommand::List(a) => execute_list(a, json_table).await,
-        ScreenCommand::Run(a) => execute_run(a, json_table).await,
+        ScreenCommand::List(a) => execute_list(a, fields).await,
+        ScreenCommand::Run(a) => execute_run(a, fields).await,
     }
 }
 
 #[instrument(skip_all)]
 #[cfg(not(coverage))]
-async fn execute_list(args: &ListArgs, json_table: bool) -> i32 {
+async fn execute_list(args: &ListArgs, fields: &[String]) -> i32 {
     let coach = args.coach;
 
-    run_client_command(json_table, |client| async move {
+    run_client_command(fields, |client| async move {
         // Always include user screens.
         let screens_response = api_call(client.screens("marketsurge")).await?;
 
@@ -100,11 +100,11 @@ async fn execute_list(args: &ListArgs, json_table: bool) -> i32 {
 
 #[instrument(skip_all)]
 #[cfg(not(coverage))]
-async fn execute_run(args: &RunArgs, json_table: bool) -> i32 {
+async fn execute_run(args: &RunArgs, fields: &[String]) -> i32 {
     let screen_id_or_name = args.screen_id.clone();
     let limit = args.limit;
 
-    run_client_command(json_table, |client| async move {
+    run_client_command(fields, |client| async move {
         // Resolve name to ID via coach tree; falls back to input as-is.
         let Some(screen_id) = resolve_screen_id(&client, &screen_id_or_name).await? else {
             error!("{IBD_50_LIMITATION}");

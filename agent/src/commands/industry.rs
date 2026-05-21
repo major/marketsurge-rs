@@ -71,10 +71,10 @@ pub struct IndustryOverviewRecord {
 /// Handles the industry command group.
 #[instrument(skip_all)]
 #[cfg(not(coverage))]
-pub async fn handle(args: &IndustryArgs, json_table: bool) -> i32 {
+pub async fn handle(args: &IndustryArgs, fields: &[String]) -> i32 {
     match &args.command {
-        IndustryCommand::Rs(a) => execute_rs(a, json_table).await,
-        IndustryCommand::Overview(a) => execute_overview(a, json_table).await,
+        IndustryCommand::Rs(a) => execute_rs(a, fields).await,
+        IndustryCommand::Overview(a) => execute_overview(a, fields).await,
     }
 }
 
@@ -101,16 +101,12 @@ fn flatten_industry_rs(
 
 #[instrument(skip_all)]
 #[cfg(not(coverage))]
-async fn execute_rs(args: &SymbolsArgs, json_table: bool) -> i32 {
-    run_command(
-        &args.symbols,
-        json_table,
-        |client, symbol_refs| async move {
-            let response = api_call(client.industry_group_rs(&symbol_refs, None)).await?;
+async fn execute_rs(args: &SymbolsArgs, fields: &[String]) -> i32 {
+    run_command(&args.symbols, fields, |client, symbol_refs| async move {
+        let response = api_call(client.industry_group_rs(&symbol_refs, None)).await?;
 
-            Ok(flatten_industry_rs(&symbol_refs, &response.market_data))
-        },
-    )
+        Ok(flatten_industry_rs(&symbol_refs, &response.market_data))
+    })
     .await
 }
 
@@ -173,19 +169,15 @@ fn flatten_industry_overview(
 
 #[instrument(skip_all)]
 #[cfg(not(coverage))]
-async fn execute_overview(args: &SymbolsArgs, json_table: bool) -> i32 {
-    run_command(
-        &args.symbols,
-        json_table,
-        |client, symbol_refs| async move {
-            let response = api_call(client.industry_overview(&symbol_refs, None)).await?;
+async fn execute_overview(args: &SymbolsArgs, fields: &[String]) -> i32 {
+    run_command(&args.symbols, fields, |client, symbol_refs| async move {
+        let response = api_call(client.industry_overview(&symbol_refs, None)).await?;
 
-            Ok(flatten_industry_overview(
-                &symbol_refs,
-                &response.market_data,
-            ))
-        },
-    )
+        Ok(flatten_industry_overview(
+            &symbol_refs,
+            &response.market_data,
+        ))
+    })
     .await
 }
 

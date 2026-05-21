@@ -48,7 +48,7 @@ pub struct AdhocScreenCommandArgs {
 /// Handles the adhoc-screen command.
 #[instrument(skip_all)]
 #[cfg(not(coverage))]
-pub async fn handle(args: &AdhocScreenCommandArgs, json_table: bool) -> i32 {
+pub async fn handle(args: &AdhocScreenCommandArgs, fields: &[String]) -> i32 {
     let columns = response_columns(&args.columns);
 
     let adhoc_query: Option<serde_json::Value> = match &args.query {
@@ -68,7 +68,7 @@ pub async fn handle(args: &AdhocScreenCommandArgs, json_table: bool) -> i32 {
     let result_limit = args.limit;
     let page_skip = args.skip;
 
-    run_client_command(json_table, |client| async move {
+    run_client_command(fields, |client| async move {
         let response = api_call(client.market_data_adhoc_screen(
             "marketsurge",
             columns,

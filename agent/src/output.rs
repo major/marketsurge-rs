@@ -3,25 +3,18 @@
 use std::io::{self, Write};
 
 use serde::Serialize;
-use serde_json::Value;
+use serde_json::{Map, Value};
 
 /// Writes `value` as compact JSON to stdout, newline-terminated.
-///
-/// When `json_table` is true, arrays of objects are converted to
-/// array-of-arrays format with a header row before serialization.
-pub fn print_json<T: Serialize>(value: &T, json_table: bool) -> io::Result<()> {
-    if json_table {
-        let v = serde_json::to_value(value)
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
-        match &v {
-            Value::Array(arr) if arr.first().is_some_and(Value::is_object) => {
-                let table = values_to_table(arr);
-                write_json(&mut io::stdout().lock(), &table)
-            }
-            _ => write_json(&mut io::stdout().lock(), &v),
-        }
-    } else {
+pub fn print_json<T: Serialize>(value: &T, fields: &[String]) -> io::Result<()> {
+    let selected_fields = selected_fields(fields);
+    if selected_fields.is_empty() {
         write_json(&mut io::stdout().lock(), value)
+    } else {
+        let value = serde_json::to_value(value)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+        let filtered = filter_value_fields(value, &selected_fields);
+        write_json(&mut io::stdout().lock(), &filtered)
     }
 }
 
@@ -36,43 +29,39 @@ pub fn finish_output(result: io::Result<()>) -> i32 {
     }
 }
 
-/// Converts an array of JSON objects into JSON Table format: an array whose
-/// first element is the header row (field names) and remaining elements are
-/// value rows. Headers are the union of all object keys, ordered by first
-/// appearance across all rows. Missing keys in any row produce `null`.
-fn values_to_table(records: &[Value]) -> Value {
-    if !records.first().is_some_and(Value::is_object) {
-        return Value::Array(records.to_vec());
+fn selected_fields(fields: &[String]) -> Vec<&str> {
+    fields
+        .iter()
+        .map(|field| field.trim())
+        .filter(|field| !field.is_empty())
+        .collect()
+}
+
+fn filter_value_fields(value: Value, fields: &[&str]) -> Value {
+    match value {
+        Value::Object(object) => Value::Object(filter_object_fields(object, fields)),
+        Value::Array(values) => Value::Array(
+            values
+                .into_iter()
+                .map(|value| match value {
+                    Value::Object(object) => Value::Object(filter_object_fields(object, fields)),
+                    other => other,
+                })
+                .collect(),
+        ),
+        other => other,
     }
+}
 
-    let mut headers: Vec<String> = Vec::new();
-    let mut seen = std::collections::HashSet::new();
-    for record in records {
-        if let Value::Object(obj) = record {
-            for key in obj.keys() {
-                if seen.insert(key.clone()) {
-                    headers.push(key.clone());
-                }
-            }
-        }
-    }
-
-    let header_row = Value::Array(headers.iter().map(|h| Value::String(h.clone())).collect());
-
-    let mut table = Vec::with_capacity(records.len() + 1);
-    table.push(header_row);
-
-    for record in records {
-        if let Value::Object(obj) = record {
-            let row: Vec<Value> = headers
-                .iter()
-                .map(|h| obj.get(h).cloned().unwrap_or(Value::Null))
-                .collect();
-            table.push(Value::Array(row));
-        }
-    }
-
-    Value::Array(table)
+fn filter_object_fields(mut object: Map<String, Value>, fields: &[&str]) -> Map<String, Value> {
+    fields
+        .iter()
+        .filter_map(|field| {
+            object
+                .remove(*field)
+                .map(|value| ((*field).to_string(), value))
+        })
+        .collect()
 }
 
 /// Writes `value` as compact JSON to `writer`, newline-terminated.
@@ -86,18 +75,12 @@ fn write_json<W: Write, T: Serialize>(writer: &mut W, value: &T) -> io::Result<(
 mod tests {
     use serde::Serialize;
 
-    use super::{finish_output, values_to_table, write_json};
+    use super::{filter_value_fields, finish_output, print_json, selected_fields, write_json};
 
     #[derive(Debug, Serialize)]
     struct TestRecord {
         symbol: String,
         price: f64,
-    }
-
-    #[derive(Debug, Serialize)]
-    struct DecodeRecord {
-        symbol: String,
-        decode_error: Option<String>,
     }
 
     fn sample_records() -> Vec<TestRecord> {
@@ -136,64 +119,87 @@ mod tests {
     }
 
     #[test]
-    fn values_to_table_converts_array_of_objects() {
-        let records = sample_records();
-        let values: Vec<serde_json::Value> = records
-            .iter()
-            .map(|r| serde_json::to_value(r).unwrap())
-            .collect();
-        let table = values_to_table(&values);
-        let rows = table.as_array().unwrap();
+    fn print_json_writes_all_fields_by_default() {
+        let record = &sample_records()[0];
 
-        assert_eq!(rows.len(), 3, "header row + 2 data rows");
-
-        let headers = rows[0].as_array().unwrap();
-        assert!(headers.contains(&serde_json::Value::String("symbol".to_string())));
-        assert!(headers.contains(&serde_json::Value::String("price".to_string())));
-
-        let first_row = rows[1].as_array().unwrap();
-        assert_eq!(first_row.len(), headers.len());
-        assert!(first_row.contains(&serde_json::json!("AAPL")));
-        assert!(first_row.contains(&serde_json::json!(150.5)));
+        print_json(record, &[]).unwrap();
     }
 
     #[test]
-    fn values_to_table_preserves_decode_error_column() {
-        let values = vec![
-            serde_json::to_value(DecodeRecord {
-                symbol: "NOW".to_string(),
-                decode_error: Some("invalid length 1, expected struct MdInstrument".to_string()),
-            })
-            .unwrap(),
+    fn print_json_applies_selected_fields() {
+        let records = sample_records();
+        let fields = vec!["symbol".to_string()];
+
+        print_json(&records, &fields).unwrap();
+    }
+
+    #[test]
+    fn selected_fields_omits_empty_names() {
+        let fields = vec!["symbol".to_string(), String::new(), "price".to_string()];
+
+        assert_eq!(selected_fields(&fields), vec!["symbol", "price"]);
+    }
+
+    #[test]
+    fn selected_fields_trims_whitespace() {
+        let fields = vec![
+            " symbol".to_string(),
+            "  ".to_string(),
+            "price ".to_string(),
         ];
 
-        let table = values_to_table(&values);
-        let rows = table.as_array().unwrap();
-        let headers = rows[0].as_array().unwrap();
-        let decode_error_index = headers
-            .iter()
-            .position(|header| header == "decode_error")
-            .expect("decode_error header should be present");
-        let first_row = rows[1].as_array().unwrap();
+        assert_eq!(selected_fields(&fields), vec!["symbol", "price"]);
+    }
+
+    #[test]
+    fn filter_value_fields_limits_array_of_objects() {
+        let records = sample_records();
+        let value = serde_json::to_value(records).unwrap();
+
+        let filtered = filter_value_fields(value, &["symbol"]);
 
         assert_eq!(
-            first_row.get(decode_error_index),
-            Some(&serde_json::json!(
-                "invalid length 1, expected struct MdInstrument"
-            ))
+            filtered,
+            serde_json::json!([
+                {"symbol": "AAPL"},
+                {"symbol": "MSFT"}
+            ])
         );
     }
 
     #[test]
-    fn values_to_table_returns_non_object_array_unchanged() {
-        let values = vec![serde_json::json!(1), serde_json::json!(2)];
-        let result = values_to_table(&values);
-        assert_eq!(result, serde_json::json!([1, 2]));
+    fn filter_value_fields_limits_single_object() {
+        let value = serde_json::json!({"symbol": "AAPL", "price": 150.5});
+
+        let filtered = filter_value_fields(value, &["price"]);
+
+        assert_eq!(filtered, serde_json::json!({"price": 150.5}));
     }
 
     #[test]
-    fn values_to_table_handles_empty_array() {
-        let result = values_to_table(&[]);
-        assert_eq!(result, serde_json::json!([]));
+    fn filter_value_fields_omits_missing_fields() {
+        let value = serde_json::json!({"symbol": "AAPL"});
+
+        let filtered = filter_value_fields(value, &["missing"]);
+
+        assert_eq!(filtered, serde_json::json!({}));
+    }
+
+    #[test]
+    fn filter_value_fields_leaves_non_object_array_values_unchanged() {
+        let value = serde_json::json!([1, {"symbol": "AAPL", "price": 150.5}]);
+
+        let filtered = filter_value_fields(value, &["symbol"]);
+
+        assert_eq!(filtered, serde_json::json!([1, {"symbol": "AAPL"}]));
+    }
+
+    #[test]
+    fn filter_value_fields_leaves_scalar_values_unchanged() {
+        let value = serde_json::json!("AAPL");
+
+        let filtered = filter_value_fields(value, &["symbol"]);
+
+        assert_eq!(filtered, serde_json::json!("AAPL"));
     }
 }

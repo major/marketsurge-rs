@@ -77,11 +77,11 @@ pub struct WatchlistSymbolRecord {
 /// Handles the watchlist command group.
 #[instrument(skip_all)]
 #[cfg(not(coverage))]
-pub async fn handle(args: &WatchlistArgs, json_table: bool) -> i32 {
+pub async fn handle(args: &WatchlistArgs, fields: &[String]) -> i32 {
     match &args.command {
-        WatchlistCommand::List => execute_list(json_table).await,
-        WatchlistCommand::Symbols(a) => execute_symbols(a, json_table).await,
-        WatchlistCommand::Screen(a) => execute_screen(a, json_table).await,
+        WatchlistCommand::List => execute_list(fields).await,
+        WatchlistCommand::Symbols(a) => execute_symbols(a, fields).await,
+        WatchlistCommand::Screen(a) => execute_screen(a, fields).await,
     }
 }
 
@@ -100,8 +100,8 @@ fn flatten_watchlist_list(watchlists: &[WatchlistSummary]) -> Vec<WatchlistRecor
 
 #[instrument(skip_all)]
 #[cfg(not(coverage))]
-async fn execute_list(json_table: bool) -> i32 {
-    run_client_command(json_table, |client| async move {
+async fn execute_list(fields: &[String]) -> i32 {
+    run_client_command(fields, |client| async move {
         let response = api_call(client.get_all_watchlist_names()).await?;
 
         Ok(flatten_watchlist_list(&response.watchlists))
@@ -128,10 +128,10 @@ fn flatten_watchlist_symbols(watchlist: Option<&WatchlistDetail>) -> Vec<Watchli
 
 #[instrument(skip_all)]
 #[cfg(not(coverage))]
-async fn execute_symbols(args: &WatchlistSymbolsArgs, json_table: bool) -> i32 {
+async fn execute_symbols(args: &WatchlistSymbolsArgs, fields: &[String]) -> i32 {
     let watchlist_id = args.watchlist_id.clone();
 
-    run_client_command(json_table, |client| async move {
+    run_client_command(fields, |client| async move {
         let response = api_call(client.flagged_symbols(&watchlist_id)).await?;
 
         Ok(flatten_watchlist_symbols(response.watchlist.as_ref()))
@@ -141,25 +141,21 @@ async fn execute_symbols(args: &WatchlistSymbolsArgs, json_table: bool) -> i32 {
 
 #[instrument(skip_all)]
 #[cfg(not(coverage))]
-async fn execute_screen(args: &WatchlistScreenArgs, json_table: bool) -> i32 {
+async fn execute_screen(args: &WatchlistScreenArgs, fields: &[String]) -> i32 {
     let columns = response_columns(&args.columns);
 
-    run_command(
-        &args.symbols,
-        json_table,
-        |client, symbol_refs| async move {
-            let response = api_call(client.screener_watchlist_items(&symbol_refs, columns)).await?;
+    run_command(&args.symbols, fields, |client, symbol_refs| async move {
+        let response = api_call(client.screener_watchlist_items(&symbol_refs, columns)).await?;
 
-            let empty = Vec::new();
-            let rows = response
-                .market_data_adhoc_screen
-                .as_ref()
-                .map(|result| &result.response_values)
-                .unwrap_or(&empty);
+        let empty = Vec::new();
+        let rows = response
+            .market_data_adhoc_screen
+            .as_ref()
+            .map(|result| &result.response_values)
+            .unwrap_or(&empty);
 
-            Ok(flatten_response_rows(rows))
-        },
-    )
+        Ok(flatten_response_rows(rows))
+    })
     .await
 }
 

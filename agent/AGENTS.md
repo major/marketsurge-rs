@@ -9,7 +9,7 @@ agent/src/
   main.rs           binary entrypoint, calls marketsurge_agent::run()
   lib.rs            crate root, #![deny(missing_docs)], exports modules, run() dispatches commands
   cli.rs            Clap derive-based argument model (Cli struct, Commands enum, SymbolsArgs)
-  output.rs         JSON output formatting (OutputFormat, print_json)
+  output.rs         Compact JSON output formatting and top-level field projection
   commands/
     mod.rs          command module declarations
     chart.rs        OHLCV chart data (daily/weekly)
@@ -32,11 +32,11 @@ agent/src/
 ## Conventions
 
 - **Doc enforcement**: `#![deny(missing_docs)]` in `lib.rs`. All public items must have doc comments.
-- **Output contract**: stdout is machine-readable (JSON). Diagnostics and errors go to stderr via `tracing`.
+- **Output contract**: stdout is compact machine-readable JSON with all fields by default. The global `--fields` option projects top-level JSON object fields after command data is built. Diagnostics and errors go to stderr via `tracing`.
 - **Logging**: `tracing` + `tracing-subscriber` with env filter. CLI sets verbosity via `-v` flags.
 - **Async runtime**: tokio with `macros`, `rt`, `rt-multi-thread` features.
 - **Auth flow**: `common::auth::make_client()` handles cookie-based auth before any API call.
-- **Command harness**: `common::command::run_command()` handles the client-creation/symbol-ref/output lifecycle. New symbol-based commands provide a closure with the API call and transform logic.
+- **Command harness**: `common::command::run_command()` handles the client-creation/symbol-ref/output lifecycle and applies output field projection. New symbol-based commands provide a closure with the API call and transform logic.
 - **Shared args**: `cli::SymbolsArgs` is the standard arg struct for commands that take ticker symbols. Embed via `#[command(flatten)]` if extra flags are needed.
 
 ## Dependencies
