@@ -42,14 +42,14 @@ Requires Rust 1.95.0 or later.
 
 The CLI reads browser cookies from Firefox automatically for authentication. Log in to [MarketSurge](https://marketsurge.investors.com) in your browser first, then run commands.
 
-Output goes to stdout as compact JSON. Pipe through `jq` for pretty-printing. Logs and errors go to stderr.
+Output goes to stdout as compact JSON with all fields included by default. Use `--fields` with a comma-delimited list to keep only selected top-level JSON fields. Pipe through `jq` for pretty-printing. Logs and errors go to stderr.
 
 ```bash
 # Fund ownership summary for a stock
 marketsurge-agent ownership summary AAPL
 
-# Output as JSON objects instead of the default array-of-arrays format
-marketsurge-agent --json-objects ownership summary AAPL
+# Limit output to selected top-level fields
+marketsurge-agent --fields symbol,num_funds_held ownership summary AAPL
 
 # Generate shell completions
 marketsurge-agent completions zsh > _marketsurge-agent

@@ -14,14 +14,14 @@ use crate::commands::watchlist::WatchlistCommand;
     name = "marketsurge-agent",
     version,
     about = "Query MarketSurge data as compact JSON",
-    long_about = "Query MarketSurge data as compact JSON. Auth reads browser cookies, so log in at https://marketsurge.investors.com first. Use --json-objects for object rows instead of compact table rows.",
-    after_help = "Examples:\n  marketsurge-agent ratings AAPL MSFT\n  marketsurge-agent --json-objects ownership summary AAPL\n  marketsurge-agent completions zsh > _marketsurge-agent",
+    long_about = "Query MarketSurge data as compact JSON. Auth reads browser cookies, so log in at https://marketsurge.investors.com first. Use --fields to limit top-level JSON fields in command output.",
+    after_help = "Examples:\n  marketsurge-agent ratings AAPL MSFT\n  marketsurge-agent --fields symbol,rs_rating ratings AAPL\n  marketsurge-agent completions zsh > _marketsurge-agent",
     arg_required_else_help = true
 )]
 pub struct Cli {
-    /// Output rows as JSON objects instead of compact table arrays.
-    #[arg(long)]
-    pub json_objects: bool,
+    /// Comma-delimited top-level JSON fields to include in output.
+    #[arg(long, global = true, value_delimiter = ',', value_name = "FIELD")]
+    pub fields: Vec<String>,
 
     /// Subcommand to run.
     #[command(subcommand)]
@@ -161,10 +161,39 @@ mod tests {
     }
 
     #[test]
-    fn json_objects_can_precede_subcommands() {
-        let cli = Cli::parse_from(["marketsurge-agent", "--json-objects", "ratings", "AAPL"]);
+    fn fields_can_precede_subcommands() {
+        let cli = Cli::parse_from([
+            "marketsurge-agent",
+            "--fields",
+            "symbol,rs_rating",
+            "ratings",
+            "AAPL",
+        ]);
 
-        assert!(cli.json_objects);
+        assert_eq!(cli.fields, vec!["symbol", "rs_rating"]);
         assert!(matches!(cli.command, Commands::Ratings(_)));
+    }
+
+    #[test]
+    fn fields_can_follow_nested_subcommands() {
+        let cli = Cli::parse_from([
+            "marketsurge-agent",
+            "ownership",
+            "summary",
+            "--fields",
+            "symbol,num_funds_held",
+            "AAPL",
+        ]);
+
+        assert_eq!(cli.fields, vec!["symbol", "num_funds_held"]);
+        assert!(matches!(cli.command, Commands::Ownership(_)));
+    }
+
+    #[test]
+    fn json_objects_is_not_accepted() {
+        let result =
+            Cli::try_parse_from(["marketsurge-agent", "--json-objects", "ratings", "AAPL"]);
+
+        assert!(result.is_err());
     }
 }

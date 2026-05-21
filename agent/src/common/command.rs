@@ -19,7 +19,7 @@ use crate::output::{finish_output, print_json};
 ///
 /// Returns a non-zero exit code if client creation fails or the closure
 /// returns an error code.
-pub async fn run_client_command<T, F, Fut>(json_table: bool, execute: F) -> i32
+pub async fn run_client_command<T, F, Fut>(fields: &[String], execute: F) -> i32
 where
     T: Serialize,
     F: FnOnce(Client) -> Fut,
@@ -31,7 +31,7 @@ where
     };
 
     match execute(client).await {
-        Ok(records) => finish_output(print_json(&records, json_table)),
+        Ok(records) => finish_output(print_json(&records, fields)),
         Err(code) => code,
     }
 }
@@ -49,14 +49,14 @@ where
 ///
 /// Returns a non-zero exit code if client creation fails or the closure
 /// returns an error code.
-pub async fn run_command<'a, T, F, Fut>(symbols: &'a [String], json_table: bool, execute: F) -> i32
+pub async fn run_command<'a, T, F, Fut>(symbols: &'a [String], fields: &[String], execute: F) -> i32
 where
     T: Serialize,
     F: FnOnce(Client, Vec<&'a str>) -> Fut,
     Fut: Future<Output = Result<Vec<T>, i32>>,
 {
     let symbol_refs: Vec<&str> = symbols.iter().map(String::as_str).collect();
-    run_client_command(json_table, |client| execute(client, symbol_refs)).await
+    run_client_command(fields, |client| execute(client, symbol_refs)).await
 }
 
 /// Maps a client API future into the command error-code convention.
@@ -82,9 +82,16 @@ pub fn zip_symbols<'a, T>(
 
 #[cfg(test)]
 mod tests {
-    use marketsurge_client::ClientError;
+    use marketsurge_client::{Client, ClientError};
+    use serde::Serialize;
 
-    use super::{api_call, zip_symbols};
+    use super::{api_call, run_client_command, run_command, zip_symbols};
+
+    #[derive(Debug, Serialize)]
+    struct CommandRecord {
+        symbol: String,
+        price: u32,
+    }
 
     fn collect_pairs<'a, T>(symbols: &'a [&str], items: &'a [T]) -> Vec<(&'a str, &'a T)> {
         zip_symbols(symbols, items).collect()
@@ -158,5 +165,51 @@ mod tests {
         .await;
 
         assert_eq!(result, Err(1));
+    }
+
+    #[tokio::test]
+    async fn run_client_command_outputs_records_with_selected_fields() {
+        let fields = vec!["symbol".to_string()];
+
+        let exit_code = run_client_command(&fields, |_client: Client| async {
+            Ok(vec![CommandRecord {
+                symbol: "AAPL".to_string(),
+                price: 150,
+            }])
+        })
+        .await;
+
+        assert_eq!(exit_code, 0);
+    }
+
+    #[tokio::test]
+    async fn run_client_command_returns_execute_error_code() {
+        let exit_code = run_client_command(&[], |_client: Client| async {
+            Err::<Vec<CommandRecord>, _>(7)
+        })
+        .await;
+
+        assert_eq!(exit_code, 7);
+    }
+
+    #[tokio::test]
+    async fn run_command_converts_owned_symbols_to_refs() {
+        let symbols = vec!["AAPL".to_string(), "MSFT".to_string()];
+        let fields = vec!["symbol".to_string()];
+
+        let exit_code = run_command(
+            &symbols,
+            &fields,
+            |_client: Client, symbol_refs| async move {
+                assert_eq!(symbol_refs, vec!["AAPL", "MSFT"]);
+                Ok(vec![CommandRecord {
+                    symbol: "AAPL".to_string(),
+                    price: 150,
+                }])
+            },
+        )
+        .await;
+
+        assert_eq!(exit_code, 0);
     }
 }

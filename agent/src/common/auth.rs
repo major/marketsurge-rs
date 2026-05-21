@@ -3,6 +3,7 @@
 use marketsurge_client::{Client, ClientError};
 
 /// Build a MarketSurge client from browser cookies and a JWT exchange.
+#[cfg(not(test))]
 pub async fn make_client() -> Result<Client, i32> {
     match Client::from_browser().await {
         Ok(client) => Ok(client),
@@ -16,6 +17,12 @@ pub async fn make_client() -> Result<Client, i32> {
             }
         }
     }
+}
+
+/// Build a test client without reading browser cookies.
+#[cfg(test)]
+pub async fn make_client() -> Result<Client, i32> {
+    Client::new(marketsurge_client::ClientConfig::default()).map_err(handle_api_error)
 }
 
 /// Convert API errors into CLI exit codes and messages.

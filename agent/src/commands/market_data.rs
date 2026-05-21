@@ -213,36 +213,32 @@ fn all_rows_failed_to_decode(records: &[MarketDataRecord]) -> bool {
 /// Handles the market-data command.
 #[instrument(skip_all)]
 #[cfg(not(coverage))]
-pub async fn handle(args: &SymbolsArgs, json_table: bool) -> i32 {
-    run_command(
-        &args.symbols,
-        json_table,
-        |client, symbol_refs| async move {
-            let response = api_call(client.other_market_data(
-                &symbol_refs,
-                "CHARTING",
-                "P12Q_AGO",
-                "P24Q_AGO",
-                "P4Q_FUTURE",
-            ))
-            .await?;
+pub async fn handle(args: &SymbolsArgs, fields: &[String]) -> i32 {
+    run_command(&args.symbols, fields, |client, symbol_refs| async move {
+        let response = api_call(client.other_market_data(
+            &symbol_refs,
+            "CHARTING",
+            "P12Q_AGO",
+            "P24Q_AGO",
+            "P4Q_FUTURE",
+        ))
+        .await?;
 
-            let records = flatten_market_data(&symbol_refs, &response.market_data);
-            if all_rows_failed_to_decode(&records) {
-                for record in &records {
-                    if let Some(error) = &record.decode_error {
-                        eprintln!(
-                            "market-data decode error for {}: {error}",
-                            record.symbol.as_str()
-                        );
-                    }
+        let records = flatten_market_data(&symbol_refs, &response.market_data);
+        if all_rows_failed_to_decode(&records) {
+            for record in &records {
+                if let Some(error) = &record.decode_error {
+                    eprintln!(
+                        "market-data decode error for {}: {error}",
+                        record.symbol.as_str()
+                    );
                 }
-                return Err(1);
             }
+            return Err(1);
+        }
 
-            Ok(records)
-        },
-    )
+        Ok(records)
+    })
     .await
 }
 

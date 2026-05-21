@@ -157,24 +157,20 @@ fn flatten_fundamentals(
 /// Handles the fundamentals command.
 #[instrument(skip_all)]
 #[cfg(not(coverage))]
-pub async fn handle(args: &SymbolsArgs, json_table: bool) -> i32 {
-    run_command(
-        &args.symbols,
-        json_table,
-        |client, symbol_refs| async move {
-            let response = api_call(client.fundamentals(
-                &symbol_refs,
-                "CHARTING",
-                "P7Y_AGO",
-                "P2Y_FUTURE",
-                "P7Y_AGO",
-                "P2Y_FUTURE",
-            ))
-            .await?;
+pub async fn handle(args: &SymbolsArgs, fields: &[String]) -> i32 {
+    run_command(&args.symbols, fields, |client, symbol_refs| async move {
+        let response = api_call(client.fundamentals(
+            &symbol_refs,
+            "CHARTING",
+            "P7Y_AGO",
+            "P2Y_FUTURE",
+            "P7Y_AGO",
+            "P2Y_FUTURE",
+        ))
+        .await?;
 
-            Ok(flatten_fundamentals(&symbol_refs, &response.market_data))
-        },
-    )
+        Ok(flatten_fundamentals(&symbol_refs, &response.market_data))
+    })
     .await
 }
 

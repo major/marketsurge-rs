@@ -23,20 +23,19 @@ use crate::cli::{Cli, Commands};
 #[cfg(not(coverage))]
 pub async fn run() -> i32 {
     let cli = Cli::parse();
-
-    let json_table = !cli.json_objects;
+    let fields = cli.fields.as_slice();
 
     match &cli.command {
-        Commands::AdhocScreen(args) => commands::adhoc_screen::handle(args, json_table).await,
-        Commands::Chart(args) => commands::chart::handle(args, json_table).await,
-        Commands::Fundamentals(args) => commands::fundamentals::handle(args, json_table).await,
-        Commands::Industry(args) => commands::industry::handle(args, json_table).await,
-        Commands::MarketData(args) => commands::market_data::handle(args, json_table).await,
-        Commands::Ownership(args) => commands::ownership::handle(args, json_table).await,
-        Commands::Ratings(args) => commands::ratings::handle(args, json_table).await,
-        Commands::Screen(args) => commands::screen::handle(args, json_table).await,
-        Commands::Tree(args) => commands::tree::handle(args, json_table).await,
-        Commands::Watchlist(args) => commands::watchlist::handle(args, json_table).await,
+        Commands::AdhocScreen(args) => commands::adhoc_screen::handle(args, fields).await,
+        Commands::Chart(args) => commands::chart::handle(args, fields).await,
+        Commands::Fundamentals(args) => commands::fundamentals::handle(args, fields).await,
+        Commands::Industry(args) => commands::industry::handle(args, fields).await,
+        Commands::MarketData(args) => commands::market_data::handle(args, fields).await,
+        Commands::Ownership(args) => commands::ownership::handle(args, fields).await,
+        Commands::Ratings(args) => commands::ratings::handle(args, fields).await,
+        Commands::Screen(args) => commands::screen::handle(args, fields).await,
+        Commands::Tree(args) => commands::tree::handle(args, fields).await,
+        Commands::Watchlist(args) => commands::watchlist::handle(args, fields).await,
         Commands::Completions(args) => {
             commands::completions::handle(args);
             0

@@ -31,16 +31,12 @@ pub struct RatingsRecord {
 /// Handles the ratings command.
 #[instrument(skip_all)]
 #[cfg(not(coverage))]
-pub async fn handle(args: &SymbolsArgs, json_table: bool) -> i32 {
-    run_command(
-        &args.symbols,
-        json_table,
-        |client, symbol_refs| async move {
-            let response = api_call(client.rs_rating_ri_panel(&symbol_refs, None)).await?;
+pub async fn handle(args: &SymbolsArgs, fields: &[String]) -> i32 {
+    run_command(&args.symbols, fields, |client, symbol_refs| async move {
+        let response = api_call(client.rs_rating_ri_panel(&symbol_refs, None)).await?;
 
-            Ok(flatten_ratings(&symbol_refs, response))
-        },
-    )
+        Ok(flatten_ratings(&symbol_refs, response))
+    })
     .await
 }
 
