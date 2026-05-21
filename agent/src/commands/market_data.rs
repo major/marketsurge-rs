@@ -63,6 +63,162 @@ pub struct MarketDataRecord {
     pub decode_error: Option<String>,
 }
 
+#[derive(Debug, Clone, Default)]
+struct SymbologyFields {
+    company_name: Option<String>,
+    instrument_type: Option<String>,
+    ipo_date: Option<String>,
+}
+
+#[derive(Debug, Clone, Default)]
+struct RatingFields {
+    comp_rating: Option<i64>,
+    rs_rating: Option<i64>,
+    eps_rating: Option<i64>,
+    smr_rating: Option<String>,
+    ad_rating: Option<String>,
+}
+
+#[derive(Debug, Clone, Default)]
+struct PricingFields {
+    market_cap: Option<String>,
+    avg_dollar_volume_50d: Option<String>,
+    up_down_volume_ratio: Option<String>,
+    short_interest_pct_float: Option<String>,
+    short_interest_days_to_cover: Option<String>,
+}
+
+#[derive(Debug, Clone, Default)]
+struct IndustryFields {
+    industry_name: Option<String>,
+    industry_sector: Option<String>,
+    industry_stocks_in_group: Option<i64>,
+}
+
+#[derive(Debug, Clone, Default)]
+struct OwnershipFields {
+    funds_pct_float_held: Option<String>,
+}
+
+#[derive(Debug, Clone, Default)]
+struct FinancialFields {
+    eps_due_date: Option<String>,
+    eps_due_date_status: Option<String>,
+}
+
+#[derive(Debug, Clone, Default)]
+struct FundamentalFields {
+    debt_pct: Option<String>,
+    rd_pct_last_qtr: Option<String>,
+}
+
+fn symbology_fields(item: &MdMarketDataItem) -> SymbologyFields {
+    let symbology = item.symbology.as_ref();
+    let company = symbology.and_then(|s| s.company.as_ref());
+    let instrument = symbology.and_then(|s| s.instrument.as_ref());
+
+    SymbologyFields {
+        company_name: company.and_then(|c| c.company_name.clone()),
+        instrument_type: instrument.and_then(|i| i.sub_type.clone()),
+        ipo_date: instrument
+            .and_then(|i| i.ipo_date.as_ref())
+            .and_then(|d| d.value.clone()),
+    }
+}
+
+fn rating_fields(item: &MdMarketDataItem) -> RatingFields {
+    let ratings = item.ratings.as_ref();
+
+    RatingFields {
+        comp_rating: ratings
+            .and_then(|r| r.comp_rating.first())
+            .and_then(|r| r.value),
+        rs_rating: ratings
+            .and_then(|r| r.rs_rating.first())
+            .and_then(|r| r.value),
+        eps_rating: ratings
+            .and_then(|r| r.eps_rating.first())
+            .and_then(|r| r.value),
+        smr_rating: ratings
+            .and_then(|r| r.smr_rating.first())
+            .and_then(|r| r.letter_value.clone()),
+        ad_rating: ratings
+            .and_then(|r| r.ad_rating.first())
+            .and_then(|r| r.letter_value.clone()),
+    }
+}
+
+fn pricing_fields(item: &MdMarketDataItem) -> PricingFields {
+    let eod = item
+        .pricing_statistics
+        .as_ref()
+        .and_then(|p| p.end_of_day_statistics.as_ref());
+
+    PricingFields {
+        market_cap: eod
+            .and_then(|e| e.market_capitalization.as_ref())
+            .and_then(|v| v.formatted_value.clone()),
+        avg_dollar_volume_50d: eod
+            .and_then(|e| e.avg_dollar_volume_50_day.as_ref())
+            .and_then(|v| v.formatted_value.clone()),
+        up_down_volume_ratio: eod
+            .and_then(|e| e.up_down_volume_ratio.as_ref())
+            .and_then(|v| v.formatted_value.clone()),
+        short_interest_pct_float: eod
+            .and_then(|e| e.short_interest.as_ref())
+            .and_then(|si| si.percent_of_float.as_ref())
+            .and_then(|v| v.formatted_value.clone()),
+        short_interest_days_to_cover: eod
+            .and_then(|e| e.short_interest.as_ref())
+            .and_then(|si| si.days_to_cover.as_ref())
+            .and_then(|v| v.formatted_value.clone()),
+    }
+}
+
+fn industry_fields(item: &MdMarketDataItem) -> IndustryFields {
+    let industry = item.industry.as_ref();
+
+    IndustryFields {
+        industry_name: industry.and_then(|i| i.name.clone()),
+        industry_sector: industry.and_then(|i| i.sector.clone()),
+        industry_stocks_in_group: industry.and_then(|i| i.number_of_stocks_in_group),
+    }
+}
+
+fn ownership_fields(item: &MdMarketDataItem) -> OwnershipFields {
+    OwnershipFields {
+        funds_pct_float_held: item
+            .ownership
+            .as_ref()
+            .and_then(|o| o.funds_float_percent_held.as_ref())
+            .and_then(|v| v.formatted_value.clone()),
+    }
+}
+
+fn financial_fields(item: &MdMarketDataItem) -> FinancialFields {
+    let financials = item.financials.as_ref();
+
+    FinancialFields {
+        eps_due_date: financials
+            .and_then(|f| f.eps_due_date.as_ref())
+            .and_then(|d| d.formatted_value.clone()),
+        eps_due_date_status: financials.and_then(|f| f.eps_due_date_status.clone()),
+    }
+}
+
+fn fundamental_fields(item: &MdMarketDataItem) -> FundamentalFields {
+    let fundamentals = item.fundamentals.as_ref();
+
+    FundamentalFields {
+        debt_pct: fundamentals
+            .and_then(|f| f.debt_percent.as_ref())
+            .and_then(|v| v.formatted_value.clone()),
+        rd_pct_last_qtr: fundamentals
+            .and_then(|f| f.research_and_development_percent_last_qtr.as_ref())
+            .and_then(|v| v.formatted_value.clone()),
+    }
+}
+
 /// Flattens nested [`MdMarketDataItem`] responses into flat
 /// [`MarketDataRecord`] rows, one per symbol.
 fn flatten_market_data(
@@ -72,133 +228,37 @@ fn flatten_market_data(
     let mut records = Vec::new();
 
     for (symbol, item) in zip_symbols(symbols, market_data) {
-        let company_name = item
-            .symbology
-            .as_ref()
-            .and_then(|s| s.company.as_ref())
-            .and_then(|c| c.company_name.clone());
-
-        let instrument_type = item
-            .symbology
-            .as_ref()
-            .and_then(|s| s.instrument.as_ref())
-            .and_then(|i| i.sub_type.clone());
-
-        let ipo_date = item
-            .symbology
-            .as_ref()
-            .and_then(|s| s.instrument.as_ref())
-            .and_then(|i| i.ipo_date.as_ref())
-            .and_then(|d| d.value.clone());
-
-        // Ratings: take the first (CURRENT) entry for each.
-        let ratings = &item.ratings;
-        let comp_rating = ratings
-            .as_ref()
-            .and_then(|r| r.comp_rating.first())
-            .and_then(|r| r.value);
-        let rs_rating = ratings
-            .as_ref()
-            .and_then(|r| r.rs_rating.first())
-            .and_then(|r| r.value);
-        let eps_rating = ratings
-            .as_ref()
-            .and_then(|r| r.eps_rating.first())
-            .and_then(|r| r.value);
-        let smr_rating = ratings
-            .as_ref()
-            .and_then(|r| r.smr_rating.first())
-            .and_then(|r| r.letter_value.clone());
-        let ad_rating = ratings
-            .as_ref()
-            .and_then(|r| r.ad_rating.first())
-            .and_then(|r| r.letter_value.clone());
-
-        // Pricing statistics
-        let eod = item
-            .pricing_statistics
-            .as_ref()
-            .and_then(|p| p.end_of_day_statistics.as_ref());
-
-        let market_cap = eod
-            .and_then(|e| e.market_capitalization.as_ref())
-            .and_then(|v| v.formatted_value.clone());
-
-        let avg_dollar_volume_50d = eod
-            .and_then(|e| e.avg_dollar_volume_50_day.as_ref())
-            .and_then(|v| v.formatted_value.clone());
-
-        let up_down_volume_ratio = eod
-            .and_then(|e| e.up_down_volume_ratio.as_ref())
-            .and_then(|v| v.formatted_value.clone());
-
-        let short_interest_pct_float = eod
-            .and_then(|e| e.short_interest.as_ref())
-            .and_then(|si| si.percent_of_float.as_ref())
-            .and_then(|v| v.formatted_value.clone());
-
-        let short_interest_days_to_cover = eod
-            .and_then(|e| e.short_interest.as_ref())
-            .and_then(|si| si.days_to_cover.as_ref())
-            .and_then(|v| v.formatted_value.clone());
-
-        // Industry
-        let industry = &item.industry;
-        let industry_name = industry.as_ref().and_then(|i| i.name.clone());
-        let industry_sector = industry.as_ref().and_then(|i| i.sector.clone());
-        let industry_stocks_in_group = industry.as_ref().and_then(|i| i.number_of_stocks_in_group);
-
-        // Ownership
-        let funds_pct_float_held = item
-            .ownership
-            .as_ref()
-            .and_then(|o| o.funds_float_percent_held.as_ref())
-            .and_then(|v| v.formatted_value.clone());
-
-        // Financials
-        let financials = &item.financials;
-        let eps_due_date = financials
-            .as_ref()
-            .and_then(|f| f.eps_due_date.as_ref())
-            .and_then(|d| d.formatted_value.clone());
-        let eps_due_date_status = financials
-            .as_ref()
-            .and_then(|f| f.eps_due_date_status.clone());
-
-        // Fundamentals
-        let fundamentals = &item.fundamentals;
-        let debt_pct = fundamentals
-            .as_ref()
-            .and_then(|f| f.debt_percent.as_ref())
-            .and_then(|v| v.formatted_value.clone());
-        let rd_pct_last_qtr = fundamentals
-            .as_ref()
-            .and_then(|f| f.research_and_development_percent_last_qtr.as_ref())
-            .and_then(|v| v.formatted_value.clone());
+        let symbology = symbology_fields(item);
+        let ratings = rating_fields(item);
+        let pricing = pricing_fields(item);
+        let industry = industry_fields(item);
+        let ownership = ownership_fields(item);
+        let financials = financial_fields(item);
+        let fundamentals = fundamental_fields(item);
 
         records.push(MarketDataRecord {
             symbol: symbol.to_string(),
-            company_name,
-            instrument_type,
-            ipo_date,
-            comp_rating,
-            rs_rating,
-            eps_rating,
-            smr_rating,
-            ad_rating,
-            market_cap,
-            avg_dollar_volume_50d,
-            up_down_volume_ratio,
-            short_interest_pct_float,
-            short_interest_days_to_cover,
-            industry_name,
-            industry_sector,
-            industry_stocks_in_group,
-            funds_pct_float_held,
-            eps_due_date,
-            eps_due_date_status,
-            debt_pct,
-            rd_pct_last_qtr,
+            company_name: symbology.company_name,
+            instrument_type: symbology.instrument_type,
+            ipo_date: symbology.ipo_date,
+            comp_rating: ratings.comp_rating,
+            rs_rating: ratings.rs_rating,
+            eps_rating: ratings.eps_rating,
+            smr_rating: ratings.smr_rating,
+            ad_rating: ratings.ad_rating,
+            market_cap: pricing.market_cap,
+            avg_dollar_volume_50d: pricing.avg_dollar_volume_50d,
+            up_down_volume_ratio: pricing.up_down_volume_ratio,
+            short_interest_pct_float: pricing.short_interest_pct_float,
+            short_interest_days_to_cover: pricing.short_interest_days_to_cover,
+            industry_name: industry.industry_name,
+            industry_sector: industry.industry_sector,
+            industry_stocks_in_group: industry.industry_stocks_in_group,
+            funds_pct_float_held: ownership.funds_pct_float_held,
+            eps_due_date: financials.eps_due_date,
+            eps_due_date_status: financials.eps_due_date_status,
+            debt_pct: fundamentals.debt_pct,
+            rd_pct_last_qtr: fundamentals.rd_pct_last_qtr,
             decode_error: item.decode_error.clone(),
         });
     }
