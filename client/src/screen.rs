@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::client::Client;
-use crate::types::ResponseColumn;
+use crate::types::{ResponseColumn, SCREEN_STRING_KEYS, json_value_to_string};
 
 // ---------------------------------------------------------------------------
 // GraphQL queries
@@ -78,36 +78,7 @@ where
 {
     let value = Option::<Value>::deserialize(deserializer)?;
 
-    Ok(value.and_then(cell_value_to_string))
-}
-
-fn cell_value_to_string(value: Value) -> Option<String> {
-    match value {
-        Value::Null => None,
-        Value::String(value) => Some(value),
-        Value::Number(value) => Some(value.to_string()),
-        Value::Bool(value) => Some(value.to_string()),
-        Value::Array(mut values) => match values.len() {
-            0 => None,
-            1 => values.pop().and_then(cell_value_to_string),
-            _ => Some(Value::Array(values).to_string()),
-        },
-        Value::Object(map) => {
-            for key in [
-                "formattedValue",
-                "value",
-                "displayValue",
-                "letterValue",
-                "name",
-            ] {
-                if let Some(value) = map.get(key).cloned().and_then(cell_value_to_string) {
-                    return Some(value);
-                }
-            }
-
-            Some(Value::Object(map).to_string())
-        }
-    }
+    Ok(value.and_then(|value| json_value_to_string(value, SCREEN_STRING_KEYS)))
 }
 
 /// Identifies a market data column in a screen response.

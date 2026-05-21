@@ -6,7 +6,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::client::Client;
-use crate::types::{deserialize_first_array_element, symbols_to_owned};
+use crate::types::{
+    DEFAULT_STRING_KEYS, deserialize_first_array_element, deserialize_optional_string,
+    json_value_to_string, symbols_to_owned,
+};
 
 // ---------------------------------------------------------------------------
 // GraphQL query (copied verbatim from Go source; contains {pattern_start_date}
@@ -122,7 +125,10 @@ where
         .map(|value| {
             serde_json::from_value(value.clone()).unwrap_or_else(|error| {
                 let mut item = empty_market_data_item();
-                item.id = value.get("id").cloned().and_then(json_value_to_string);
+                item.id = value
+                    .get("id")
+                    .cloned()
+                    .and_then(|value| json_value_to_string(value, DEFAULT_STRING_KEYS));
                 item.origin_request = value
                     .get("originRequest")
                     .cloned()
@@ -854,38 +860,6 @@ pub struct MdFundamentals {
     pub debt_percent: Option<MdFormattedFloat>,
 }
 
-fn deserialize_optional_string<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    let value = Option::<Value>::deserialize(deserializer)?;
-
-    Ok(value.and_then(json_value_to_string))
-}
-
-fn json_value_to_string(value: Value) -> Option<String> {
-    match value {
-        Value::Null => None,
-        Value::String(value) => Some(value),
-        Value::Number(value) => Some(value.to_string()),
-        Value::Bool(value) => Some(value.to_string()),
-        Value::Array(mut values) => match values.len() {
-            0 => None,
-            1 => values.pop().and_then(json_value_to_string),
-            _ => Some(Value::Array(values).to_string()),
-        },
-        Value::Object(map) => {
-            for key in ["value", "formattedValue", "displayValue", "name"] {
-                if let Some(value) = map.get(key).cloned().and_then(json_value_to_string) {
-                    return Some(value);
-                }
-            }
-
-            Some(Value::Object(map).to_string())
-        }
-    }
-}
-
 // ---------------------------------------------------------------------------
 // Client methods
 // ---------------------------------------------------------------------------
@@ -1231,14 +1205,25 @@ mod tests {
 
     #[test]
     fn json_value_to_string_handles_array_and_object_fallbacks() {
-        assert_eq!(super::json_value_to_string(serde_json::json!(null)), None);
-        assert_eq!(super::json_value_to_string(serde_json::json!([])), None);
         assert_eq!(
-            super::json_value_to_string(serde_json::json!(["A", "B"])).as_deref(),
+            super::json_value_to_string(serde_json::json!(null), super::DEFAULT_STRING_KEYS),
+            None
+        );
+        assert_eq!(
+            super::json_value_to_string(serde_json::json!([]), super::DEFAULT_STRING_KEYS),
+            None
+        );
+        assert_eq!(
+            super::json_value_to_string(serde_json::json!(["A", "B"]), super::DEFAULT_STRING_KEYS)
+                .as_deref(),
             Some("[\"A\",\"B\"]")
         );
         assert_eq!(
-            super::json_value_to_string(serde_json::json!({"unexpected": 1})).as_deref(),
+            super::json_value_to_string(
+                serde_json::json!({"unexpected": 1}),
+                super::DEFAULT_STRING_KEYS,
+            )
+            .as_deref(),
             Some("{\"unexpected\":1}")
         );
     }
