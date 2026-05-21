@@ -66,6 +66,12 @@ pub struct FundOwnershipRecord {
     pub date_4q_ago: Option<String>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct DowJonesKey<'a> {
+    exchange: &'a str,
+    id: &'a str,
+}
+
 /// Handles the ownership command group.
 #[instrument(skip_all)]
 #[cfg(not(coverage))]
@@ -108,30 +114,18 @@ async fn execute_funds(args: &SymbolsArgs, fields: &[String]) -> i32 {
         let mut records = Vec::new();
 
         for (symbol, item) in zip_symbols(&symbol_refs, &fundamentals.market_data) {
-            // Extract DJ_KEY from symbology and split into exchange + id.
-            let dj_key = extract_dj_key(item);
-
-            let (exchange, id) = match dj_key.and_then(|k| k.split_once('-')) {
-                Some(pair) => pair,
+            let key = match extract_dow_jones_key(item) {
+                Some(key) => key,
                 None => {
                     tracing::warn!(%symbol, "no DJ_KEY found, skipping fund lookup");
                     continue;
                 }
             };
 
-            let parameters = vec![
-                ScreenerParameter {
-                    name: "DowJonesExchange".to_string(),
-                    value: exchange.to_string(),
-                },
-                ScreenerParameter {
-                    name: "DowJonesId".to_string(),
-                    value: id.to_string(),
-                },
-            ];
-
-            let response =
-                api_call(client.market_data_screen(FUND_OWNERSHIP_SCREEN, parameters)).await?;
+            let response = api_call(
+                client.market_data_screen(FUND_OWNERSHIP_SCREEN, fund_screen_parameters(key)),
+            )
+            .await?;
 
             if let Some(result) = response.market_data_screen {
                 records.extend(flatten_fund_rows(symbol, &result.response_values));
@@ -215,6 +209,33 @@ fn extract_dj_key(item: &FundamentalsItem) -> Option<&str> {
         .and_then(|s| s.value.as_deref())
 }
 
+fn extract_dow_jones_key(item: &FundamentalsItem) -> Option<DowJonesKey<'_>> {
+    extract_dj_key(item).and_then(parse_dow_jones_key)
+}
+
+fn parse_dow_jones_key(value: &str) -> Option<DowJonesKey<'_>> {
+    value.split_once('-').and_then(|(exchange, id)| {
+        if exchange.is_empty() || id.is_empty() {
+            None
+        } else {
+            Some(DowJonesKey { exchange, id })
+        }
+    })
+}
+
+fn fund_screen_parameters(key: DowJonesKey<'_>) -> Vec<ScreenerParameter> {
+    vec![
+        ScreenerParameter {
+            name: "DowJonesExchange".to_string(),
+            value: key.exchange.to_string(),
+        },
+        ScreenerParameter {
+            name: "DowJonesId".to_string(),
+            value: key.id.to_string(),
+        },
+    ]
+}
+
 /// Converts screen response rows into flat fund ownership records.
 ///
 /// Each row in `response_values` becomes one [`FundOwnershipRecord`] tagged
@@ -254,7 +275,10 @@ mod tests {
     };
     use marketsurge_client::screen::ResponseValue;
 
-    use super::{cell_value, extract_dj_key, flatten_fund_rows, flatten_ownership_summary};
+    use super::{
+        DowJonesKey, cell_value, extract_dj_key, extract_dow_jones_key, flatten_fund_rows,
+        flatten_ownership_summary, fund_screen_parameters, parse_dow_jones_key,
+    };
 
     #[test]
     fn test_cell_value_matching_value() {
@@ -378,6 +402,13 @@ mod tests {
         ]);
 
         assert_eq!(extract_dj_key(&item), Some("XNAS-AAPL"));
+        assert_eq!(
+            extract_dow_jones_key(&item),
+            Some(DowJonesKey {
+                exchange: "XNAS",
+                id: "AAPL",
+            })
+        );
     }
 
     #[test]
@@ -396,6 +427,34 @@ mod tests {
         };
 
         assert_eq!(extract_dj_key(&item), None);
+    }
+
+    #[test]
+    fn test_parse_dow_jones_key_requires_exchange_and_id() {
+        assert_eq!(
+            parse_dow_jones_key("XNYS-IBM"),
+            Some(DowJonesKey {
+                exchange: "XNYS",
+                id: "IBM",
+            })
+        );
+        assert_eq!(parse_dow_jones_key("IBM"), None);
+        assert_eq!(parse_dow_jones_key("-IBM"), None);
+        assert_eq!(parse_dow_jones_key("XNYS-"), None);
+    }
+
+    #[test]
+    fn test_fund_screen_parameters_use_dow_jones_key_parts() {
+        let parameters = fund_screen_parameters(DowJonesKey {
+            exchange: "XNAS",
+            id: "AAPL",
+        });
+
+        assert_eq!(parameters.len(), 2);
+        assert_eq!(parameters[0].name, "DowJonesExchange");
+        assert_eq!(parameters[0].value, "XNAS");
+        assert_eq!(parameters[1].name, "DowJonesId");
+        assert_eq!(parameters[1].value, "AAPL");
     }
 
     // --- flatten_fund_rows tests ---

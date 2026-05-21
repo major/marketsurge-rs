@@ -4,7 +4,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::client::Client;
-use crate::types::{deserialize_first_array_element, symbols_to_owned};
+use crate::types::{
+    deserialize_first_array_element, deserialize_optional_string, symbols_to_owned,
+};
 
 // ---------------------------------------------------------------------------
 // GraphQL query
@@ -234,38 +236,6 @@ pub struct FundamentalsSymbol {
     #[serde(rename = "type")]
     #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub node_type: Option<String>,
-}
-
-fn deserialize_optional_string<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    let value = Option::<Value>::deserialize(deserializer)?;
-
-    Ok(value.and_then(json_value_to_string))
-}
-
-fn json_value_to_string(value: Value) -> Option<String> {
-    match value {
-        Value::Null => None,
-        Value::String(value) => Some(value),
-        Value::Number(value) => Some(value.to_string()),
-        Value::Bool(value) => Some(value.to_string()),
-        Value::Array(mut values) => match values.len() {
-            0 => None,
-            1 => values.pop().and_then(json_value_to_string),
-            _ => Some(Value::Array(values).to_string()),
-        },
-        Value::Object(map) => {
-            for key in ["value", "formattedValue", "displayValue", "name"] {
-                if let Some(value) = map.get(key).cloned().and_then(json_value_to_string) {
-                    return Some(value);
-                }
-            }
-
-            Some(Value::Object(map).to_string())
-        }
-    }
 }
 
 // ---------------------------------------------------------------------------

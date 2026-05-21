@@ -6,6 +6,17 @@ use serde_json::Value;
 /// Default symbol dialect type for market data queries.
 pub(crate) const DEFAULT_SYMBOL_DIALECT_TYPE: &str = "CHARTING";
 
+pub(crate) const DEFAULT_STRING_KEYS: &[&str] =
+    &["value", "formattedValue", "displayValue", "name"];
+
+pub(crate) const SCREEN_STRING_KEYS: &[&str] = &[
+    "formattedValue",
+    "value",
+    "displayValue",
+    "letterValue",
+    "name",
+];
+
 /// Convert a borrowed symbol slice into owned strings for GraphQL variables.
 pub(crate) fn symbols_to_owned(symbols: &[&str]) -> Vec<String> {
     symbols.iter().map(|s| (*s).to_string()).collect()
@@ -22,6 +33,46 @@ where
         .map(serde_json::from_value)
         .transpose()
         .map_err(E::custom)
+}
+
+pub(crate) fn deserialize_optional_string<'de, D>(
+    deserializer: D,
+) -> Result<Option<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = Option::<Value>::deserialize(deserializer)?;
+
+    Ok(value.and_then(|value| json_value_to_string(value, DEFAULT_STRING_KEYS)))
+}
+
+pub(crate) fn json_value_to_string(value: Value, object_keys: &[&str]) -> Option<String> {
+    match value {
+        Value::Null => None,
+        Value::String(value) => Some(value),
+        Value::Number(value) => Some(value.to_string()),
+        Value::Bool(value) => Some(value.to_string()),
+        Value::Array(mut values) => match values.len() {
+            0 => None,
+            1 => values
+                .pop()
+                .and_then(|value| json_value_to_string(value, object_keys)),
+            _ => Some(Value::Array(values).to_string()),
+        },
+        Value::Object(map) => {
+            for key in object_keys {
+                if let Some(value) = map
+                    .get(*key)
+                    .cloned()
+                    .and_then(|value| json_value_to_string(value, object_keys))
+                {
+                    return Some(value);
+                }
+            }
+
+            Some(Value::Object(map).to_string())
+        }
+    }
 }
 
 /// GraphQL variables for queries that only need symbols and dialect type.
