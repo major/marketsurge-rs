@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::client::Client;
-use crate::types::symbols_to_owned;
+use crate::types::{deserialize_first_array_element, symbols_to_owned};
 
 // ---------------------------------------------------------------------------
 // GraphQL query (copied verbatim from Go source; contains {pattern_start_date}
@@ -462,7 +462,23 @@ pub struct MdSymbology {
     /// Company profile.
     pub company: Option<MdCompany>,
     /// Instrument metadata.
+    #[serde(default, deserialize_with = "deserialize_instrument")]
     pub instrument: Option<MdInstrument>,
+}
+
+fn deserialize_instrument<'de, D>(deserializer: D) -> Result<Option<MdInstrument>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = Option::<Value>::deserialize(deserializer)?;
+
+    match value {
+        None | Some(Value::Null) => Ok(None),
+        Some(Value::Array(values)) => deserialize_first_array_element(values),
+        Some(value) => serde_json::from_value(value)
+            .map(Some)
+            .map_err(serde::de::Error::custom),
+    }
 }
 
 /// Company profile information.
@@ -1108,6 +1124,75 @@ mod tests {
                 .as_ref()
                 .and_then(|industry| industry.ind_code.as_deref()),
             Some("G3620")
+        );
+    }
+
+    #[test]
+    fn other_market_data_accepts_array_wrapped_instrument() {
+        let resp: super::OtherMarketDataResponse = serde_json::from_value(serde_json::json!({
+            "marketData": [
+                {
+                    "id": "NOW",
+                    "originRequest": {"symbol": "NOW"},
+                    "symbology": {
+                        "instrument": [
+                            {
+                                "subType": "COMMON_STOCK",
+                                "ipoDate": {"value": "2012-06-29"},
+                                "ipoPrice": {
+                                    "value": 18.0,
+                                    "formattedValue": "$18.00"
+                                }
+                            }
+                        ]
+                    }
+                }
+            ]
+        }))
+        .expect("array-wrapped instrument should parse");
+
+        assert_eq!(resp.market_data.len(), 1);
+        let item = &resp.market_data[0];
+        assert!(item.decode_error.is_none());
+        let instrument = item
+            .symbology
+            .as_ref()
+            .and_then(|symbology| symbology.instrument.as_ref())
+            .expect("instrument should parse from first array element");
+        assert_eq!(instrument.sub_type.as_deref(), Some("COMMON_STOCK"));
+        assert_eq!(
+            instrument
+                .ipo_date
+                .as_ref()
+                .and_then(|date| date.value.as_deref()),
+            Some("2012-06-29")
+        );
+        assert_eq!(
+            instrument.ipo_price.as_ref().and_then(|price| price.value),
+            Some(18.0)
+        );
+    }
+
+    #[test]
+    fn other_market_data_accepts_empty_array_instrument() {
+        let resp: super::OtherMarketDataResponse = serde_json::from_value(serde_json::json!({
+            "marketData": [
+                {
+                    "id": "NOW",
+                    "originRequest": {"symbol": "NOW"},
+                    "symbology": {"instrument": []}
+                }
+            ]
+        }))
+        .expect("empty instrument array should parse as none");
+
+        let item = &resp.market_data[0];
+        assert!(item.decode_error.is_none());
+        assert!(
+            item.symbology
+                .as_ref()
+                .and_then(|symbology| symbology.instrument.as_ref())
+                .is_none()
         );
     }
 
