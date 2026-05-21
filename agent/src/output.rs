@@ -94,6 +94,12 @@ mod tests {
         price: f64,
     }
 
+    #[derive(Debug, Serialize)]
+    struct DecodeRecord {
+        symbol: String,
+        decode_error: Option<String>,
+    }
+
     fn sample_records() -> Vec<TestRecord> {
         vec![
             TestRecord {
@@ -149,6 +155,33 @@ mod tests {
         assert_eq!(first_row.len(), headers.len());
         assert!(first_row.contains(&serde_json::json!("AAPL")));
         assert!(first_row.contains(&serde_json::json!(150.5)));
+    }
+
+    #[test]
+    fn values_to_table_preserves_decode_error_column() {
+        let values = vec![
+            serde_json::to_value(DecodeRecord {
+                symbol: "NOW".to_string(),
+                decode_error: Some("invalid length 1, expected struct MdInstrument".to_string()),
+            })
+            .unwrap(),
+        ];
+
+        let table = values_to_table(&values);
+        let rows = table.as_array().unwrap();
+        let headers = rows[0].as_array().unwrap();
+        let decode_error_index = headers
+            .iter()
+            .position(|header| header == "decode_error")
+            .expect("decode_error header should be present");
+        let first_row = rows[1].as_array().unwrap();
+
+        assert_eq!(
+            first_row.get(decode_error_index),
+            Some(&serde_json::json!(
+                "invalid length 1, expected struct MdInstrument"
+            ))
+        );
     }
 
     #[test]

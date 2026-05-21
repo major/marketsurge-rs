@@ -206,6 +206,10 @@ fn flatten_market_data(
     records
 }
 
+fn all_rows_failed_to_decode(records: &[MarketDataRecord]) -> bool {
+    !records.is_empty() && records.iter().all(|record| record.decode_error.is_some())
+}
+
 /// Handles the market-data command.
 #[instrument(skip_all)]
 #[cfg(not(coverage))]
@@ -223,7 +227,20 @@ pub async fn handle(args: &SymbolsArgs, json_table: bool) -> i32 {
             ))
             .await?;
 
-            Ok(flatten_market_data(&symbol_refs, &response.market_data))
+            let records = flatten_market_data(&symbol_refs, &response.market_data);
+            if all_rows_failed_to_decode(&records) {
+                for record in &records {
+                    if let Some(error) = &record.decode_error {
+                        eprintln!(
+                            "market-data decode error for {}: {error}",
+                            record.symbol.as_str()
+                        );
+                    }
+                }
+                return Err(1);
+            }
+
+            Ok(records)
         },
     )
     .await
@@ -399,6 +416,39 @@ mod tests {
             records[0].decode_error.as_deref(),
             Some("invalid type: map, expected a string")
         );
+    }
+
+    #[test]
+    fn all_rows_failed_to_decode_requires_non_empty_all_error_rows() {
+        assert!(!all_rows_failed_to_decode(&[]));
+
+        let good_item = MdMarketDataItem {
+            symbology: Some(MdSymbology {
+                company: Some(MdCompany {
+                    company_name: Some("Apple Inc".to_string()),
+                    address: None,
+                    address2: None,
+                    phone: None,
+                    business_description: None,
+                    url: None,
+                    city: None,
+                    country: None,
+                    state_province: None,
+                }),
+                instrument: None,
+            }),
+            ..empty_item()
+        };
+        let bad_item = MdMarketDataItem {
+            decode_error: Some("invalid length 1, expected struct MdInstrument".to_string()),
+            ..empty_item()
+        };
+
+        let mixed_records = flatten_market_data(&["AAPL", "NOW"], &[good_item, bad_item.clone()]);
+        assert!(!all_rows_failed_to_decode(&mixed_records));
+
+        let failed_records = flatten_market_data(&["NOW"], &[bad_item]);
+        assert!(all_rows_failed_to_decode(&failed_records));
     }
 
     #[test]

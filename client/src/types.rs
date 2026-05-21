@@ -1,6 +1,7 @@
 //! Shared value wrapper types used across multiple endpoint modules.
 
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 /// Default symbol dialect type for market data queries.
 pub(crate) const DEFAULT_SYMBOL_DIALECT_TYPE: &str = "CHARTING";
@@ -8,6 +9,19 @@ pub(crate) const DEFAULT_SYMBOL_DIALECT_TYPE: &str = "CHARTING";
 /// Convert a borrowed symbol slice into owned strings for GraphQL variables.
 pub(crate) fn symbols_to_owned(symbols: &[&str]) -> Vec<String> {
     symbols.iter().map(|s| (*s).to_string()).collect()
+}
+
+pub(crate) fn deserialize_first_array_element<T, E>(values: Vec<Value>) -> Result<Option<T>, E>
+where
+    T: serde::de::DeserializeOwned,
+    E: serde::de::Error,
+{
+    values
+        .into_iter()
+        .next()
+        .map(serde_json::from_value)
+        .transpose()
+        .map_err(E::custom)
 }
 
 /// GraphQL variables for queries that only need symbols and dialect type.

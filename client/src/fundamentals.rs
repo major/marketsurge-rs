@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::client::Client;
-use crate::types::symbols_to_owned;
+use crate::types::{deserialize_first_array_element, symbols_to_owned};
 
 // ---------------------------------------------------------------------------
 // GraphQL query
@@ -184,19 +184,6 @@ where
             .map(Some)
             .map_err(serde::de::Error::custom),
     }
-}
-
-fn deserialize_first_array_element<T, E>(values: Vec<Value>) -> Result<Option<T>, E>
-where
-    T: serde::de::DeserializeOwned,
-    E: serde::de::Error,
-{
-    values
-        .into_iter()
-        .next()
-        .map(serde_json::from_value)
-        .transpose()
-        .map_err(E::custom)
 }
 
 /// Company profile information.
