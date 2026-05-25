@@ -9,15 +9,6 @@ Unofficial Rust client library and CLI for querying market data from [MarketSurg
 
 > **Disclaimer:** This project is not affiliated with, endorsed by, or sponsored by Investor's Business Daily (IBD), MarketSurge, or Dow Jones & Company. MarketSurge is a trademark of Dow Jones & Company. Use of this software is at your own risk.
 
-## Workspace crates
-
-| Crate | Description |
-|---|---|
-| [`marketsurge-client`](client/) | HTTP client library for the MarketSurge GraphQL API |
-| [`marketsurge-agent`](agent/) | CLI binary for querying market data |
-
-`marketsurge-agent` depends on `marketsurge-client`. The client crate has no dependency on the agent.
-
 ## Installation
 
 ### Pre-built binaries
@@ -27,13 +18,13 @@ Download a binary from the [latest release](https://github.com/major/marketsurge
 ### cargo-binstall
 
 ```bash
-cargo binstall marketsurge-agent
+cargo binstall rusty-marketsurge
 ```
 
 ### Build from source
 
 ```bash
-cargo install --path agent
+cargo install rusty-marketsurge --locked
 ```
 
 Requires Rust 1.95.0 or later.
@@ -59,6 +50,17 @@ marketsurge-agent screen list --query ibd
 marketsurge-agent completions zsh > _marketsurge-agent
 ```
 
+## Using as a library
+
+Other Rust projects can depend on `rusty-marketsurge` as an API client without pulling in the CLI by disabling default features:
+
+```toml
+[dependencies]
+rusty-marketsurge = { version = "0.3.0", default-features = false }
+```
+
+This excludes `clap` and `clap_complete` and exposes `Client`, `ClientConfig`, `ClientError`, and `Result`. The `cli` feature (enabled by default) adds the CLI parser and the `run` entry point used by the `marketsurge-agent` binary.
+
 ## Development
 
 ```bash
@@ -66,9 +68,10 @@ marketsurge-agent completions zsh > _marketsurge-agent
 make check
 
 # Individual targets
-make fmt        # cargo +nightly fmt
+make fmt        # cargo fmt --check
+make fmt-fix    # cargo +nightly fmt --all
 make clippy     # cargo clippy -- -D clippy::all
-make test       # cargo test --workspace
+make test       # cargo test
 make doc        # cargo doc with -D warnings
 
 # Coverage (90% line minimum enforced)

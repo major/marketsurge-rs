@@ -1,13 +1,13 @@
 //! Watchlist data commands.
 
+use crate::watchlist::{WatchlistDetail, WatchlistSummary};
 use clap::{Args, Subcommand};
-use marketsurge_client::watchlist::{WatchlistDetail, WatchlistSummary};
 use serde::Serialize;
 use tracing::instrument;
 
 use crate::cli::WatchlistArgs;
-use crate::common::command::{api_call, run_client_command, run_command};
-use crate::common::rows::{flatten_response_rows, response_columns};
+use crate::cli::common::command::{api_call, run_client_command, run_command};
+use crate::cli::common::rows::{flatten_response_rows, response_columns};
 
 /// Watchlist subcommands.
 #[derive(Debug, Subcommand)]
@@ -214,8 +214,8 @@ async fn execute_screen(args: &WatchlistScreenArgs, fields: &[String]) -> i32 {
 
 #[cfg(test)]
 mod tests {
-    use crate::common::test_support::{response_value, response_value_without_md_item};
-    use marketsurge_client::watchlist::WatchlistItem;
+    use crate::cli::common::test_support::{response_value, response_value_without_md_item};
+    use crate::watchlist::WatchlistItem;
 
     use super::*;
 

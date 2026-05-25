@@ -1,22 +1,33 @@
-//! Async Rust client for the MarketSurge GraphQL API.
+//! Async Rust client library and CLI for the MarketSurge GraphQL API.
 //!
 //! This project is unofficial and is not affiliated with, endorsed by, or
 //! sponsored by [MarketSurge](https://marketsurge.investors.com).
 //!
+//! The HTTP client, endpoint modules, and error types are always available so other Rust
+//! projects can consume the API without pulling in the CLI. The `cli` module and its
+//! dependencies are gated behind the default `cli` feature.
+//!
+//! Library-only consumers should disable default features:
+//!
+//! ```toml
+//! rusty-marketsurge = { version = "0.3.0", default-features = false }
+//! ```
+//!
 //! # Quick start
 //!
 //! ```no_run
-//! use marketsurge_client::{Client, ClientConfig};
+//! use rusty_marketsurge::{Client, ClientConfig};
 //!
-//! # fn main() -> marketsurge_client::Result<()> {
+//! # fn main() -> rusty_marketsurge::Result<()> {
 //! let config = ClientConfig::default();
 //! let client = Client::new(config)?;
 //! // Use any endpoint method, e.g. client.chart_market_data(...).await
 //! # Ok(())
 //! # }
 //! ```
-//!
-//! An agent crate providing higher-level workflows is planned separately.
+
+#[cfg(feature = "cli")]
+pub mod cli;
 
 pub mod adhoc_screen;
 pub mod auth;

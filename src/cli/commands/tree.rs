@@ -5,7 +5,7 @@ use serde::Serialize;
 use tracing::instrument;
 
 use crate::cli::TreeArgs;
-use crate::common::command::{api_call, run_client_command};
+use crate::cli::common::command::{api_call, run_client_command};
 
 /// Tree subcommands.
 #[derive(Debug, Subcommand)]
@@ -77,7 +77,7 @@ async fn execute_nav(fields: &[String]) -> i32 {
 ///
 /// Watchlist nodes get source `"watchlist"`, screen nodes get `"screen"`.
 /// Returns an empty `Vec` when the response has no user data.
-fn flatten_coach_tree(response: &marketsurge_client::coach::CoachTreeResponse) -> Vec<TreeRecord> {
+fn flatten_coach_tree(response: &crate::coach::CoachTreeResponse) -> Vec<TreeRecord> {
     let Some(user) = &response.user else {
         return Vec::new();
     };
@@ -96,7 +96,7 @@ fn flatten_coach_tree(response: &marketsurge_client::coach::CoachTreeResponse) -
 ///
 /// All nodes get source `"nav"`.
 /// Returns an empty `Vec` when the response has no user data.
-fn flatten_nav_tree(response: &marketsurge_client::nav::NavTreeResponse) -> Vec<TreeRecord> {
+fn flatten_nav_tree(response: &crate::nav::NavTreeResponse) -> Vec<TreeRecord> {
     response
         .user
         .iter()
@@ -105,7 +105,7 @@ fn flatten_nav_tree(response: &marketsurge_client::nav::NavTreeResponse) -> Vec<
         .collect()
 }
 
-fn node_to_record(source: &str, node: &marketsurge_client::types::TreeNode) -> TreeRecord {
+fn node_to_record(source: &str, node: &crate::types::TreeNode) -> TreeRecord {
     TreeRecord {
         source: source.to_string(),
         id: node.id.clone(),
@@ -122,10 +122,10 @@ fn node_to_record(source: &str, node: &marketsurge_client::types::TreeNode) -> T
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::common::test_support::tree_node;
-    use marketsurge_client::coach::{CoachTreeResponse, CoachTreeUser};
-    use marketsurge_client::nav::{NavTreeResponse, NavTreeUser};
-    use marketsurge_client::types::{TreeChildNode, TreeNode};
+    use crate::cli::common::test_support::tree_node;
+    use crate::coach::{CoachTreeResponse, CoachTreeUser};
+    use crate::nav::{NavTreeResponse, NavTreeUser};
+    use crate::types::{TreeChildNode, TreeNode};
 
     #[test]
     fn node_to_record_all_fields_populated() {

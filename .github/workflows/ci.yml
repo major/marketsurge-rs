@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 env:
   CARGO_TERM_COLOR: always
 
@@ -36,7 +39,9 @@ jobs:
           components: clippy
           rustflags: ""
       - name: Run clippy
-        run: cargo clippy --all-targets -- -D clippy::all -A clippy::needless_borrow -A clippy::large_enum_variant
+        run: |
+          cargo clippy --all-targets --all-features -- -D clippy::all -A clippy::needless_borrow -A clippy::large_enum_variant
+          cargo clippy --lib --no-default-features -- -D clippy::all -A clippy::needless_borrow -A clippy::large_enum_variant
 
   test:
     name: Test (${{ matrix.os }})
@@ -51,7 +56,9 @@ jobs:
           toolchain: stable
           rustflags: ""
       - name: Run tests
-        run: cargo test
+        run: |
+          cargo test --all-features
+          cargo test --lib --no-default-features
 
   msrv:
     name: MSRV
@@ -62,7 +69,7 @@ jobs:
         with:
           toolchain: "1.95"
           rustflags: ""
-      - run: cargo test --locked
+      - run: cargo test --locked --all-features
 
   coverage:
     name: Coverage
@@ -80,13 +87,27 @@ jobs:
         with:
           tool: cargo-llvm-cov
       - name: Enforce 90% line coverage
-        run: cargo llvm-cov --workspace --fail-under-lines 90 --lcov --output-path lcov.info
+        run: cargo llvm-cov --workspace --all-features --fail-under-lines 90 --lcov --output-path lcov.info
       - name: Upload to Codecov
         if: ${{ !cancelled() && env.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
         with:
           files: lcov.info
           fail_ci_if_error: true
+
+  machete:
+    name: Unused dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions-rust-lang/setup-rust-toolchain@46268bd060767258de96ed93c1251119784f2ab6 # v1.16.1
+        with:
+          toolchain: stable
+          rustflags: ""
+      - uses: taiki-e/install-action@213ccc1a076163c093f914550b94feb90fab916d # v2.79.2
+        with:
+          tool: cargo-machete
+      - run: cargo machete
 
   docs:
     name: Docs
@@ -97,6 +118,9 @@ jobs:
         with:
           toolchain: stable
           rustflags: ""
-      - run: cargo doc --no-deps
+      - name: Build docs
+        run: |
+          cargo doc --all-features --no-deps
+          cargo doc --no-default-features --no-deps
         env:
           RUSTDOCFLAGS: -D warnings

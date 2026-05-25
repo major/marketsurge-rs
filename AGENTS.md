@@ -4,21 +4,24 @@
 
 ## Overview
 
-Unofficial Rust workspace providing an HTTP client library and CLI for the MarketSurge platform. Not affiliated with, endorsed by, or sponsored by IBD, MarketSurge, or Dow Jones. Two crates, one-way dependency: `agent` depends on `client`. Client never depends on agent.
+Unofficial Rust client library and CLI for the MarketSurge platform. Not affiliated with, endorsed by, or sponsored by IBD, MarketSurge, or Dow Jones. Single package `rusty-marketsurge` with a `cli` feature (enabled by default) that builds the `marketsurge-agent` binary.
 
-## Workspace Layout
+## Package Layout
 
 ```text
 marketsurge-rs/
-  Cargo.toml          workspace root (resolver=2)
-  Makefile             build automation
-  .coderabbit.yaml     code review config
-  agent/               CLI binary + library crate (marketsurge-agent)
-  client/              HTTP client library crate (marketsurge-client)
-  .github/workflows/   CI/CD pipelines
+  Cargo.toml          single package (rusty-marketsurge)
+  Makefile            build automation
+  .coderabbit.yaml    code review config
+  build.rs            man page generation (cli feature only)
+  dist-workspace.toml cargo-dist config
+  rust-toolchain.toml pins Rust 1.95 for local builds
+  src/                merged client + CLI source
+  src/cli/            CLI modules (behind cli feature)
+  testdata/           fixture files for mocked tests
+  tests/              CLI smoke tests
+  .github/workflows/  CI/CD pipelines
 ```
-
-See `agent/AGENTS.md` and `client/AGENTS.md` for crate-specific details.
 
 ## Rust Conventions
 
@@ -60,19 +63,17 @@ All workflow actions must use pinned versions. Workflows require minimum permiss
 
 ## Testing
 
-All tests are colocated `#[cfg(test)] mod tests` inside source files. No separate `tests/` integration test crate.
+Unit and mocked tests are colocated `#[cfg(test)] mod tests` inside source files. CLI smoke tests live in `tests/`.
 
 - **Unit tests**: `#[test]` for sync, `#[tokio::test]` for async
-- **Mocked API tests**: use `mockito` with helpers from `client/src/test_support.rs`
+- **Mocked API tests**: use `mockito` with helpers from `src/test_support.rs`
 - **Live tests**: `#[ignore]` + `integration_*` naming, run via `make integration`
-- **Fixtures**: `client/testdata/<Operation>/` with `request.json` and `response.json` pairs
-
-See `client/AGENTS.md` for detailed test patterns.
+- **Fixtures**: `testdata/<Operation>/` with `request.json` and `response.json` pairs
 
 ## Lint Suppressions
 
 Existing suppressions (do not add new ones without justification):
-- `#[allow(dead_code)]` in `client/src/test_support.rs` (test-only utilities)
+- `#[allow(dead_code)]` in `src/test_support.rs` (test-only utilities)
 - `#[allow(clippy::too_many_arguments)]` in `adhoc_screen.rs`, `chart.rs` (wire contract fidelity)
 - `#[allow(missing_docs)]` in `market_data.rs` (should be fixed)
 

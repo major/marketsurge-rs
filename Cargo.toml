@@ -1,10 +1,50 @@
-[workspace]
-resolver = "2"
-members = [
-    "client",
-    "agent",
-]
+[package]
+name = "rusty-marketsurge"
+version = "0.3.0"
+edition = "2024"
+rust-version = "1.95"
+description = "Unofficial Rust client library and CLI for the MarketSurge platform"
+license = "Apache-2.0"
+repository = "https://github.com/major/marketsurge-rs"
+readme = "README.md"
 
+[[bin]]
+name = "marketsurge-agent"
+path = "src/main.rs"
+required-features = ["cli"]
+
+[lib]
+
+[features]
+default = ["cli"]
+cli = ["dep:clap", "dep:clap_complete"]
+
+[dependencies]
+chrono = { version = "0.4", features = ["serde"] }
+clap = { version = "4", features = ["derive"], optional = true }
+clap_complete = { version = "4", optional = true }
+reqwest = { version = "0.13", features = ["cookies", "json"] }
+rookie = "0.5"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+
+url = "2"
+
+[dev-dependencies]
+mockito = "=1.7.2"
+tokio = { version = "=1.52.3", features = ["full", "test-util"] }
+
+[build-dependencies]
+clap = "4"
+clap_mangen = "0.2"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage)'] }
+
+# The profile that cargo-dist builds with.
 [profile.dist]
 inherits = "release"
 lto = "thin"

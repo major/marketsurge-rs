@@ -1,13 +1,11 @@
 //! Ad-hoc stock screening command.
 
+use crate::adhoc_screen::{AdhocScreenId, AdhocScreenIncludeSource, AdhocScreenInstruments};
 use clap::Args;
-use marketsurge_client::adhoc_screen::{
-    AdhocScreenId, AdhocScreenIncludeSource, AdhocScreenInstruments,
-};
 use tracing::instrument;
 
-use crate::common::command::{api_call, run_client_command};
-use crate::common::rows::{flatten_response_rows, response_columns};
+use crate::cli::common::command::{api_call, run_client_command};
+use crate::cli::common::rows::{flatten_response_rows, response_columns};
 
 /// Arguments for the adhoc-screen command.
 #[derive(Debug, Args)]
@@ -125,8 +123,8 @@ fn build_include_source(args: &AdhocScreenCommandArgs) -> AdhocScreenIncludeSour
 #[cfg(test)]
 mod tests {
     use super::{AdhocScreenCommandArgs, build_include_source};
-    use crate::common::rows::flatten_response_rows;
-    use crate::common::test_support::{
+    use crate::cli::common::rows::flatten_response_rows;
+    use crate::cli::common::test_support::{
         optional_response_value, response_value, response_value_without_md_item,
     };
 

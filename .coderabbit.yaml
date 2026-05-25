@@ -46,27 +46,21 @@ reviews:
     - "!.sisyphus/**"
 
   path_instructions:
-    - path: "client/**/*.rs"
+    - path: "src/**/*.rs"
       instructions: |
-        Client crate review:
+        Single-crate review:
         - Preserve exact MarketSurge wire contracts, form field names, cookie names, and request encoding.
         - Never expose cookie values, auth cookies, or session tokens in logs, errors, tests, docs, Debug, or Display output.
-        - Prefer focused API-boundary feedback over broad architecture rewrites.
-        - Don't nitpick style because rustfmt and clippy handle formatting and lint.
-
-    - path: "agent/**/*.rs"
-      instructions: |
-        CLI crate review:
-        - stdout is machine-readable output only; diagnostics and logs belong on stderr.
+        - CLI modules live under src/cli/ and are gated behind the cli feature. stdout is machine-readable JSON only; diagnostics and logs belong on stderr.
         - Keep compact JSON defaults stable unless tests and README examples are updated.
         - Ensure new commands wire clap, command dispatch, tests, and README notes together.
-        - Don't duplicate client wire-contract rules in the CLI layer.
+        - Don't nitpick style because rustfmt and clippy handle formatting and lint.
 
     - path: "**/*.{rs,toml,yml,yaml}"
       instructions: |
-        Rust workspace review:
-        - Respect the one-way dependency direction: agent depends on client, client never depends on agent.
+        Rust crate review:
         - Keep publishable crate metadata valid for crates.io.
+        - The cli feature must remain additive; library-only builds with --no-default-features must stay clean.
         - Release automation should preserve release-plz for crates.io publishing and cargo-dist for CLI artifacts.
 
     - path: ".github/workflows/**"

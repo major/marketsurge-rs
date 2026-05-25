@@ -4,9 +4,9 @@ use chrono::Utc;
 use serde::Serialize;
 use tracing::instrument;
 
+use crate::chart::ChartMarketDataResponse;
 use crate::cli::ChartArgs;
-use crate::common::command::{api_call, run_command, zip_symbols};
-use marketsurge_client::chart::ChartMarketDataResponse;
+use crate::cli::common::command::{api_call, run_command, zip_symbols};
 
 /// Flat output record for a single OHLCV data point.
 ///
@@ -110,12 +110,12 @@ pub async fn handle(args: &ChartArgs, fields: &[String]) -> i32 {
 #[cfg(test)]
 mod tests {
     use super::flatten_chart_data;
-    use marketsurge_client::chart::{
+    use crate::chart::{
         ChartDataPoint, ChartMarketDataItem, ChartMarketDataResponse, ChartPricing, ChartTimeSeries,
     };
 
-    fn chart_value(value: f64) -> marketsurge_client::types::FloatValue {
-        marketsurge_client::types::FloatValue { value: Some(value) }
+    fn chart_value(value: f64) -> crate::types::FloatValue {
+        crate::types::FloatValue { value: Some(value) }
     }
 
     fn data_point(
