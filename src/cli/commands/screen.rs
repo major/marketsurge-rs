@@ -1,14 +1,14 @@
 //! Stock screen commands for listing, running, and querying screens.
 
+use crate::ClientError;
+use crate::coach::{CoachTreeNode, CoachTreeResponse};
+use crate::screen::{ResponseValue, ScreenEntry, ScreensResponse};
 use clap::{Args, Subcommand};
-use marketsurge_client::ClientError;
-use marketsurge_client::coach::{CoachTreeNode, CoachTreeResponse};
-use marketsurge_client::screen::{ResponseValue, ScreenEntry, ScreensResponse};
 use serde::Serialize;
 use tracing::{error, instrument};
 
-use crate::common::command::{api_call, run_client_command};
-use crate::common::rows::flatten_response_rows;
+use crate::cli::common::command::{api_call, run_client_command};
+use crate::cli::common::rows::flatten_response_rows;
 
 const IBD_50_LIMITATION: &str = "MarketSurge did not expose an official IBD 50 screen in the coach tree. Try `screen list --query ibd`, `screen list --coach`, or `tree coach` for currently exposed lists such as EF-50.";
 
@@ -115,12 +115,10 @@ async fn execute_run(args: &RunArgs, fields: &[String]) -> i32 {
             return Err(1);
         };
 
-        let input = marketsurge_client::screen::RunScreenInput {
+        let input = crate::screen::RunScreenInput {
             correlation_tag: "marketsurge".to_string(),
             coach_account: true,
-            include_source: Some(marketsurge_client::screen::RunScreenIncludeSource {
-                source: None,
-            }),
+            include_source: Some(crate::screen::RunScreenIncludeSource { source: None }),
             page_size: limit,
             result_limit: 1_000_000,
             screen_id,
@@ -135,7 +133,7 @@ async fn execute_run(args: &RunArgs, fields: &[String]) -> i32 {
                 error!("{IBD_50_LIMITATION}");
                 return Err(1);
             }
-            Err(err) => return Err(crate::common::auth::handle_api_error(err)),
+            Err(err) => return Err(crate::cli::common::auth::handle_api_error(err)),
         };
 
         let rows: &[Vec<ResponseValue>] = response
@@ -242,13 +240,13 @@ fn map_coach_screen_node(node: &CoachTreeNode) -> ScreenListRecord {
 /// must be discoverable before they can be run.
 #[cfg(not(coverage))]
 async fn resolve_screen_id(
-    client: &marketsurge_client::Client,
+    client: &crate::Client,
     id_or_name: &str,
 ) -> Result<Option<String>, i32> {
     let response = client
         .coach_tree("marketsurge", "MSR_NAV")
         .await
-        .map_err(crate::common::auth::handle_api_error)?;
+        .map_err(crate::cli::common::auth::handle_api_error)?;
 
     Ok(resolve_screen_id_from_response(&response, id_or_name))
 }
@@ -306,12 +304,12 @@ fn is_not_found_error(err: &ClientError) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::common::test_support::{
+    use crate::cli::common::test_support::{
         optional_response_value, response_value, response_value_without_md_item,
     };
-    use marketsurge_client::coach::{CoachTreeResponse, CoachTreeUser};
-    use marketsurge_client::graphql::GraphQLFieldError;
-    use marketsurge_client::screen::{ScreensResponse, ScreensUser};
+    use crate::coach::{CoachTreeResponse, CoachTreeUser};
+    use crate::graphql::GraphQLFieldError;
+    use crate::screen::{ScreensResponse, ScreensUser};
 
     fn make_screen_entry(id: &str, name: &str) -> ScreenEntry {
         ScreenEntry {

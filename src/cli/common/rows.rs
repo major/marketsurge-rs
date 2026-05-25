@@ -2,8 +2,8 @@
 
 use std::collections::BTreeMap;
 
-use marketsurge_client::screen::ResponseValue;
-use marketsurge_client::types::ResponseColumn;
+use crate::screen::ResponseValue;
+use crate::types::ResponseColumn;
 
 /// Converts response rows into flat key-value maps.
 pub(crate) fn flatten_response_rows(
@@ -36,7 +36,7 @@ pub(crate) fn response_columns(names: &[String]) -> Vec<ResponseColumn> {
 #[cfg(test)]
 mod tests {
     use super::{flatten_response_rows, response_columns};
-    use crate::common::test_support::{
+    use crate::cli::common::test_support::{
         optional_response_value, response_value, response_value_without_md_item,
     };
 

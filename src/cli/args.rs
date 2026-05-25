@@ -1,12 +1,12 @@
 use clap::{Args, Parser, Subcommand};
 use clap_complete::Shell;
 
-use crate::commands::adhoc_screen::AdhocScreenCommandArgs;
-use crate::commands::industry::IndustryCommand;
-use crate::commands::ownership::OwnershipCommand;
-use crate::commands::screen::ScreenCommand;
-use crate::commands::tree::TreeCommand;
-use crate::commands::watchlist::WatchlistCommand;
+use super::commands::adhoc_screen::AdhocScreenCommandArgs;
+use super::commands::industry::IndustryCommand;
+use super::commands::ownership::OwnershipCommand;
+use super::commands::screen::ScreenCommand;
+use super::commands::tree::TreeCommand;
+use super::commands::watchlist::WatchlistCommand;
 
 /// CLI tool for querying MarketSurge market data.
 #[derive(Debug, Parser)]

@@ -5,9 +5,9 @@ use serde::Serialize;
 use tracing::instrument;
 
 use crate::cli::SymbolsArgs;
-use marketsurge_client::market_data::MdMarketDataItem;
+use crate::market_data::MdMarketDataItem;
 
-use crate::common::command::{api_call, run_command, zip_symbols};
+use crate::cli::common::command::{api_call, run_command, zip_symbols};
 
 /// Flat output record for a single symbol's market data snapshot.
 ///
@@ -304,12 +304,12 @@ pub async fn handle(args: &SymbolsArgs, fields: &[String]) -> i32 {
 
 #[cfg(test)]
 mod tests {
-    use marketsurge_client::market_data::{
+    use crate::market_data::{
         MdCompany, MdEndOfDayStatistics, MdFinancials, MdFormattedString, MdFundamentals,
         MdIndustry, MdInstrument, MdMarketDataItem, MdOwnership, MdPricingStatistics, MdRating,
         MdRatings, MdScaledFloat, MdShortInterest, MdSymbology,
     };
-    use marketsurge_client::types::{DateValue, FormattedFloat};
+    use crate::types::{DateValue, FormattedFloat};
 
     use super::*;
 

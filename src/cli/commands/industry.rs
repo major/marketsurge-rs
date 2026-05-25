@@ -4,10 +4,10 @@ use clap::Subcommand;
 use serde::Serialize;
 use tracing::instrument;
 
-use marketsurge_client::industry::{IndustryGroupRsItem, IndustryOverviewItem};
+use crate::industry::{IndustryGroupRsItem, IndustryOverviewItem};
 
+use crate::cli::common::command::{api_call, run_command, zip_symbols};
 use crate::cli::{IndustryArgs, SymbolsArgs};
-use crate::common::command::{api_call, run_command, zip_symbols};
 
 /// Industry subcommands.
 #[derive(Debug, Subcommand)]
@@ -184,12 +184,12 @@ async fn execute_overview(args: &SymbolsArgs, fields: &[String]) -> i32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use marketsurge_client::industry::{
+    use crate::industry::{
         IndustryGroupRsIndustry, IndustryGroupRsValue, IndustryOverviewIndustry,
         IndustryOverviewRatings, IndustryRankInGroup,
     };
-    use marketsurge_client::market_data::{MdGroupRank, MdPercentChangeVs};
-    use marketsurge_client::types::FormattedFloat;
+    use crate::market_data::{MdGroupRank, MdPercentChangeVs};
+    use crate::types::FormattedFloat;
 
     // -----------------------------------------------------------------------
     // flatten_industry_rs

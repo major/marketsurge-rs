@@ -1,4 +1,5 @@
 /target
+/man/
 *.swp
 *.swo
 .idea/

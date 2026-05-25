@@ -6,21 +6,16 @@ on:
     paths:
       - Cargo.toml
       - Cargo.lock
-      - client/Cargo.toml
-      - agent/Cargo.toml
   pull_request:
     paths:
       - Cargo.toml
       - Cargo.lock
-      - client/Cargo.toml
-      - agent/Cargo.toml
   schedule:
     - cron: "0 6 * * *"
   workflow_dispatch:
 
 permissions:
   contents: read
-  checks: write
 
 jobs:
   audit:

@@ -1,7 +1,7 @@
 //! Test helpers shared across command modules.
 
-use marketsurge_client::screen::{MdItem, ResponseValue};
-use marketsurge_client::types::TreeNode;
+use crate::screen::{MdItem, ResponseValue};
+use crate::types::TreeNode;
 
 /// Builds a named screen response value for command flattening tests.
 pub(crate) fn response_value(name: &str, value: Option<&str>) -> ResponseValue {

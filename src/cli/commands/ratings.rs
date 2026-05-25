@@ -1,11 +1,11 @@
 //! RS rating data command.
 
-use marketsurge_client::ratings::RsRatingRiPanelResponse;
+use crate::ratings::RsRatingRiPanelResponse;
 use serde::Serialize;
 use tracing::instrument;
 
 use crate::cli::SymbolsArgs;
-use crate::common::command::{api_call, run_command, zip_symbols};
+use crate::cli::common::command::{api_call, run_command, zip_symbols};
 
 /// Flat output record for a single RS rating snapshot.
 ///
@@ -85,7 +85,7 @@ fn flatten_ratings(symbol_refs: &[&str], response: RsRatingRiPanelResponse) -> V
 #[cfg(test)]
 mod tests {
     use super::flatten_ratings;
-    use marketsurge_client::ratings::{
+    use crate::ratings::{
         RsRatingIntradayStatistics, RsRatingPricingStatistics, RsRatingRatings,
         RsRatingRiPanelItem, RsRatingRiPanelResponse, RsRatingSnapshot,
     };

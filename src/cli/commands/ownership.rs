@@ -1,14 +1,14 @@
 //! Fund ownership data commands.
 
+use crate::fundamentals::FundamentalsItem;
+use crate::ownership::OwnershipItem;
+use crate::screen::{ResponseValue, ScreenerParameter};
 use clap::Subcommand;
-use marketsurge_client::fundamentals::FundamentalsItem;
-use marketsurge_client::ownership::OwnershipItem;
-use marketsurge_client::screen::{ResponseValue, ScreenerParameter};
 use serde::Serialize;
 use tracing::instrument;
 
+use crate::cli::common::command::{api_call, run_command, zip_symbols};
 use crate::cli::{OwnershipArgs, SymbolsArgs};
-use crate::common::command::{api_call, run_command, zip_symbols};
 
 /// Screen name for the fund ownership detail query.
 const FUND_OWNERSHIP_SCREEN: &str = "MarketSurge.RelatedInformation.MUTIFundOwnership";
@@ -265,15 +265,15 @@ fn flatten_fund_rows(
 
 #[cfg(test)]
 mod tests {
-    use crate::common::test_support::response_value;
-    use marketsurge_client::fundamentals::{
+    use crate::cli::common::test_support::response_value;
+    use crate::fundamentals::{
         FundamentalsInstrument, FundamentalsItem, FundamentalsSymbol, FundamentalsSymbology,
     };
-    use marketsurge_client::ownership::{
+    use crate::ownership::{
         OwnershipData, OwnershipDateValue, OwnershipFormattedValue, OwnershipItem,
         OwnershipQuarterlySummary,
     };
-    use marketsurge_client::screen::ResponseValue;
+    use crate::screen::ResponseValue;
 
     use super::{
         DowJonesKey, cell_value, extract_dj_key, extract_dow_jones_key, flatten_fund_rows,

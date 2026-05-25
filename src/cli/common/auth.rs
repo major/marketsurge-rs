@@ -1,6 +1,6 @@
 //! Browser cookie authentication for MarketSurge.
 
-use marketsurge_client::{Client, ClientError};
+use crate::{Client, ClientError};
 
 /// Build a MarketSurge client from browser cookies and a JWT exchange.
 #[cfg(not(test))]
@@ -22,7 +22,7 @@ pub async fn make_client() -> Result<Client, i32> {
 /// Build a test client without reading browser cookies.
 #[cfg(test)]
 pub async fn make_client() -> Result<Client, i32> {
-    Client::new(marketsurge_client::ClientConfig::default()).map_err(handle_api_error)
+    Client::new(crate::ClientConfig::default()).map_err(handle_api_error)
 }
 
 /// Convert API errors into CLI exit codes and messages.
@@ -39,7 +39,7 @@ pub fn handle_api_error(err: ClientError) -> i32 {
 #[cfg(test)]
 mod tests {
     use super::handle_api_error;
-    use marketsurge_client::ClientError;
+    use crate::ClientError;
 
     fn status_error(status: u16) -> ClientError {
         ClientError::Status {

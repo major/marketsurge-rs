@@ -3,10 +3,10 @@
 use serde::Serialize;
 use tracing::instrument;
 
-use marketsurge_client::fundamentals::FundamentalsItem;
+use crate::fundamentals::FundamentalsItem;
 
 use crate::cli::SymbolsArgs;
-use crate::common::command::{api_call, run_command, zip_symbols};
+use crate::cli::common::command::{api_call, run_command, zip_symbols};
 
 /// Flat output record for a single fundamentals period.
 ///
@@ -176,13 +176,13 @@ pub async fn handle(args: &SymbolsArgs, fields: &[String]) -> i32 {
 
 #[cfg(test)]
 mod tests {
-    use marketsurge_client::fundamentals::{
+    use crate::fundamentals::{
         FundamentalsCompany, FundamentalsConsensus, FundamentalsConsensusEps,
         FundamentalsConsensusSales, FundamentalsEstimate, FundamentalsEstimates,
         FundamentalsFinancials, FundamentalsItem, FundamentalsReportedPeriod,
         FundamentalsSymbology,
     };
-    use marketsurge_client::types::{DateValue, FormattedFloat};
+    use crate::types::{DateValue, FormattedFloat};
 
     use super::*;
 

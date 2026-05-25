@@ -2,11 +2,11 @@
 
 use std::future::Future;
 
-use marketsurge_client::Client;
+use crate::Client;
 use serde::Serialize;
 
-use crate::common::auth::{handle_api_error, make_client};
-use crate::output::{finish_output, print_json};
+use super::auth::{handle_api_error, make_client};
+use crate::cli::output::{finish_output, print_json};
 
 /// Runs a command through the standard client/output lifecycle.
 ///
@@ -62,7 +62,7 @@ where
 /// Maps a client API future into the command error-code convention.
 pub async fn api_call<T, Fut>(request: Fut) -> Result<T, i32>
 where
-    Fut: Future<Output = marketsurge_client::Result<T>>,
+    Fut: Future<Output = crate::Result<T>>,
 {
     request.await.map_err(handle_api_error)
 }
@@ -82,7 +82,7 @@ pub fn zip_symbols<'a, T>(
 
 #[cfg(test)]
 mod tests {
-    use marketsurge_client::{Client, ClientError};
+    use crate::{Client, ClientError};
     use serde::Serialize;
 
     use super::{api_call, run_client_command, run_command, zip_symbols};
