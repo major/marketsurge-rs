@@ -47,6 +47,43 @@ fn completions_returns_exit_code_0() {
 
 #[test]
 #[cfg_attr(coverage, ignore)]
+fn schema_returns_exit_code_0_and_valid_json() {
+    let output = output(&["schema"]);
+
+    assert_eq!(output.status.code(), Some(0));
+    assert!(stderr(&output).is_empty(), "schema should not write stderr");
+
+    let schema: serde_json::Value = serde_json::from_str(&stdout(&output)).unwrap();
+    assert_eq!(schema["schema_version"], 1);
+    assert_eq!(schema["binary"], "marketsurge-agent");
+    assert_eq!(schema["version"], env!("CARGO_PKG_VERSION"));
+    assert!(
+        schema["commands"]
+            .as_array()
+            .is_some_and(|commands| { commands.iter().any(|command| command["name"] == "schema") })
+    );
+
+    let line_count = stdout(&output).lines().count();
+    assert_eq!(line_count, 1, "schema should be compact single-line JSON");
+}
+
+#[test]
+#[cfg_attr(coverage, ignore)]
+fn schema_honors_global_field_selection() {
+    let output = output(&["--fields", "schema_version,binary", "schema"]);
+
+    assert_eq!(output.status.code(), Some(0));
+    assert!(stderr(&output).is_empty(), "schema should not write stderr");
+
+    let schema: serde_json::Value = serde_json::from_str(&stdout(&output)).unwrap();
+    assert_eq!(
+        schema,
+        serde_json::json!({"schema_version": 1, "binary": "marketsurge-agent"})
+    );
+}
+
+#[test]
+#[cfg_attr(coverage, ignore)]
 fn invalid_flag_returns_exit_code_2() {
     let output = output(&["--definitely-invalid"]);
 

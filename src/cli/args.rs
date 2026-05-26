@@ -80,6 +80,12 @@ pub enum Commands {
         after_help = "Examples:\n  marketsurge-agent completions zsh > _marketsurge-agent\n  marketsurge-agent completions bash > marketsurge-agent.bash"
     )]
     Completions(CompletionsArgs),
+    /// Dump the CLI surface as machine-readable JSON.
+    #[command(
+        long_about = "Dump the CLI surface as machine-readable JSON. The output format is experimental and may change between versions. schema_version 1 is the initial format.\n\nThis command does not read browser cookies and does not make any network requests.",
+        after_help = "Examples:\n  marketsurge-agent schema\n  marketsurge-agent schema | jq '.commands | length'"
+    )]
+    Schema,
 }
 
 /// Arguments for the chart command.
