@@ -63,7 +63,7 @@ Other Rust projects can depend on `rusty-marketsurge` as an API client without p
 
 ```toml
 [dependencies]
-rusty-marketsurge = { version = "0.3.0", default-features = false }
+rusty-marketsurge = { version = "0.4.0", default-features = false }
 ```
 
 This excludes `clap` and `clap_complete` and exposes `Client`, `ClientConfig`, `ClientError`, and `Result`. The `cli` feature (enabled by default) adds the CLI parser and the `run` entry point used by the `marketsurge-agent` binary.

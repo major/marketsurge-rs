@@ -10,7 +10,7 @@
 //! Library-only consumers should disable default features:
 //!
 //! ```toml
-//! rusty-marketsurge = { version = "0.3.0", default-features = false }
+//! rusty-marketsurge = { version = "0.4.0", default-features = false }
 //! ```
 //!
 //! # Quick start

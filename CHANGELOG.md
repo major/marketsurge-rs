@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0] - 2026-05-26
+
+### <!-- 0 -->🚀 Features
+
+- *(agent)* Add schema command
+
 ## [0.3.0] - 2026-05-25
 
 ### <!-- 0 -->🚀 Features

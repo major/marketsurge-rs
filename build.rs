@@ -36,7 +36,10 @@ fn main() {
         let mut buf = vec![];
         man.render(&mut buf).expect("failed to render man page");
 
-        let out_dir = std::path::PathBuf::from("man");
+        let out_dir = std::path::PathBuf::from(
+            std::env::var_os("OUT_DIR").expect("OUT_DIR is set by Cargo for build scripts"),
+        )
+        .join("man");
         std::fs::create_dir_all(&out_dir).expect("failed to create man/ directory");
 
         let path = out_dir.join("marketsurge-agent.1");
