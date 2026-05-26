@@ -35,13 +35,14 @@ fn top_level_help_exits_successfully() {
     assert!(stdout.contains("ratings"));
     assert!(stdout.contains("watchlist"));
     assert!(stdout.contains("completions"));
+    assert!(stdout.contains("schema"));
     assert!(!stdout.contains("requires a subcommand"));
 }
 
 #[test]
 #[cfg_attr(coverage, ignore)]
 fn command_specific_help_exits_successfully() {
-    for command in ["ratings", "chart", "market-data"] {
+    for command in ["ratings", "chart", "market-data", "schema"] {
         let output = output(&[command, "--help"]);
 
         assert!(output.status.success(), "{command} --help should exit 0");

@@ -16,6 +16,8 @@ pub mod market_data;
 pub mod ownership;
 /// RS rating data command.
 pub mod ratings;
+/// CLI schema introspection command.
+pub mod schema;
 /// Stock screen commands.
 pub mod screen;
 /// Navigation and coaching tree commands.

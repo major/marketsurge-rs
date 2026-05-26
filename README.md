@@ -48,7 +48,14 @@ marketsurge-agent screen list --query ibd
 
 # Generate shell completions
 marketsurge-agent completions zsh > _marketsurge-agent
+
+# Dump the experimental CLI schema without network access
+marketsurge-agent schema | jq '.commands | length'
 ```
+
+### Schema introspection
+
+`marketsurge-agent schema` dumps the CLI surface as compact JSON for scripts and agent tooling. It does not read browser cookies or make network requests. The schema shape is experimental and starts with `schema_version: 1`; entries include the binary name, package version, command metadata, and visible command arguments.
 
 ## Using as a library
 

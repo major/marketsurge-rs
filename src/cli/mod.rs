@@ -45,5 +45,6 @@ pub async fn run() -> i32 {
             commands::completions::handle(args);
             0
         }
+        Commands::Schema => commands::schema::handle(fields),
     }
 }
