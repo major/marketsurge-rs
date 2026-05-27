@@ -85,6 +85,8 @@ mod tests {
     use crate::{Client, ClientError};
     use serde::Serialize;
 
+    use crate::cli::common::exit::ExitCode;
+
     use super::{api_call, run_client_command, run_command, zip_symbols};
 
     #[derive(Debug, Serialize)]
@@ -164,7 +166,7 @@ mod tests {
         })
         .await;
 
-        assert_eq!(result, Err(1));
+        assert_eq!(result, Err(ExitCode::ApiError.code()));
     }
 
     #[tokio::test]

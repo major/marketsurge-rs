@@ -55,7 +55,22 @@ marketsurge-agent schema | jq '.commands | length'
 
 ### Schema introspection
 
-`marketsurge-agent schema` dumps the CLI surface as compact JSON for scripts and agent tooling. It does not read browser cookies or make network requests. The schema shape is experimental and starts with `schema_version: 1`; entries include the binary name, package version, command metadata, and visible command arguments.
+`marketsurge-agent schema` dumps the CLI surface as compact JSON for scripts and agent tooling. It does not read browser cookies or make network requests. The schema shape is experimental; `schema_version: 2` includes the binary name, package version, exit-code metadata, command metadata, and visible command arguments.
+
+### Exit codes
+
+`marketsurge-agent` uses stable exit codes so scripts can distinguish usage, authentication, and upstream failures.
+
+| Code | Name | Meaning |
+|---:|---|---|
+| 0 | `success` | Command completed successfully. |
+| 1 | `internal_error` | Unexpected internal error, including local output failures. |
+| 2 | `usage` | Invalid arguments or command usage. |
+| 3 | `api_error` | Network failure, rate limit, or upstream MarketSurge API failure. |
+| 4 | `auth_error` | Browser cookies are missing, expired, or rejected. |
+| 5 | `no_results` | Command completed but produced no actionable result. |
+
+The `schema` command includes the same table in its `exit_codes` field.
 
 ## Using as a library
 

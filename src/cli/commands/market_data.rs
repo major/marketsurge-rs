@@ -294,7 +294,7 @@ pub async fn handle(args: &SymbolsArgs, fields: &[String]) -> i32 {
                     );
                 }
             }
-            return Err(1);
+            return Err(crate::cli::common::exit::ExitCode::ApiError.code());
         }
 
         Ok(records)

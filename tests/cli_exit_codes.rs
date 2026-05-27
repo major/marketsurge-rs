@@ -1,4 +1,5 @@
 use std::process::{Command, Output};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 fn marketsurge_agent() -> Command {
     let mut command = Command::new(env!("CARGO_BIN_EXE_marketsurge-agent"));
@@ -11,6 +12,27 @@ fn output(args: &[&str]) -> Output {
         .args(args)
         .output()
         .expect("marketsurge-agent should run")
+}
+
+fn output_without_browser_cookies(args: &[&str]) -> Output {
+    let unique = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("system time should be after Unix epoch")
+        .as_nanos();
+    let home = std::env::temp_dir().join(format!("marketsurge-agent-empty-home-{unique}"));
+    std::fs::create_dir_all(&home).expect("empty home directory should be created");
+
+    let output = marketsurge_agent()
+        .args(args)
+        .env("HOME", &home)
+        .env("XDG_CONFIG_HOME", home.join(".config"))
+        .env("APPDATA", home.join("AppData"))
+        .env("LOCALAPPDATA", home.join("AppData").join("Local"))
+        .output()
+        .expect("marketsurge-agent should run");
+
+    std::fs::remove_dir_all(&home).expect("empty home directory should be removed");
+    output
 }
 
 fn stdout(output: &Output) -> String {
@@ -54,9 +76,17 @@ fn schema_returns_exit_code_0_and_valid_json() {
     assert!(stderr(&output).is_empty(), "schema should not write stderr");
 
     let schema: serde_json::Value = serde_json::from_str(&stdout(&output)).unwrap();
-    assert_eq!(schema["schema_version"], 1);
+    assert_eq!(schema["schema_version"], 2);
     assert_eq!(schema["binary"], "marketsurge-agent");
     assert_eq!(schema["version"], env!("CARGO_PKG_VERSION"));
+    assert!(
+        schema["exit_codes"].as_array().is_some_and(|codes| {
+            codes
+                .iter()
+                .any(|code| code["code"] == 4 && code["name"] == "auth_error")
+        }),
+        "schema should expose the auth error exit code"
+    );
     assert!(
         schema["commands"]
             .as_array()
@@ -78,7 +108,23 @@ fn schema_honors_global_field_selection() {
     let schema: serde_json::Value = serde_json::from_str(&stdout(&output)).unwrap();
     assert_eq!(
         schema,
-        serde_json::json!({"schema_version": 1, "binary": "marketsurge-agent"})
+        serde_json::json!({"schema_version": 2, "binary": "marketsurge-agent"})
+    );
+}
+
+#[test]
+#[cfg_attr(coverage, ignore)]
+fn help_documents_exit_codes() {
+    let output = output(&["--help"]);
+
+    assert_eq!(output.status.code(), Some(0));
+    assert!(
+        stdout(&output).contains("Exit codes:"),
+        "help should include the exit-code contract"
+    );
+    assert!(
+        stdout(&output).contains("4  auth_error"),
+        "help should document auth failures separately from clap usage errors"
     );
 }
 
@@ -107,5 +153,37 @@ fn missing_subcommand_returns_exit_code_2() {
     assert!(
         combined_output(&output).contains("Usage: marketsurge-agent [OPTIONS] <COMMAND>"),
         "missing subcommand should print help"
+    );
+}
+
+#[test]
+#[cfg_attr(coverage, ignore)]
+fn unknown_command_returns_exit_code_2() {
+    let output = output(&["not-a-command"]);
+
+    assert_eq!(output.status.code(), Some(2));
+    assert!(
+        stdout(&output).is_empty(),
+        "unknown commands should not write stdout"
+    );
+    assert!(
+        stderr(&output).contains("unrecognized subcommand 'not-a-command'"),
+        "unknown commands should use clap's error path"
+    );
+}
+
+#[test]
+#[cfg_attr(coverage, ignore)]
+fn missing_browser_cookies_return_exit_code_4() {
+    let output = output_without_browser_cookies(&["analysis", "ratings", "AAPL"]);
+
+    assert_eq!(output.status.code(), Some(4));
+    assert!(
+        stdout(&output).is_empty(),
+        "auth failures should not write stdout"
+    );
+    assert!(
+        stderr(&output).contains("auth error:"),
+        "auth failures should identify the auth error path"
     );
 }
