@@ -2,11 +2,13 @@
 
 use crate::adhoc_screen::{AdhocScreenId, AdhocScreenIncludeSource, AdhocScreenInstruments};
 use clap::Args;
+use std::collections::BTreeSet;
 use tracing::instrument;
 
 use crate::cli::common::command::{api_call, run_client_command};
-use crate::cli::common::error::render_usage_message;
+use crate::cli::common::error::{render_usage_message, render_warning_message};
 use crate::cli::common::rows::{flatten_response_rows, response_columns};
+use crate::screen::ResponseValue;
 
 /// Arguments for the adhoc-screen command.
 #[derive(Debug, Args)]
@@ -48,7 +50,11 @@ pub struct AdhocScreenCommandArgs {
 #[instrument(skip_all)]
 #[cfg(not(coverage))]
 pub async fn handle(args: &AdhocScreenCommandArgs, fields: &[String]) -> i32 {
-    let columns = response_columns(&args.columns);
+    let requested_columns = normalized_columns(&args.columns);
+    if requested_columns.is_empty() {
+        return render_usage_message("--columns must include at least one column name".to_string());
+    }
+    let columns = response_columns(&requested_columns);
 
     let adhoc_query: Option<serde_json::Value> = match &args.query {
         Some(q) => match serde_json::from_str(q) {
@@ -85,9 +91,64 @@ pub async fn handle(args: &AdhocScreenCommandArgs, fields: &[String]) -> i32 {
             .map(|result| &result.response_values[..])
             .unwrap_or(&[]);
 
+        let invalid_columns = missing_columns(&requested_columns, response_values);
+        if invalid_columns.len() == requested_columns.len() {
+            return Err(render_usage_message(all_invalid_columns_message(
+                &invalid_columns,
+            )));
+        }
+
+        if !invalid_columns.is_empty() {
+            render_warning_message(partial_invalid_columns_message(&invalid_columns));
+        }
+
         Ok(flatten_response_rows(response_values))
     })
     .await
+}
+
+fn normalized_columns(columns: &[String]) -> Vec<String> {
+    columns
+        .iter()
+        .map(|column| column.trim())
+        .filter(|column| !column.is_empty())
+        .map(str::to_string)
+        .collect()
+}
+
+fn missing_columns(
+    requested_columns: &[String],
+    response_values: &[Vec<ResponseValue>],
+) -> Vec<String> {
+    if response_values.is_empty() {
+        return Vec::new();
+    }
+
+    let returned_columns: BTreeSet<&str> = response_values
+        .iter()
+        .flat_map(|row| row.iter())
+        .filter_map(|cell| cell.md_item.as_ref()?.name.as_deref())
+        .collect();
+
+    requested_columns
+        .iter()
+        .filter(|column| !returned_columns.contains(column.as_str()))
+        .cloned()
+        .collect()
+}
+
+fn all_invalid_columns_message(columns: &[String]) -> String {
+    format!(
+        "unrecognized screen adhoc column name(s): {}",
+        columns.join(", ")
+    )
+}
+
+fn partial_invalid_columns_message(columns: &[String]) -> String {
+    format!(
+        "unrecognized screen adhoc column name(s): {}. Valid columns in the same request were still returned.",
+        columns.join(", ")
+    )
 }
 
 fn build_include_source(args: &AdhocScreenCommandArgs) -> AdhocScreenIncludeSource {
@@ -122,7 +183,10 @@ fn build_include_source(args: &AdhocScreenCommandArgs) -> AdhocScreenIncludeSour
 
 #[cfg(test)]
 mod tests {
-    use super::{AdhocScreenCommandArgs, build_include_source};
+    use super::{
+        AdhocScreenCommandArgs, all_invalid_columns_message, build_include_source, missing_columns,
+        normalized_columns, partial_invalid_columns_message,
+    };
     use crate::cli::common::rows::flatten_response_rows;
     use crate::cli::common::test_support::{
         optional_response_value, response_value, response_value_without_md_item,
@@ -242,5 +306,68 @@ mod tests {
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].len(), 1);
         assert_eq!(result[0].get("Symbol").unwrap(), &Some("AAPL".to_string()));
+    }
+
+    #[test]
+    fn test_normalized_columns_trims_and_omits_empty_names() {
+        let columns = vec![
+            " Symbol ".to_string(),
+            String::new(),
+            "RSRating".to_string(),
+            "  ".to_string(),
+        ];
+
+        assert_eq!(normalized_columns(&columns), vec!["Symbol", "RSRating"]);
+    }
+
+    #[test]
+    fn test_missing_columns_reports_requested_names_absent_from_response() {
+        let requested = vec![
+            "Symbol".to_string(),
+            "FakeColumn".to_string(),
+            "RSRating".to_string(),
+        ];
+        let rows = vec![vec![
+            response_value("Symbol", Some("AAPL")),
+            response_value("RSRating", Some("92")),
+        ]];
+
+        assert_eq!(missing_columns(&requested, &rows), vec!["FakeColumn"]);
+    }
+
+    #[test]
+    fn test_missing_columns_looks_across_all_rows() {
+        let requested = vec!["Symbol".to_string(), "RSRating".to_string()];
+        let rows = vec![
+            vec![response_value("Symbol", Some("AAPL"))],
+            vec![response_value("RSRating", Some("92"))],
+        ];
+
+        assert!(missing_columns(&requested, &rows).is_empty());
+    }
+
+    #[test]
+    fn test_missing_columns_does_not_warn_for_empty_results() {
+        let requested = vec!["Symbol".to_string(), "RSRating".to_string()];
+
+        assert!(missing_columns(&requested, &[]).is_empty());
+    }
+
+    #[test]
+    fn test_partial_invalid_columns_message_lists_invalid_names() {
+        let message =
+            partial_invalid_columns_message(&["FakeColumn".to_string(), "RSrating".to_string()]);
+
+        assert!(message.contains("FakeColumn, RSrating"));
+        assert!(message.contains("Valid columns in the same request were still returned"));
+    }
+
+    #[test]
+    fn test_all_invalid_columns_message_lists_invalid_names_without_partial_success() {
+        let message =
+            all_invalid_columns_message(&["FakeColumn".to_string(), "RSrating".to_string()]);
+
+        assert!(message.contains("FakeColumn, RSrating"));
+        assert!(!message.contains("Valid columns in the same request were still returned"));
     }
 }

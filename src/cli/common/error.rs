@@ -116,6 +116,11 @@ pub const ERROR_FIELDS: &[ErrorFieldMetadata] = &[
 /// Documented structured error kinds.
 pub const ERROR_KINDS: &[ErrorKindMetadata] = &[
     ErrorKindMetadata {
+        kind: "warning",
+        exit_code: 0,
+        description: "non-fatal diagnostic emitted on stderr while command output still succeeds",
+    },
+    ErrorKindMetadata {
         kind: "usage",
         exit_code: 2,
         description: "invalid arguments or command usage",
@@ -190,6 +195,19 @@ pub fn render_usage_message_with_suggestion(message: String, suggestion: Option<
         retry_after: None,
         command: command_name(),
         suggestion,
+    })
+}
+
+/// Render a non-fatal structured warning and return success.
+pub fn render_warning_message(message: String) -> i32 {
+    render_cli_error(&CliError {
+        kind: "warning",
+        message,
+        exit_code: ExitCode::Success.code(),
+        status_code: None,
+        retry_after: None,
+        command: command_name(),
+        suggestion: Some("Check the column names and spelling before retrying."),
     })
 }
 
@@ -309,8 +327,8 @@ mod tests {
 
     use super::{
         ERROR_SCHEMA, render_api_error, render_client_error, render_internal_error,
-        render_no_results_error, render_usage_error, render_usage_message, set_command_name,
-        structured_client_error, structured_no_results_error,
+        render_no_results_error, render_usage_error, render_usage_message, render_warning_message,
+        set_command_name, structured_client_error, structured_no_results_error,
     };
 
     fn status_error(status: u16) -> ClientError {
@@ -384,6 +402,7 @@ mod tests {
         set_command_name(Some("market"));
 
         assert_eq!(render_usage_message("invalid input".to_string()), 2);
+        assert_eq!(render_warning_message("invalid input".to_string()), 0);
         assert_eq!(render_api_error("upstream failed".to_string()), 3);
         assert_eq!(render_internal_error("broken pipe".to_string()), 1);
         assert_eq!(render_no_results_error("nothing matched"), 5);
@@ -409,6 +428,12 @@ mod tests {
                 .kinds
                 .iter()
                 .any(|kind| { kind.kind == "rate_limit" && kind.exit_code == 3 })
+        );
+        assert!(
+            ERROR_SCHEMA
+                .kinds
+                .iter()
+                .any(|kind| { kind.kind == "warning" && kind.exit_code == 0 })
         );
     }
 }
