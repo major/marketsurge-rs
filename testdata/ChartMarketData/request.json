@@ -6,7 +6,7 @@
     "where": {
       "startDateTime": { "eq": "2025-01-01T00:00:00.000Z" },
       "endDateTime": { "eq": "2025-05-02T23:59:59.000Z" },
-      "timeSeriesType": { "eq": "ONE_DAY" },
+      "timeSeriesType": { "eq": "P1D" },
       "includeIntradayData": true
     },
     "exchangeName": "NYSE"

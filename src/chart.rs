@@ -3,7 +3,9 @@
 use serde::{Deserialize, Serialize};
 
 use crate::client::Client;
-use crate::types::symbols_to_owned;
+use crate::types::{
+    DEFAULT_STRING_KEYS, deserialize_optional_string, json_value_to_string, symbols_to_owned,
+};
 
 // ---------------------------------------------------------------------------
 // GraphQL queries
@@ -26,8 +28,6 @@ struct ChartMarketDataVariables {
     #[serde(rename = "where")]
     filter: TimeSeriesFilterInput,
     exchange_name: String,
-    holiday_start_date_time: String,
-    holiday_end_date_time: String,
 }
 
 #[derive(Serialize)]
@@ -168,13 +168,17 @@ pub type ChartFormattedValue = crate::types::FormattedFloat;
 #[serde(rename_all = "camelCase")]
 pub struct ChartExchangeData {
     /// City name.
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub city: Option<String>,
     /// ISO country code.
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub country_code: Option<String>,
     /// Exchange ISO code (e.g. "XNYS").
     #[serde(rename = "exchangeISO")]
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub exchange_iso: Option<String>,
     /// Exchange identifier.
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub id: Option<String>,
     /// Exchange holidays.
     #[serde(default)]
@@ -186,14 +190,19 @@ pub struct ChartExchangeData {
 #[serde(rename_all = "camelCase")]
 pub struct ChartExchangeHoliday {
     /// Holiday name.
+    #[serde(deserialize_with = "deserialize_string")]
     pub name: String,
     /// Holiday type (e.g. "FULL").
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub holiday_type: Option<String>,
     /// Holiday description.
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub description: Option<String>,
     /// Start timestamp.
+    #[serde(deserialize_with = "deserialize_string")]
     pub start_date_time: String,
     /// End timestamp.
+    #[serde(deserialize_with = "deserialize_string")]
     pub end_date_time: String,
 }
 
@@ -219,6 +228,7 @@ impl Client {
         include_intraday: bool,
         exchange_name: &str,
     ) -> crate::error::Result<ChartMarketDataResponse> {
+        let query = chart_market_data_query(start_date_time, end_date_time)?;
         let variables = ChartMarketDataVariables {
             symbols: symbols_to_owned(symbols),
             symbol_dialect_type: symbol_dialect_type.to_string(),
@@ -230,16 +240,14 @@ impl Client {
                     eq: end_date_time.to_string(),
                 },
                 time_series_type: EqFilter {
-                    eq: time_series_type.to_string(),
+                    eq: api_time_series_type(time_series_type).to_string(),
                 },
                 include_intraday_data: include_intraday,
             },
             exchange_name: exchange_name.to_string(),
-            holiday_start_date_time: start_date_time.to_string(),
-            holiday_end_date_time: end_date_time.to_string(),
         };
 
-        self.graphql_operation("ChartMarketData", variables, QUERY_CHART_MARKET_DATA)
+        self.graphql_operation("ChartMarketData", variables, query)
             .await
     }
 
@@ -267,7 +275,7 @@ impl Client {
                     eq: end_date_time.to_string(),
                 },
                 time_series_type: EqFilter {
-                    eq: "ONE_WEEK".to_string(),
+                    eq: api_time_series_type("ONE_WEEK").to_string(),
                 },
                 include_intraday_data: true,
             },
@@ -276,6 +284,63 @@ impl Client {
         self.graphql_operation("ChartMarketData", variables, QUERY_CHART_MARKET_DATA_WEEKLY)
             .await
     }
+}
+
+fn chart_market_data_query(
+    start_date_time: &str,
+    end_date_time: &str,
+) -> crate::error::Result<String> {
+    render_chart_market_data_query(QUERY_CHART_MARKET_DATA, start_date_time, end_date_time)
+}
+
+fn render_chart_market_data_query(
+    template: &str,
+    start_date_time: &str,
+    end_date_time: &str,
+) -> crate::error::Result<String> {
+    ensure_query_placeholder(template, "__START_DATE_TIME__")?;
+    ensure_query_placeholder(template, "__END_DATE_TIME__")?;
+
+    let start_date_time = date_time_literal(start_date_time)?;
+    let end_date_time = date_time_literal(end_date_time)?;
+
+    Ok(template
+        .replace("__START_DATE_TIME__", &start_date_time)
+        .replace("__END_DATE_TIME__", &end_date_time))
+}
+
+fn ensure_query_placeholder(template: &str, placeholder: &'static str) -> crate::error::Result<()> {
+    if template.contains(placeholder) {
+        return Ok(());
+    }
+
+    Err(serde_json::Error::io(std::io::Error::new(
+        std::io::ErrorKind::InvalidData,
+        format!("chart market data query template missing {placeholder}"),
+    ))
+    .into())
+}
+
+fn date_time_literal(value: &str) -> crate::error::Result<String> {
+    Ok(serde_json::to_string(value)?)
+}
+
+fn api_time_series_type(value: &str) -> &str {
+    match value {
+        "ONE_DAY" => "P1D",
+        "ONE_WEEK" => "P7D",
+        other => other,
+    }
+}
+
+fn deserialize_string<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = serde_json::Value::deserialize(deserializer)?;
+
+    json_value_to_string(value, DEFAULT_STRING_KEYS)
+        .ok_or_else(|| serde::de::Error::custom("expected string-like value"))
 }
 
 #[cfg(test)]
@@ -397,5 +462,103 @@ mod tests {
             .expect("live chart_market_data_weekly should succeed");
 
         assert!(!resp.market_data.is_empty());
+    }
+
+    #[test]
+    fn chart_market_data_query_inlines_holiday_date_time_literals() {
+        let query =
+            super::chart_market_data_query("2025-01-01T00:00:00.000Z", "2025-05-02T23:59:59.000Z")
+                .expect("query should render");
+
+        assert!(!query.contains("__START_DATE_TIME__"));
+        assert!(!query.contains("__END_DATE_TIME__"));
+        assert!(!query.contains("$holidayStartDateTime"));
+        assert!(query.contains("timeSeries(where: $where)"));
+        assert!(query.contains(r#"startDateTime: { gt: "2025-01-01T00:00:00.000Z" }"#));
+        assert!(query.contains(r#"endDateTime: { lt: "2025-05-02T23:59:59.000Z" }"#));
+    }
+
+    #[test]
+    fn chart_market_data_query_reports_missing_holiday_placeholder() {
+        let err = super::render_chart_market_data_query(
+            "query { holidays(where: { endDateTime: { lt: __END_DATE_TIME__ } }) { name } }",
+            "2025-01-01T00:00:00.000Z",
+            "2025-05-02T23:59:59.000Z",
+        )
+        .expect_err("missing placeholder should fail");
+
+        assert!(
+            err.to_string()
+                .contains("chart market data query template missing __START_DATE_TIME__")
+        );
+    }
+
+    #[test]
+    fn api_time_series_type_maps_legacy_names_to_current_api_periods() {
+        assert_eq!(super::api_time_series_type("ONE_DAY"), "P1D");
+        assert_eq!(super::api_time_series_type("ONE_WEEK"), "P7D");
+        assert_eq!(super::api_time_series_type("P1M"), "P1M");
+    }
+
+    #[test]
+    fn chart_exchange_holiday_description_accepts_nested_value() {
+        let holiday: super::ChartExchangeHoliday = serde_json::from_value(serde_json::json!({
+            "name": "Holiday",
+            "holidayType": "FULL",
+            "description": { "value": "Nested description" },
+            "startDateTime": "2025-07-04T00:00:00.000Z",
+            "endDateTime": "2025-07-04T23:59:59.000Z"
+        }))
+        .expect("holiday should deserialize");
+
+        assert_eq!(holiday.description.as_deref(), Some("Nested description"));
+    }
+
+    #[test]
+    fn chart_exchange_holiday_name_accepts_nested_value() {
+        let holiday: super::ChartExchangeHoliday = serde_json::from_value(serde_json::json!({
+            "name": { "value": "Nested holiday" },
+            "holidayType": "FULL",
+            "description": "Description",
+            "startDateTime": "2025-07-04T00:00:00.000Z",
+            "endDateTime": "2025-07-04T23:59:59.000Z"
+        }))
+        .expect("holiday should deserialize");
+
+        assert_eq!(holiday.name, "Nested holiday");
+    }
+
+    #[test]
+    fn chart_exchange_data_accepts_nested_string_values() {
+        let exchange: super::ChartExchangeData = serde_json::from_value(serde_json::json!({
+            "city": { "value": "New York" },
+            "countryCode": { "value": "US" },
+            "exchangeISO": { "value": "XNYS" },
+            "id": { "value": "NYSE" },
+            "holidays": [
+                {
+                    "name": "Holiday",
+                    "holidayType": { "value": "FULL" },
+                    "description": "Description",
+                    "startDateTime": { "value": "2025-07-04T00:00:00.000Z" },
+                    "endDateTime": { "value": "2025-07-04T23:59:59.000Z" }
+                }
+            ]
+        }))
+        .expect("exchange data should deserialize");
+
+        assert_eq!(exchange.city.as_deref(), Some("New York"));
+        assert_eq!(exchange.country_code.as_deref(), Some("US"));
+        assert_eq!(exchange.exchange_iso.as_deref(), Some("XNYS"));
+        assert_eq!(exchange.id.as_deref(), Some("NYSE"));
+        assert_eq!(exchange.holidays[0].holiday_type.as_deref(), Some("FULL"));
+        assert_eq!(
+            exchange.holidays[0].start_date_time,
+            "2025-07-04T00:00:00.000Z"
+        );
+        assert_eq!(
+            exchange.holidays[0].end_date_time,
+            "2025-07-04T23:59:59.000Z"
+        );
     }
 }
