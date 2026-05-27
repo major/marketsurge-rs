@@ -120,7 +120,7 @@ Flag precedence: `RUST_LOG` overrides `--verbose` and `--debug`. When neither `-
 
 ### Schema introspection
 
-`marketsurge-agent schema` dumps the CLI surface as compact JSON for scripts and agent tooling. It does not read browser cookies or make network requests. The schema shape is experimental; `schema_version: 3` includes the binary name, package version, exit-code metadata, structured error metadata, command metadata, and visible command arguments.
+`marketsurge-agent schema` dumps the CLI surface as compact JSON for scripts and agent tooling. It does not read browser cookies or make network requests. The schema shape is experimental; `schema_version: 4` includes the binary name, package version, exit-code metadata, structured error metadata, command metadata, visible command arguments, and documented top-level output fields for field-filterable commands.
 
 ### Screen column discovery
 
