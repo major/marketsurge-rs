@@ -623,6 +623,18 @@ mod tests {
                 .iter()
                 .any(|field| field.name == "close" && field.r#type == "number")
         );
+        assert!(
+            chart
+                .args
+                .iter()
+                .any(|arg| { arg.name == "days" && arg.kind == "option" && !arg.required })
+        );
+        assert!(
+            chart
+                .args
+                .iter()
+                .any(|arg| { arg.name == "start_date" && arg.kind == "option" && !arg.required })
+        );
     }
 
     #[test]

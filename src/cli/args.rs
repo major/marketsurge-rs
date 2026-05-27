@@ -1,3 +1,4 @@
+use chrono::NaiveDate;
 use clap::{Args, Parser, Subcommand};
 use clap_complete::Shell;
 
@@ -150,7 +151,7 @@ pub enum Commands {
 
     /// Dump the CLI surface as machine-readable JSON.
     #[command(
-        long_about = "Dump the CLI surface as machine-readable JSON. The output format is experimental and may change between versions. schema_version 3 adds the structured error contract.\n\nThis command does not read browser cookies and does not make any network requests.",
+        long_about = "Dump the CLI surface as machine-readable JSON. The output format is experimental and may change between versions. schema_version 4 documents top-level output fields for field-filterable commands.\n\nThis command does not read browser cookies and does not make any network requests.",
         after_help = "Examples:\n  marketsurge-agent schema\n  marketsurge-agent schema | jq '.commands | length'"
     )]
     Schema,
@@ -169,6 +170,14 @@ pub struct ChartArgs {
     /// Use weekly bars instead of daily bars.
     #[arg(long)]
     pub weekly: bool,
+
+    /// Keep only the last N returned bars per symbol.
+    #[arg(long, value_name = "COUNT", value_parser = clap::value_parser!(u16).range(1..))]
+    pub days: Option<u16>,
+
+    /// Start chart history at this date, formatted as YYYY-MM-DD.
+    #[arg(long, value_name = "YYYY-MM-DD")]
+    pub start_date: Option<NaiveDate>,
 
     /// Ticker symbols and options.
     #[command(flatten)]
@@ -277,6 +286,42 @@ mod tests {
 
         assert_eq!(cli.fields, vec!["symbol", "num_funds_held"]);
         assert!(matches!(cli.command, Commands::Ownership { .. }));
+    }
+
+    #[test]
+    fn market_chart_accepts_date_range_flags() {
+        let cli = Cli::parse_from([
+            "marketsurge-agent",
+            "market",
+            "chart",
+            "--weekly",
+            "--days",
+            "20",
+            "--start-date",
+            "2026-05-01",
+            "AAPL",
+        ]);
+
+        let command = format!("{:?}", cli.command);
+
+        assert!(command.contains("weekly: true"));
+        assert!(command.contains("days: Some(20)"));
+        assert!(command.contains("start_date: Some(2026-05-01)"));
+        assert!(command.contains("symbols: [\"AAPL\"]"));
+    }
+
+    #[test]
+    fn market_chart_rejects_zero_days() {
+        let result = Cli::try_parse_from([
+            "marketsurge-agent",
+            "market",
+            "chart",
+            "--days",
+            "0",
+            "AAPL",
+        ]);
+
+        assert!(result.is_err());
     }
 
     #[test]

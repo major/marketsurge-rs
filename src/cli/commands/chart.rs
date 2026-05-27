@@ -1,6 +1,6 @@
 //! Chart OHLCV data command for daily and weekly price history.
 
-use chrono::Utc;
+use chrono::{DateTime, Duration, NaiveDate, NaiveTime, Utc};
 use serde::Serialize;
 use tracing::instrument;
 
@@ -33,6 +33,48 @@ pub struct ChartRecord {
 
 /// ISO 8601 format with milliseconds for the MarketSurge API.
 const DATE_FMT: &str = "%Y-%m-%dT%H:%M:%S%.3fZ";
+
+#[derive(Debug, Clone, Copy)]
+struct ChartDateRange {
+    start: DateTime<Utc>,
+    end: DateTime<Utc>,
+}
+
+impl ChartDateRange {
+    fn formatted_start(self) -> String {
+        self.start.format(DATE_FMT).to_string()
+    }
+
+    fn formatted_end(self) -> String {
+        self.end.format(DATE_FMT).to_string()
+    }
+}
+
+fn start_of_day_utc(date: NaiveDate) -> DateTime<Utc> {
+    date.and_time(NaiveTime::MIN).and_utc()
+}
+
+fn chart_date_range(args: &ChartArgs, now: DateTime<Utc>) -> ChartDateRange {
+    let start = if let Some(start_date) = args.start_date {
+        start_of_day_utc(start_date)
+    } else if let Some(days) = args.days {
+        range_start_for_bar_count(now, args.weekly, days)
+    } else if args.weekly {
+        now - Duration::weeks(156)
+    } else {
+        now - Duration::days(365)
+    };
+
+    ChartDateRange { start, end: now }
+}
+
+fn range_start_for_bar_count(now: DateTime<Utc>, weekly: bool, days: u16) -> DateTime<Utc> {
+    if weekly {
+        now - Duration::weeks(i64::from(days) + 2)
+    } else {
+        now - Duration::days(i64::from(days) * 2 + 7)
+    }
+}
 
 /// Flattens chart market data into OHLCV output records.
 pub(crate) fn flatten_chart_data(
@@ -68,6 +110,39 @@ pub(crate) fn flatten_chart_data(
     records
 }
 
+fn keep_last_bars_per_symbol(records: Vec<ChartRecord>, count: Option<u16>) -> Vec<ChartRecord> {
+    let Some(count) = count else {
+        return records;
+    };
+    let count = usize::from(count);
+
+    let mut kept = Vec::new();
+    let mut current_symbol = None::<String>;
+    let mut current_records = Vec::new();
+
+    for record in records {
+        if current_symbol.as_deref() != Some(record.symbol.as_str()) {
+            keep_last_records(&mut kept, &mut current_records, count);
+            current_symbol = Some(record.symbol.clone());
+        }
+        current_records.push(record);
+    }
+
+    keep_last_records(&mut kept, &mut current_records, count);
+    kept
+}
+
+fn keep_last_records(
+    kept: &mut Vec<ChartRecord>,
+    current_records: &mut Vec<ChartRecord>,
+    count: usize,
+) {
+    if current_records.len() > count {
+        current_records.drain(0..current_records.len() - count);
+    }
+    kept.append(current_records);
+}
+
 /// Handles the chart command.
 #[instrument(skip_all)]
 #[cfg(not(coverage))]
@@ -77,18 +152,14 @@ pub async fn handle(args: &ChartArgs, fields: &[String]) -> i32 {
         fields,
         |client, symbol_refs| async move {
             let now = Utc::now();
-            let end = now.format(DATE_FMT).to_string();
+            let date_range = chart_date_range(args, now);
+            let start = date_range.formatted_start();
+            let end = date_range.formatted_end();
 
             let response = if args.weekly {
-                let start = (now - chrono::Duration::weeks(156))
-                    .format(DATE_FMT)
-                    .to_string();
                 api_call(client.chart_market_data_weekly(&symbol_refs, "CHARTING", &start, &end))
                     .await?
             } else {
-                let start = (now - chrono::Duration::days(365))
-                    .format(DATE_FMT)
-                    .to_string();
                 api_call(client.chart_market_data(
                     &symbol_refs,
                     "CHARTING",
@@ -101,7 +172,10 @@ pub async fn handle(args: &ChartArgs, fields: &[String]) -> i32 {
                 .await?
             };
 
-            Ok(flatten_chart_data(&symbol_refs, response))
+            Ok(keep_last_bars_per_symbol(
+                flatten_chart_data(&symbol_refs, response),
+                args.days,
+            ))
         },
     )
     .await
@@ -109,10 +183,24 @@ pub async fn handle(args: &ChartArgs, fields: &[String]) -> i32 {
 
 #[cfg(test)]
 mod tests {
-    use super::flatten_chart_data;
+    use chrono::{TimeZone, Utc};
+
+    use super::{chart_date_range, flatten_chart_data, keep_last_bars_per_symbol};
     use crate::chart::{
         ChartDataPoint, ChartMarketDataItem, ChartMarketDataResponse, ChartPricing, ChartTimeSeries,
     };
+    use crate::cli::{ChartArgs, SymbolsArgs};
+
+    fn chart_args(weekly: bool, days: Option<u16>, start_date: Option<&str>) -> ChartArgs {
+        ChartArgs {
+            weekly,
+            days,
+            start_date: start_date.map(|date| date.parse().expect("valid test date")),
+            symbols: SymbolsArgs {
+                symbols: vec!["AAPL".to_string()],
+            },
+        }
+    }
 
     fn chart_value(value: f64) -> crate::types::FloatValue {
         crate::types::FloatValue { value: Some(value) }
@@ -159,6 +247,49 @@ mod tests {
             market_data: items,
             exchange_data: None,
         }
+    }
+
+    #[test]
+    fn chart_date_range_defaults_to_one_year_for_daily_bars() {
+        let now = Utc.with_ymd_and_hms(2026, 5, 27, 12, 0, 0).unwrap();
+        let range = chart_date_range(&chart_args(false, None, None), now);
+
+        assert_eq!(range.formatted_start(), "2025-05-27T12:00:00.000Z");
+        assert_eq!(range.formatted_end(), "2026-05-27T12:00:00.000Z");
+    }
+
+    #[test]
+    fn chart_date_range_defaults_to_three_years_for_weekly_bars() {
+        let now = Utc.with_ymd_and_hms(2026, 5, 27, 12, 0, 0).unwrap();
+        let range = chart_date_range(&chart_args(true, None, None), now);
+
+        assert_eq!(range.formatted_start(), "2023-05-31T12:00:00.000Z");
+        assert_eq!(range.formatted_end(), "2026-05-27T12:00:00.000Z");
+    }
+
+    #[test]
+    fn chart_date_range_uses_start_date_at_midnight() {
+        let now = Utc.with_ymd_and_hms(2026, 5, 27, 12, 0, 0).unwrap();
+        let range = chart_date_range(&chart_args(false, None, Some("2026-05-01")), now);
+
+        assert_eq!(range.formatted_start(), "2026-05-01T00:00:00.000Z");
+        assert_eq!(range.formatted_end(), "2026-05-27T12:00:00.000Z");
+    }
+
+    #[test]
+    fn chart_date_range_expands_daily_days_window_for_trading_days() {
+        let now = Utc.with_ymd_and_hms(2026, 5, 27, 12, 0, 0).unwrap();
+        let range = chart_date_range(&chart_args(false, Some(10), None), now);
+
+        assert_eq!(range.formatted_start(), "2026-04-30T12:00:00.000Z");
+    }
+
+    #[test]
+    fn chart_date_range_expands_weekly_days_window_for_weekly_bars() {
+        let now = Utc.with_ymd_and_hms(2026, 5, 27, 12, 0, 0).unwrap();
+        let range = chart_date_range(&chart_args(true, Some(20), None), now);
+
+        assert_eq!(range.formatted_start(), "2025-12-24T12:00:00.000Z");
     }
 
     #[test]
@@ -225,5 +356,92 @@ mod tests {
         let records = flatten_chart_data(&symbols, response);
 
         assert!(records.is_empty());
+    }
+
+    #[test]
+    fn keep_last_bars_per_symbol_trims_each_symbol_independently() {
+        let symbols = ["AAPL", "MSFT"];
+        let response = response(vec![
+            chart_item(
+                "ONE_DAY",
+                vec![
+                    data_point(
+                        "2026-05-01T00:00:00.000Z",
+                        None,
+                        None,
+                        None,
+                        Some(1.0),
+                        None,
+                    ),
+                    data_point(
+                        "2026-05-02T00:00:00.000Z",
+                        None,
+                        None,
+                        None,
+                        Some(2.0),
+                        None,
+                    ),
+                    data_point(
+                        "2026-05-03T00:00:00.000Z",
+                        None,
+                        None,
+                        None,
+                        Some(3.0),
+                        None,
+                    ),
+                ],
+            ),
+            chart_item(
+                "ONE_DAY",
+                vec![
+                    data_point(
+                        "2026-05-01T00:00:00.000Z",
+                        None,
+                        None,
+                        None,
+                        Some(4.0),
+                        None,
+                    ),
+                    data_point(
+                        "2026-05-02T00:00:00.000Z",
+                        None,
+                        None,
+                        None,
+                        Some(5.0),
+                        None,
+                    ),
+                ],
+            ),
+        ]);
+        let records = flatten_chart_data(&symbols, response);
+
+        let records = keep_last_bars_per_symbol(records, Some(2));
+
+        assert_eq!(records.len(), 4);
+        assert_eq!(records[0].symbol, "AAPL");
+        assert_eq!(records[0].date, "2026-05-02T00:00:00.000Z");
+        assert_eq!(records[1].date, "2026-05-03T00:00:00.000Z");
+        assert_eq!(records[2].symbol, "MSFT");
+        assert_eq!(records[2].date, "2026-05-01T00:00:00.000Z");
+        assert_eq!(records[3].date, "2026-05-02T00:00:00.000Z");
+    }
+
+    #[test]
+    fn keep_last_bars_per_symbol_keeps_all_records_without_count() {
+        let symbols = ["AAPL"];
+        let records = flatten_chart_data(
+            &symbols,
+            response(vec![chart_item(
+                "ONE_DAY",
+                vec![
+                    data_point("2026-05-01T00:00:00.000Z", None, None, None, None, None),
+                    data_point("2026-05-02T00:00:00.000Z", None, None, None, None, None),
+                ],
+            )]),
+        );
+
+        let records = keep_last_bars_per_symbol(records, None);
+
+        assert_eq!(records.len(), 2);
     }
 }
