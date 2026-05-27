@@ -103,11 +103,16 @@ mod tests {
     #[test]
     fn payload_includes_visible_command_arguments() {
         let payload = schema_payload();
-        let ratings = payload
+        let analysis = payload
             .commands
             .iter()
+            .find(|command| command.name == "analysis")
+            .expect("analysis command should be present");
+        let ratings = analysis
+            .subcommands
+            .iter()
             .find(|command| command.name == "ratings")
-            .expect("ratings command should be present");
+            .expect("ratings subcommand should be present");
 
         assert!(
             ratings

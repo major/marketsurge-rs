@@ -5,6 +5,8 @@ mod args;
 pub mod commands;
 /// Shared utilities: auth helpers and error mapping.
 pub mod common;
+/// Command groups that organize related subcommands.
+pub mod groups;
 /// JSON output formatting and field selection.
 pub mod output;
 
@@ -23,6 +25,19 @@ pub async fn run() -> i32 {
     0
 }
 
+/// Prints help for a command group when invoked without a subcommand.
+#[cfg(not(coverage))]
+fn print_subcommand_help(name: &str) -> i32 {
+    let mut cmd = <Cli as clap::CommandFactory>::command();
+    cmd.build();
+    if let Some(sub) = cmd.find_subcommand(name) {
+        // print_help requires &mut, so clone the subcommand to get a mutable copy.
+        let mut sub = sub.clone();
+        let _ = sub.print_help();
+    }
+    0
+}
+
 /// Parses CLI arguments, routes to the appropriate command handler, and returns
 /// the process exit code.
 #[cfg(not(coverage))]
@@ -31,16 +46,34 @@ pub async fn run() -> i32 {
     let fields = cli.fields.as_slice();
 
     match &cli.command {
-        Commands::AdhocScreen(args) => commands::adhoc_screen::handle(args, fields).await,
-        Commands::Chart(args) => commands::chart::handle(args, fields).await,
-        Commands::Fundamentals(args) => commands::fundamentals::handle(args, fields).await,
-        Commands::Industry(args) => commands::industry::handle(args, fields).await,
-        Commands::MarketData(args) => commands::market_data::handle(args, fields).await,
-        Commands::Ownership(args) => commands::ownership::handle(args, fields).await,
-        Commands::Ratings(args) => commands::ratings::handle(args, fields).await,
-        Commands::Screen(args) => commands::screen::handle(args, fields).await,
-        Commands::Tree(args) => commands::tree::handle(args, fields).await,
-        Commands::Watchlist(args) => commands::watchlist::handle(args, fields).await,
+        Commands::Market { command } => match command {
+            Some(cmd) => groups::market::dispatch(cmd, fields).await,
+            None => print_subcommand_help("market"),
+        },
+        Commands::Analysis { command } => match command {
+            Some(cmd) => groups::analysis::dispatch(cmd, fields).await,
+            None => print_subcommand_help("analysis"),
+        },
+        Commands::Screen { command } => match command {
+            Some(cmd) => groups::screen::dispatch(cmd, fields).await,
+            None => print_subcommand_help("screen"),
+        },
+        Commands::Ownership { command } => match command {
+            Some(cmd) => groups::ownership::dispatch(cmd, fields).await,
+            None => print_subcommand_help("ownership"),
+        },
+        Commands::Industry { command } => match command {
+            Some(cmd) => groups::industry::dispatch(cmd, fields).await,
+            None => print_subcommand_help("industry"),
+        },
+        Commands::Navigation { command } => match command {
+            Some(cmd) => groups::navigation::dispatch(cmd, fields).await,
+            None => print_subcommand_help("navigation"),
+        },
+        Commands::Watchlist { command } => match command {
+            Some(cmd) => groups::watchlist::dispatch(cmd, fields).await,
+            None => print_subcommand_help("watchlist"),
+        },
         Commands::Completions(args) => {
             commands::completions::handle(args);
             0

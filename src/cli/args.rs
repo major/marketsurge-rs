@@ -1,12 +1,12 @@
 use clap::{Args, Parser, Subcommand};
 use clap_complete::Shell;
 
-use super::commands::adhoc_screen::AdhocScreenCommandArgs;
 use super::commands::industry::IndustryCommand;
 use super::commands::ownership::OwnershipCommand;
 use super::commands::screen::ScreenCommand;
 use super::commands::tree::TreeCommand;
 use super::commands::watchlist::WatchlistCommand;
+use super::groups;
 
 /// CLI tool for querying MarketSurge market data.
 #[derive(Debug, Parser)]
@@ -15,7 +15,7 @@ use super::commands::watchlist::WatchlistCommand;
     version,
     about = "Query MarketSurge data as compact JSON",
     long_about = "Query MarketSurge data as compact JSON. Auth reads browser cookies, so log in at https://marketsurge.investors.com first. Use --fields to limit top-level JSON fields in command output.",
-    after_help = "Examples:\n  marketsurge-agent ratings AAPL MSFT\n  marketsurge-agent --fields symbol,rs_rating ratings AAPL\n  marketsurge-agent completions zsh > _marketsurge-agent",
+    after_help = "Examples:\n  marketsurge-agent analysis ratings AAPL\n  marketsurge-agent --fields symbol,rs_rating analysis ratings AAPL\n  marketsurge-agent completions zsh > _marketsurge-agent",
     arg_required_else_help = true
 )]
 pub struct Cli {
@@ -31,55 +31,82 @@ pub struct Cli {
 /// Top-level command groups.
 #[derive(Debug, Subcommand)]
 pub enum Commands {
-    /// Run an ad-hoc screener query and return matching rows.
+    /// Market data: chart OHLCV bars and broad snapshots.
     #[command(
-        after_help = "Examples:\n  marketsurge-agent adhoc-screen --symbols AAPL,MSFT --columns Symbol,CompanyName,EPSRating\n  marketsurge-agent adhoc-screen --screen-id 12345 --limit 100"
+        after_help = "Examples:\n  marketsurge-agent market chart AAPL MSFT\n  marketsurge-agent market snapshot AAPL MSFT"
     )]
-    AdhocScreen(AdhocScreenCommandArgs),
-    /// Fetch daily or weekly OHLCV bars for symbols.
+    Market {
+        /// Market subcommand to run.
+        #[command(subcommand)]
+        command: Option<groups::market::Cmd>,
+    },
+
+    /// Analysis: company fundamentals and RS ratings.
     #[command(
-        after_help = "Examples:\n  marketsurge-agent chart AAPL MSFT\n  marketsurge-agent chart --weekly AAPL"
+        after_help = "Examples:\n  marketsurge-agent analysis fundamentals AAPL MSFT\n  marketsurge-agent analysis ratings AAPL MSFT"
     )]
-    Chart(ChartArgs),
-    /// Fetch EPS, sales, and estimate fundamentals for symbols.
-    #[command(after_help = "Examples:\n  marketsurge-agent fundamentals AAPL MSFT")]
-    Fundamentals(SymbolsArgs),
-    /// Fetch industry group RS and overview data.
+    Analysis {
+        /// Analysis subcommand to run.
+        #[command(subcommand)]
+        command: Option<groups::analysis::Cmd>,
+    },
+
+    /// Stock screens: ad-hoc queries, list, and run.
     #[command(
-        after_help = "Examples:\n  marketsurge-agent industry rs AAPL\n  marketsurge-agent industry overview AAPL"
+        after_help = "Examples:\n  marketsurge-agent screen adhoc --symbols AAPL,MSFT\n  marketsurge-agent screen list --query ibd\n  marketsurge-agent screen run 'IBD 50'"
     )]
-    Industry(IndustryArgs),
-    /// Fetch broad rating, price, industry, and fundamental snapshot data.
-    #[command(after_help = "Examples:\n  marketsurge-agent market-data AAPL MSFT")]
-    MarketData(SymbolsArgs),
-    /// Fetch fund ownership summaries and fund holdings.
+    Screen {
+        /// Screen subcommand to run.
+        #[command(subcommand)]
+        command: Option<groups::screen::Cmd>,
+    },
+
+    /// Fund ownership data: quarterly summaries and fund holdings.
     #[command(
         after_help = "Examples:\n  marketsurge-agent ownership summary AAPL\n  marketsurge-agent ownership funds AAPL"
     )]
-    Ownership(OwnershipArgs),
-    /// Fetch relative strength ratings for symbols.
-    #[command(after_help = "Examples:\n  marketsurge-agent ratings AAPL MSFT")]
-    Ratings(SymbolsArgs),
-    /// List or run stock screens, including coach screens.
+    Ownership {
+        /// Ownership subcommand to run.
+        #[command(subcommand)]
+        command: Option<groups::ownership::Cmd>,
+    },
+
+    /// Industry group data: RS ratings and overview.
     #[command(
-        after_help = "Examples:\n  marketsurge-agent screen list --query ibd\n  marketsurge-agent screen list --coach\n  marketsurge-agent screen run 'IBD 50'"
+        after_help = "Examples:\n  marketsurge-agent industry rs AAPL\n  marketsurge-agent industry overview AAPL"
     )]
-    Screen(ScreenArgs),
-    /// Fetch coach or navigation trees.
+    Industry {
+        /// Industry subcommand to run.
+        #[command(subcommand)]
+        command: Option<groups::industry::Cmd>,
+    },
+
+    /// Navigation trees: coach and site navigation.
     #[command(
-        after_help = "Examples:\n  marketsurge-agent tree coach\n  marketsurge-agent tree nav"
+        after_help = "Examples:\n  marketsurge-agent navigation coach\n  marketsurge-agent navigation nav"
     )]
-    Tree(TreeArgs),
-    /// List watchlists, read symbols, or screen symbols.
+    Navigation {
+        /// Navigation subcommand to run.
+        #[command(subcommand)]
+        command: Option<groups::navigation::Cmd>,
+    },
+
+    /// Watchlist data: list, symbols, and screening.
     #[command(
         after_help = "Examples:\n  marketsurge-agent watchlist list --query ibd\n  marketsurge-agent watchlist symbols 12345"
     )]
-    Watchlist(WatchlistArgs),
+    Watchlist {
+        /// Watchlist subcommand to run.
+        #[command(subcommand)]
+        command: Option<groups::watchlist::Cmd>,
+    },
+
     /// Generate shell completion scripts.
     #[command(
         after_help = "Examples:\n  marketsurge-agent completions zsh > _marketsurge-agent\n  marketsurge-agent completions bash > marketsurge-agent.bash"
     )]
     Completions(CompletionsArgs),
+
     /// Dump the CLI surface as machine-readable JSON.
     #[command(
         long_about = "Dump the CLI surface as machine-readable JSON. The output format is experimental and may change between versions. schema_version 1 is the initial format.\n\nThis command does not read browser cookies and does not make any network requests.",
@@ -148,7 +175,7 @@ pub struct CompletionsArgs {
 }
 
 /// Arguments containing one or more ticker symbols.
-#[derive(Debug, Args)]
+#[derive(Debug, Args, Clone)]
 pub struct SymbolsArgs {
     /// One or more ticker symbols, for example AAPL MSFT.
     #[arg(required = true)]
@@ -172,12 +199,13 @@ mod tests {
             "marketsurge-agent",
             "--fields",
             "symbol,rs_rating",
+            "analysis",
             "ratings",
             "AAPL",
         ]);
 
         assert_eq!(cli.fields, vec!["symbol", "rs_rating"]);
-        assert!(matches!(cli.command, Commands::Ratings(_)));
+        assert!(matches!(cli.command, Commands::Analysis { .. }));
     }
 
     #[test]
@@ -192,13 +220,18 @@ mod tests {
         ]);
 
         assert_eq!(cli.fields, vec!["symbol", "num_funds_held"]);
-        assert!(matches!(cli.command, Commands::Ownership(_)));
+        assert!(matches!(cli.command, Commands::Ownership { .. }));
     }
 
     #[test]
     fn json_objects_is_not_accepted() {
-        let result =
-            Cli::try_parse_from(["marketsurge-agent", "--json-objects", "ratings", "AAPL"]);
+        let result = Cli::try_parse_from([
+            "marketsurge-agent",
+            "--json-objects",
+            "analysis",
+            "ratings",
+            "AAPL",
+        ]);
 
         assert!(result.is_err());
     }
