@@ -33,9 +33,20 @@ pub(crate) fn response_columns(names: &[String]) -> Vec<ResponseColumn> {
         .collect()
 }
 
+/// Truncates records to at most `limit` entries.
+///
+/// A limit of zero means no limit.
+pub(crate) fn truncate_records<T>(mut records: Vec<T>, limit: usize) -> Vec<T> {
+    if limit > 0 && records.len() > limit {
+        records.truncate(limit);
+    }
+
+    records
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{flatten_response_rows, response_columns};
+    use super::{flatten_response_rows, response_columns, truncate_records};
     use crate::cli::common::test_support::{
         optional_response_value, response_value, response_value_without_md_item,
     };
@@ -97,5 +108,40 @@ mod tests {
         assert!(columns[0].sort_information.is_none());
         assert_eq!(columns[1].name, "RSRating");
         assert!(columns[1].sort_information.is_none());
+    }
+
+    #[test]
+    fn truncate_records_keeps_all_records_when_limit_is_zero() {
+        let records = vec![1, 2, 3];
+
+        assert_eq!(truncate_records(records, 0), vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn truncate_records_keeps_all_records_when_limit_exceeds_len() {
+        let records = vec![1, 2, 3];
+
+        assert_eq!(truncate_records(records, 5), vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn truncate_records_keeps_all_records_when_limit_matches_len() {
+        let records = vec![1, 2, 3];
+
+        assert_eq!(truncate_records(records, 3), vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn truncate_records_keeps_first_limit_records() {
+        let records = vec![1, 2, 3];
+
+        assert_eq!(truncate_records(records, 2), vec![1, 2]);
+    }
+
+    #[test]
+    fn truncate_records_handles_empty_records() {
+        let records: Vec<i32> = Vec::new();
+
+        assert!(truncate_records(records, 2).is_empty());
     }
 }

@@ -10,7 +10,7 @@ use crate::cli::{ChartArgs, SymbolsArgs};
 pub enum Cmd {
     /// Fetch daily or weekly OHLCV bars for symbols.
     #[command(
-        after_help = "Examples:\n  marketsurge-agent market chart AAPL MSFT\n  marketsurge-agent market chart AAPL --days 10\n  marketsurge-agent market chart AAPL --start-date 2026-05-01\n  marketsurge-agent market chart --weekly AAPL --days 20"
+        after_help = "Examples:\n  marketsurge-agent market chart AAPL MSFT\n  marketsurge-agent market chart AAPL --days 10\n  marketsurge-agent market chart AAPL --start-date 2026-05-01\n  marketsurge-agent market chart AAPL --limit 10\n  marketsurge-agent market chart --weekly AAPL --days 20"
     )]
     Chart(ChartArgs),
 

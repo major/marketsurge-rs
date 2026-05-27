@@ -5,8 +5,9 @@ use tracing::instrument;
 
 use crate::fundamentals::FundamentalsItem;
 
-use crate::cli::SymbolsArgs;
+use crate::cli::SymbolLimitArgs;
 use crate::cli::common::command::{api_call, run_command, zip_symbols};
+use crate::cli::common::rows::truncate_records;
 
 /// Flat output record for a single fundamentals period.
 ///
@@ -157,20 +158,27 @@ fn flatten_fundamentals(
 /// Handles the fundamentals command.
 #[instrument(skip_all)]
 #[cfg(not(coverage))]
-pub async fn handle(args: &SymbolsArgs, fields: &[String]) -> i32 {
-    run_command(&args.symbols, fields, |client, symbol_refs| async move {
-        let response = api_call(client.fundamentals(
-            &symbol_refs,
-            "CHARTING",
-            "P7Y_AGO",
-            "P2Y_FUTURE",
-            "P7Y_AGO",
-            "P2Y_FUTURE",
-        ))
-        .await?;
+pub async fn handle(args: &SymbolLimitArgs, fields: &[String]) -> i32 {
+    run_command(
+        &args.symbols.symbols,
+        fields,
+        |client, symbol_refs| async move {
+            let response = api_call(client.fundamentals(
+                &symbol_refs,
+                "CHARTING",
+                "P7Y_AGO",
+                "P2Y_FUTURE",
+                "P7Y_AGO",
+                "P2Y_FUTURE",
+            ))
+            .await?;
 
-        Ok(flatten_fundamentals(&symbol_refs, &response.market_data))
-    })
+            Ok(truncate_records(
+                flatten_fundamentals(&symbol_refs, &response.market_data),
+                args.limit.limit,
+            ))
+        },
+    )
     .await
 }
 

@@ -8,7 +8,8 @@ use serde::Serialize;
 use tracing::instrument;
 
 use crate::cli::common::command::{api_call, run_command, zip_symbols};
-use crate::cli::{OwnershipArgs, SymbolsArgs};
+use crate::cli::common::rows::truncate_records;
+use crate::cli::{OwnershipArgs, SymbolLimitArgs};
 
 /// Screen name for the fund ownership detail query.
 const FUND_OWNERSHIP_SCREEN: &str = "MarketSurge.RelatedInformation.MUTIFundOwnership";
@@ -21,10 +22,10 @@ pub enum OwnershipCommand {
         long_about = "Fetch quarterly fund ownership summary rows for symbols. The funds_float_pct_held field is the current percentage of float held by funds from the MarketSurge response. MarketSurge does not provide this value per quarter in the ownership summary payload, so the CLI repeats the current value on each quarterly row for context. Use num_funds_held for historical quarter-by-quarter trend analysis.",
         after_help = "Examples:\n  marketsurge-agent ownership summary AAPL MSFT\n\nField notes:\n  funds_float_pct_held is current-only in the MarketSurge response and is repeated on each quarterly row. Use num_funds_held for historical quarter-by-quarter trend analysis."
     )]
-    Summary(SymbolsArgs),
+    Summary(SymbolLimitArgs),
     /// Fetch individual fund holders and share history for symbols.
     #[command(after_help = "Examples:\n  marketsurge-agent ownership funds AAPL MSFT")]
-    Funds(SymbolsArgs),
+    Funds(SymbolLimitArgs),
 }
 
 /// Flat output record for a single quarter's fund ownership data.
@@ -88,56 +89,64 @@ pub async fn handle(args: &OwnershipArgs, fields: &[String]) -> i32 {
 
 #[instrument(skip_all)]
 #[cfg(not(coverage))]
-async fn execute_summary(args: &SymbolsArgs, fields: &[String]) -> i32 {
-    run_command(&args.symbols, fields, |client, symbol_refs| async move {
-        let response = api_call(client.ownership(&symbol_refs)).await?;
+async fn execute_summary(args: &SymbolLimitArgs, fields: &[String]) -> i32 {
+    run_command(
+        &args.symbols.symbols,
+        fields,
+        |client, symbol_refs| async move {
+            let response = api_call(client.ownership(&symbol_refs)).await?;
 
-        Ok(flatten_ownership_summary(
-            &symbol_refs,
-            &response.market_data,
-        ))
-    })
+            Ok(truncate_records(
+                flatten_ownership_summary(&symbol_refs, &response.market_data),
+                args.limit.limit,
+            ))
+        },
+    )
     .await
 }
 
 #[instrument(skip_all)]
 #[cfg(not(coverage))]
-async fn execute_funds(args: &SymbolsArgs, fields: &[String]) -> i32 {
-    run_command(&args.symbols, fields, |client, symbol_refs| async move {
-        // Resolve DJ_KEY for each symbol via the fundamentals API symbology.
-        let fundamentals = api_call(client.fundamentals(
-            &symbol_refs,
-            "CHARTING",
-            "P7Y_AGO",
-            "P2Y_FUTURE",
-            "P7Y_AGO",
-            "P2Y_FUTURE",
-        ))
-        .await?;
-
-        let mut records = Vec::new();
-
-        for (symbol, item) in zip_symbols(&symbol_refs, &fundamentals.market_data) {
-            let key = match extract_dow_jones_key(item) {
-                Some(key) => key,
-                None => {
-                    tracing::warn!(%symbol, "no DJ_KEY found, skipping fund lookup");
-                    continue;
-                }
-            };
-
-            let response = api_call(
-                client.market_data_screen(FUND_OWNERSHIP_SCREEN, fund_screen_parameters(key)),
-            )
+async fn execute_funds(args: &SymbolLimitArgs, fields: &[String]) -> i32 {
+    run_command(
+        &args.symbols.symbols,
+        fields,
+        |client, symbol_refs| async move {
+            // Resolve DJ_KEY for each symbol via the fundamentals API symbology.
+            let fundamentals = api_call(client.fundamentals(
+                &symbol_refs,
+                "CHARTING",
+                "P7Y_AGO",
+                "P2Y_FUTURE",
+                "P7Y_AGO",
+                "P2Y_FUTURE",
+            ))
             .await?;
 
-            if let Some(result) = response.market_data_screen {
-                records.extend(flatten_fund_rows(symbol, &result.response_values));
-            }
-        }
+            let mut records = Vec::new();
 
-        Ok(records)
-    })
+            for (symbol, item) in zip_symbols(&symbol_refs, &fundamentals.market_data) {
+                let key = match extract_dow_jones_key(item) {
+                    Some(key) => key,
+                    None => {
+                        tracing::warn!(%symbol, "no DJ_KEY found, skipping fund lookup");
+                        continue;
+                    }
+                };
+
+                let response = api_call(
+                    client.market_data_screen(FUND_OWNERSHIP_SCREEN, fund_screen_parameters(key)),
+                )
+                .await?;
+
+                if let Some(result) = response.market_data_screen {
+                    records.extend(flatten_fund_rows(symbol, &result.response_values));
+                }
+            }
+
+            Ok(truncate_records(records, args.limit.limit))
+        },
+    )
     .await
 }
 

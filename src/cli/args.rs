@@ -179,6 +179,30 @@ pub struct ChartArgs {
     #[arg(long, value_name = "YYYY-MM-DD")]
     pub start_date: Option<NaiveDate>,
 
+    /// Keep only the first N output rows. Use 0 for no limit.
+    #[command(flatten)]
+    pub limit: LimitArgs,
+
+    /// Ticker symbols and options.
+    #[command(flatten)]
+    pub symbols: SymbolsArgs,
+}
+
+/// Arguments for limiting data-returning command output.
+#[derive(Debug, Args, Clone, Copy, Default)]
+pub struct LimitArgs {
+    /// Keep only the first N output rows. Use 0 for no limit.
+    #[arg(long, default_value_t = 0, value_name = "COUNT")]
+    pub limit: usize,
+}
+
+/// Arguments containing ticker symbols plus output row limiting.
+#[derive(Debug, Args, Clone)]
+pub struct SymbolLimitArgs {
+    /// Output row limit.
+    #[command(flatten)]
+    pub limit: LimitArgs,
+
     /// Ticker symbols and options.
     #[command(flatten)]
     pub symbols: SymbolsArgs,
@@ -297,6 +321,8 @@ mod tests {
             "--weekly",
             "--days",
             "20",
+            "--limit",
+            "5",
             "--start-date",
             "2026-05-01",
             "AAPL",
@@ -306,8 +332,57 @@ mod tests {
 
         assert!(command.contains("weekly: true"));
         assert!(command.contains("days: Some(20)"));
+        assert!(command.contains("limit: 5"));
         assert!(command.contains("start_date: Some(2026-05-01)"));
         assert!(command.contains("symbols: [\"AAPL\"]"));
+    }
+
+    #[test]
+    fn data_commands_accept_zero_limit() {
+        let cli = Cli::parse_from([
+            "marketsurge-agent",
+            "analysis",
+            "fundamentals",
+            "--limit",
+            "0",
+            "AAPL",
+        ]);
+
+        let command = format!("{:?}", cli.command);
+
+        assert!(command.contains("limit: 0"));
+        assert!(command.contains("symbols: [\"AAPL\"]"));
+    }
+
+    #[test]
+    fn data_commands_accept_positive_limit() {
+        let cli = Cli::parse_from([
+            "marketsurge-agent",
+            "ownership",
+            "funds",
+            "--limit",
+            "10",
+            "AAPL",
+        ]);
+
+        let command = format!("{:?}", cli.command);
+
+        assert!(command.contains("limit: 10"));
+        assert!(command.contains("symbols: [\"AAPL\"]"));
+    }
+
+    #[test]
+    fn data_commands_reject_negative_limit() {
+        let result = Cli::try_parse_from([
+            "marketsurge-agent",
+            "industry",
+            "rs",
+            "--limit",
+            "-1",
+            "AAPL",
+        ]);
+
+        assert!(result.is_err());
     }
 
     #[test]

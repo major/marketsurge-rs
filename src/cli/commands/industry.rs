@@ -7,17 +7,18 @@ use tracing::instrument;
 use crate::industry::{IndustryGroupRsItem, IndustryOverviewItem};
 
 use crate::cli::common::command::{api_call, run_command, zip_symbols};
-use crate::cli::{IndustryArgs, SymbolsArgs};
+use crate::cli::common::rows::truncate_records;
+use crate::cli::{IndustryArgs, SymbolLimitArgs};
 
 /// Industry subcommands.
 #[derive(Debug, Subcommand)]
 pub enum IndustryCommand {
     /// Fetch industry group relative strength ratings for symbols.
     #[command(after_help = "Examples:\n  marketsurge-agent industry rs AAPL MSFT")]
-    Rs(SymbolsArgs),
+    Rs(SymbolLimitArgs),
     /// Fetch industry rankings, sector, and breadth data for symbols.
     #[command(after_help = "Examples:\n  marketsurge-agent industry overview AAPL MSFT")]
-    Overview(SymbolsArgs),
+    Overview(SymbolLimitArgs),
 }
 
 /// Flat output record for industry group relative strength.
@@ -101,12 +102,19 @@ fn flatten_industry_rs(
 
 #[instrument(skip_all)]
 #[cfg(not(coverage))]
-async fn execute_rs(args: &SymbolsArgs, fields: &[String]) -> i32 {
-    run_command(&args.symbols, fields, |client, symbol_refs| async move {
-        let response = api_call(client.industry_group_rs(&symbol_refs, None)).await?;
+async fn execute_rs(args: &SymbolLimitArgs, fields: &[String]) -> i32 {
+    run_command(
+        &args.symbols.symbols,
+        fields,
+        |client, symbol_refs| async move {
+            let response = api_call(client.industry_group_rs(&symbol_refs, None)).await?;
 
-        Ok(flatten_industry_rs(&symbol_refs, &response.market_data))
-    })
+            Ok(truncate_records(
+                flatten_industry_rs(&symbol_refs, &response.market_data),
+                args.limit.limit,
+            ))
+        },
+    )
     .await
 }
 
@@ -169,15 +177,19 @@ fn flatten_industry_overview(
 
 #[instrument(skip_all)]
 #[cfg(not(coverage))]
-async fn execute_overview(args: &SymbolsArgs, fields: &[String]) -> i32 {
-    run_command(&args.symbols, fields, |client, symbol_refs| async move {
-        let response = api_call(client.industry_overview(&symbol_refs, None)).await?;
+async fn execute_overview(args: &SymbolLimitArgs, fields: &[String]) -> i32 {
+    run_command(
+        &args.symbols.symbols,
+        fields,
+        |client, symbol_refs| async move {
+            let response = api_call(client.industry_overview(&symbol_refs, None)).await?;
 
-        Ok(flatten_industry_overview(
-            &symbol_refs,
-            &response.market_data,
-        ))
-    })
+            Ok(truncate_records(
+                flatten_industry_overview(&symbol_refs, &response.market_data),
+                args.limit.limit,
+            ))
+        },
+    )
     .await
 }
 

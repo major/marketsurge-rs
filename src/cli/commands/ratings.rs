@@ -4,8 +4,9 @@ use crate::ratings::RsRatingRiPanelResponse;
 use serde::Serialize;
 use tracing::instrument;
 
-use crate::cli::SymbolsArgs;
+use crate::cli::SymbolLimitArgs;
 use crate::cli::common::command::{api_call, run_command, zip_symbols};
+use crate::cli::common::rows::truncate_records;
 
 /// Flat output record for a single RS rating snapshot.
 ///
@@ -31,12 +32,19 @@ pub struct RatingsRecord {
 /// Handles the ratings command.
 #[instrument(skip_all)]
 #[cfg(not(coverage))]
-pub async fn handle(args: &SymbolsArgs, fields: &[String]) -> i32 {
-    run_command(&args.symbols, fields, |client, symbol_refs| async move {
-        let response = api_call(client.rs_rating_ri_panel(&symbol_refs, None)).await?;
+pub async fn handle(args: &SymbolLimitArgs, fields: &[String]) -> i32 {
+    run_command(
+        &args.symbols.symbols,
+        fields,
+        |client, symbol_refs| async move {
+            let response = api_call(client.rs_rating_ri_panel(&symbol_refs, None)).await?;
 
-        Ok(flatten_ratings(&symbol_refs, response))
-    })
+            Ok(truncate_records(
+                flatten_ratings(&symbol_refs, response),
+                args.limit.limit,
+            ))
+        },
+    )
     .await
 }
 
