@@ -1,0 +1,122 @@
+# release-plz configuration.
+# See https://release-plz.dev/docs/config
+#
+# Every supported `[workspace]` field is set explicitly, including defaults,
+# so the contract between release-plz and cargo-dist is visible at a glance.
+# Fields with no inherent default (custom regexes, release_commits, repo_url)
+# are intentionally omitted.
+
+[workspace]
+
+# --- Changelog ---------------------------------------------------------------
+
+# Reuse the existing git-cliff template instead of release-plz's built-in
+# changelog so formatting stays stable across the manual-to-automated
+# migration. Switching to a `[changelog]` table is a future refactor.
+changelog_config = "cliff.toml"
+
+# Regenerate CHANGELOG.md when release-plz opens or updates a release PR.
+changelog_update = true
+
+# --- Cargo / dependencies ----------------------------------------------------
+
+# Refuse to operate on a dirty working tree. release-plz creates its own
+# branch, so it should never see unrelated local changes.
+allow_dirty = false
+
+# Do not run `cargo update --workspace` in the release PR. Dependabot owns
+# dependency bumps; release-plz only edits version + changelog.
+dependencies_update = false
+
+# Treat new features as patch bumps on 0.x to keep proper SemVer semantics.
+# When the crate hits 1.0 we can revisit this.
+features_always_increment_minor = false
+
+# Run cargo-semver-checks against the library on every release. rusty-marketsurge
+# ships both a library and a binary; the binary surface is covered by CLI
+# integration tests, the library surface is covered here.
+semver_check = true
+
+# --- Release gating ----------------------------------------------------------
+
+# Allow release-plz to perform releases (push tags, etc.). Without this the
+# `release-plz-release` workflow job would be a no-op.
+release = true
+
+# Only release when the release PR (branch prefix `release-plz-`) merges.
+# Non-default. Avoids cargo-dist races with squash-merged feature PRs, and
+# matches the intent of the upstream quickstart: human merges the release
+# PR, then release-plz tags. This relies on release-plz's hardcoded
+# `pr_branch_prefix` check.
+release_always = false
+
+# --- crates.io publishing ----------------------------------------------------
+
+# cargo-dist (`.github/workflows/release.yml`) publishes to crates.io via
+# OIDC trusted publishing on tag push. release-plz only needs to push the
+# tag, so it must NOT publish.
+publish = false
+
+# Do not bypass `cargo publish`'s clean-tree check. Inert while
+# `publish = false`, but kept explicit for safety.
+publish_allow_dirty = false
+
+# Do not pass `--no-verify` to `cargo publish`. Inert while
+# `publish = false`.
+publish_no_verify = false
+
+# Do not enable `--all-features` during `cargo publish` verification.
+# Inert while `publish = false`.
+publish_all_features = false
+
+# Allow up to 30 minutes for `cargo publish` to complete. Inert while
+# `publish = false`.
+publish_timeout = "30m"
+
+# --- Git tag (this is what triggers cargo-dist) ------------------------------
+
+# Push an annotated tag when the release PR merges. CRITICAL: this is the
+# event that triggers `.github/workflows/release.yml` (cargo-dist). Turning
+# this off would silently disable the entire release pipeline.
+git_tag_enable = true
+
+# Tag format. Single-crate default is `v{{ version }}` (e.g. v0.4.1).
+# cargo-dist's tag regex matches this.
+git_tag_name = "v{{ version }}"
+
+# Detect the currently published version via the cargo registry (Cargo.toml +
+# crates.io), not via the existing git tags. release-plz pushes unsigned
+# annotated tags via the GitHub API, so the registry source is authoritative.
+git_only = false
+
+# --- GitHub Release ----------------------------------------------------------
+#
+# cargo-dist creates the GitHub Release (with binary assets, installers, and
+# man page) when it sees the tag. release-plz must NOT create one or the two
+# systems would race. Everything in this section is therefore inert; it is
+# kept explicit so that re-enabling `git_release_enable` later does not pull
+# in surprise defaults.
+
+git_release_enable = false
+git_release_name = "v{{ version }}"
+git_release_body = "{{ changelog }}"
+git_release_type = "prod"
+git_release_draft = false
+git_release_latest = true
+
+# --- Release PR --------------------------------------------------------------
+
+# `release_always = false` requires the branch prefix to be `release-plz-`
+# (hardcoded in release-plz). Keep the default; do not rename.
+pr_branch_prefix = "release-plz-"
+
+# Open the release PR as ready-for-review, not draft.
+pr_draft = false
+
+# Single-crate default PR title. Matches the release commit on main after
+# squash-merge: `chore: release v<version>`. cliff.toml skips this commit
+# subject so it does not pollute the next release's changelog.
+pr_name = "chore: release v{{ version }}"
+
+# Do not attach labels to the release PR by default.
+pr_labels = []
