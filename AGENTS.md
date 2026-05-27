@@ -45,6 +45,7 @@ marketsurge-rs/
 | `integration` | `cargo test --workspace -- --ignored` (live API tests) |
 | `doc` | `cargo doc` with `-D warnings` |
 | `coverage` | `cargo llvm-cov --workspace --fail-under-lines 90` |
+| `patch-coverage` | `cargo llvm-cov --lcov` + `diff-cover` against main (100% patch) |
 | `audit` | `cargo audit` |
 | `clean` | `cargo clean` |
 
@@ -61,7 +62,9 @@ All workflow actions must use pinned versions. Workflows require minimum permiss
 
 ## Coverage
 
-90% line coverage enforced via `cargo llvm-cov --fail-under-lines 90`. Do not lower this threshold without justification.
+- 90% line coverage enforced via `cargo llvm-cov --fail-under-lines 90`. Do not lower this threshold without justification.
+- **Patch coverage**: `make patch-coverage` generates `lcov.info` and runs `diff-cover` against `PATCH_COVERAGE_BASE ?= main` with `PATCH_COVERAGE_FAIL_UNDER ?= 100`. Run this before opening PRs. Use `DIFF_COVER='uvx diff-cover'` when the standalone command is not installed.
+- Codecov uses `codecov.yml` to enforce 90% project coverage and 100% patch coverage. The CI `coverage` job uploads `lcov.info` only when `CODECOV_TOKEN` is available.
 
 ## Testing
 
