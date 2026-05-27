@@ -36,7 +36,10 @@ pub struct OwnershipItem {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OwnershipData {
-    /// Percentage of float held by funds.
+    /// Current percentage of float held by funds.
+    ///
+    /// The MarketSurge ownership response exposes this once per symbol, not per
+    /// quarter in `fund_ownership_summary`.
     pub funds_float_percent_held: Option<OwnershipFormattedValue>,
     /// Quarterly fund ownership summaries.
     #[serde(default)]

@@ -188,4 +188,27 @@ mod tests {
             "screen run should expose its required screen_id positional arg"
         );
     }
+
+    #[test]
+    fn payload_documents_ownership_summary_float_pct_semantics() {
+        let payload = schema_payload();
+        let ownership = payload
+            .commands
+            .iter()
+            .find(|command| command.name == "ownership")
+            .expect("ownership command should be present");
+        let summary = ownership
+            .subcommands
+            .iter()
+            .find(|command| command.name == "summary")
+            .expect("ownership summary command should be present");
+
+        let long_about = summary
+            .long_about
+            .as_deref()
+            .expect("ownership summary should have long help");
+        assert!(long_about.contains("funds_float_pct_held"));
+        assert!(long_about.contains("current percentage of float held by funds"));
+        assert!(long_about.contains("does not provide this value per quarter"));
+    }
 }
