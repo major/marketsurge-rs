@@ -10,6 +10,8 @@ use crate::cli::common::error::{render_usage_message, render_warning_message};
 use crate::cli::common::rows::{flatten_response_rows, response_columns};
 use crate::screen::ResponseValue;
 
+const INVALID_COLUMN_SUGGESTION: &str = "Check the column names and spelling before retrying.";
+
 /// Arguments for the adhoc-screen command.
 #[derive(Debug, Args)]
 pub struct AdhocScreenCommandArgs {
@@ -99,7 +101,10 @@ pub async fn handle(args: &AdhocScreenCommandArgs, fields: &[String]) -> i32 {
         }
 
         if !invalid_columns.is_empty() {
-            render_warning_message(partial_invalid_columns_message(&invalid_columns));
+            render_warning_message(
+                partial_invalid_columns_message(&invalid_columns),
+                Some(INVALID_COLUMN_SUGGESTION.to_string()),
+            );
         }
 
         Ok(flatten_response_rows(response_values))

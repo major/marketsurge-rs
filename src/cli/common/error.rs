@@ -199,7 +199,7 @@ pub fn render_usage_message_with_suggestion(message: String, suggestion: Option<
 }
 
 /// Render a non-fatal structured warning and return success.
-pub fn render_warning_message(message: String) -> i32 {
+pub fn render_warning_message(message: String, suggestion: Option<String>) -> i32 {
     render_cli_error(&CliError {
         kind: "warning",
         message,
@@ -207,7 +207,7 @@ pub fn render_warning_message(message: String) -> i32 {
         status_code: None,
         retry_after: None,
         command: command_name(),
-        suggestion: Some("Check the column names and spelling before retrying."),
+        suggestion,
     })
 }
 
@@ -402,7 +402,7 @@ mod tests {
         set_command_name(Some("market"));
 
         assert_eq!(render_usage_message("invalid input".to_string()), 2);
-        assert_eq!(render_warning_message("invalid input".to_string()), 0);
+        assert_eq!(render_warning_message("invalid input".to_string(), None), 0);
         assert_eq!(render_api_error("upstream failed".to_string()), 3);
         assert_eq!(render_internal_error("broken pipe".to_string()), 1);
         assert_eq!(render_no_results_error("nothing matched"), 5);
