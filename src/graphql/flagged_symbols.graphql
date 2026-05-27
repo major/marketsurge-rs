@@ -5,6 +5,7 @@ query FlaggedSymbols($pub: String!, $watchlistId: ID!) {
     lastModifiedDateUtc
     description
     items {
+      symbol
       key
       dowJonesKey
     }

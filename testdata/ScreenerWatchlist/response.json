@@ -35,6 +35,64 @@
             },
             "__typename": "MDAdhocScreenerResponseValue"
           }
+        ],
+        [
+          {
+            "value": "99",
+            "mdItem": {
+              "mdItemID": 483,
+              "name": "EPSRating",
+              "__typename": "MDAdhocScreenerDataItem"
+            },
+            "__typename": "MDAdhocScreenerResponseValue"
+          },
+          {
+            "value": "90",
+            "mdItem": {
+              "mdItemID": 2,
+              "name": "RSRating",
+              "__typename": "MDAdhocScreenerDataItem"
+            },
+            "__typename": "MDAdhocScreenerResponseValue"
+          },
+          {
+            "value": "B+",
+            "mdItem": {
+              "mdItemID": 5,
+              "name": "AccDisRating",
+              "__typename": "MDAdhocScreenerDataItem"
+            },
+            "__typename": "MDAdhocScreenerResponseValue"
+          }
+        ],
+        [
+          {
+            "value": "87",
+            "mdItem": {
+              "mdItemID": 483,
+              "name": "EPSRating",
+              "__typename": "MDAdhocScreenerDataItem"
+            },
+            "__typename": "MDAdhocScreenerResponseValue"
+          },
+          {
+            "value": "91",
+            "mdItem": {
+              "mdItemID": 2,
+              "name": "RSRating",
+              "__typename": "MDAdhocScreenerDataItem"
+            },
+            "__typename": "MDAdhocScreenerResponseValue"
+          },
+          {
+            "value": "A",
+            "mdItem": {
+              "mdItemID": 5,
+              "name": "AccDisRating",
+              "__typename": "MDAdhocScreenerDataItem"
+            },
+            "__typename": "MDAdhocScreenerResponseValue"
+          }
         ]
       ],
       "__typename": "MDAdhocScreenerResult"

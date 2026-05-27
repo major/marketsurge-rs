@@ -341,13 +341,13 @@ mod tests {
         let include_source = AdhocScreenIncludeSource {
             screen_id: None,
             instruments: Some(AdhocScreenInstruments {
-                symbols: vec!["AMD".to_string()],
+                symbols: vec!["AMD".to_string(), "AAPL".to_string(), "MSFT".to_string()],
                 dialect: "CHARTING".to_string(),
             }),
         };
 
         let resp = client
-            .screener_watchlist("Screen With Watchlist", columns, include_source, 1, 1, 0)
+            .screener_watchlist("Screen With Watchlist", columns, include_source, 3, 3, 0)
             .await
             .expect("screener_watchlist should succeed");
 
@@ -363,7 +363,7 @@ mod tests {
         assert_eq!(result.number_of_instruments_in_source, Some(0));
 
         // Verify 2D response values
-        assert_eq!(result.response_values.len(), 1);
+        assert_eq!(result.response_values.len(), 3);
         assert_eq!(result.response_values[0].len(), 3);
 
         let eps = &result.response_values[0][0];

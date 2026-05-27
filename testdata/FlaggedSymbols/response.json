@@ -7,10 +7,12 @@
       "description": "Test watchlist",
       "items": [
         {
+          "symbol": "AAPL",
           "key": "AAPL",
           "dowJonesKey": "US:AAPL"
         },
         {
+          "symbol": "MSFT",
           "key": "MSFT",
           "dowJonesKey": "US:MSFT"
         }
