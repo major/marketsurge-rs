@@ -76,6 +76,10 @@ pub async fn run() -> i32 {
             Some(cmd) => groups::watchlist::dispatch(cmd, fields).await,
             None => print_subcommand_help("watchlist"),
         },
+        Commands::Auth { command } => match command {
+            Some(cmd) => groups::auth::dispatch(cmd, fields).await,
+            None => print_subcommand_help("auth"),
+        },
         Commands::Completions(args) => {
             commands::completions::handle(args);
             ExitCode::Success.code()

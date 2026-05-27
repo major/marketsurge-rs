@@ -115,6 +115,18 @@ pub enum Commands {
         command: Option<groups::watchlist::Cmd>,
     },
 
+    /// Auth: verify browser cookie and JWT readiness.
+    #[command(
+        subcommand_required = true,
+        arg_required_else_help = true,
+        after_help = "Examples:\n  marketsurge-agent auth status"
+    )]
+    Auth {
+        /// Auth subcommand to run.
+        #[command(subcommand)]
+        command: Option<groups::auth::Cmd>,
+    },
+
     /// Generate shell completion scripts.
     #[command(
         after_help = "Examples:\n  marketsurge-agent completions zsh > _marketsurge-agent\n  marketsurge-agent completions bash > marketsurge-agent.bash"

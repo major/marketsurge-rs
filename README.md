@@ -49,6 +49,9 @@ marketsurge-agent screen list --query ibd
 # Generate shell completions
 marketsurge-agent completions zsh > _marketsurge-agent
 
+# Check whether browser cookies and JWT are ready before running queries
+marketsurge-agent auth status
+
 # Dump the experimental CLI schema without network access
 marketsurge-agent schema | jq '.commands | length'
 ```
