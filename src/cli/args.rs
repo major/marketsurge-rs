@@ -15,10 +15,25 @@ use super::groups;
     version,
     about = "Query MarketSurge data as compact JSON",
     long_about = "Query MarketSurge data as compact JSON. Auth reads browser cookies, so log in at https://marketsurge.investors.com first. Use --fields to limit top-level JSON fields in command output. Failures emit machine-readable JSON on stderr.",
-    after_help = "Examples:\n  marketsurge-agent analysis ratings AAPL\n  marketsurge-agent --fields symbol,rs_rating analysis ratings AAPL\n  marketsurge-agent completions zsh > _marketsurge-agent\n\nExit codes:\n  0  success - command completed successfully\n  1  internal_error - unexpected internal error, including local output failures\n  2  usage - invalid arguments or command usage\n  3  api_error - network failure, rate limit, or upstream MarketSurge API failure\n  4  auth_error - browser cookies are missing, expired, or rejected\n  5  no_results - command completed but produced no actionable result",
+    after_help = "Examples:\n  marketsurge-agent analysis ratings AAPL\n  marketsurge-agent --fields symbol,rs_rating analysis ratings AAPL\n  marketsurge-agent completions zsh > _marketsurge-agent\n\nDiagnostics:\n  --verbose, -v                  info-level diagnostics to stderr\n  --verbose --verbose, -vv       debug-level diagnostics to stderr\n  --debug                        debug-level diagnostics to stderr\n  RUST_LOG=rusty_marketsurge=debug  env-var equivalent to --debug\n\nExit codes:\n  0  success - command completed successfully\n  1  internal_error - unexpected internal error, including local output failures\n  2  usage - invalid arguments or command usage\n  3  api_error - network failure, rate limit, or upstream MarketSurge API failure\n  4  auth_error - browser cookies are missing, expired, or rejected\n  5  no_results - command completed but produced no actionable result",
     arg_required_else_help = true
 )]
 pub struct Cli {
+    /// Print verbose diagnostics to stderr: once for info, twice for debug.
+    ///
+    /// Diagnostics include HTTP status codes, auth discovery steps, and
+    /// retry decisions.  Cookie values, auth tokens, and full sensitive
+    /// headers are never logged.
+    #[arg(long, short = 'v', global = true, action = clap::ArgAction::Count)]
+    pub verbose: u8,
+
+    /// Print detailed debug diagnostics to stderr.
+    ///
+    /// Equivalent to `--verbose --verbose` or `RUST_LOG=rusty_marketsurge=debug`.
+    /// Debug output never contaminates stdout JSON.
+    #[arg(long, global = true)]
+    pub debug: bool,
+
     /// Comma-delimited top-level JSON fields to include in output.
     #[arg(long, global = true, value_delimiter = ',', value_name = "FIELD")]
     pub fields: Vec<String>,

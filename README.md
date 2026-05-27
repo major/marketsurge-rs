@@ -56,6 +56,22 @@ marketsurge-agent auth status
 marketsurge-agent schema | jq '.commands | length'
 ```
 
+### Diagnostics
+
+The CLI supports `--verbose` and `--debug` flags for troubleshooting. All diagnostic output goes to stderr and never contaminates stdout JSON. Cookie values, auth tokens, and full sensitive headers are never logged.
+
+```bash
+# Info-level diagnostics: HTTP status codes, auth discovery steps
+marketsurge-agent --verbose analysis ratings AAPL
+# or: marketsurge-agent -v analysis ratings AAPL
+
+# Debug-level diagnostics: request attempts, retry decisions, GraphQL payloads
+marketsurge-agent --debug analysis ratings AAPL
+# or: RUST_LOG=rusty_marketsurge=debug marketsurge-agent analysis ratings AAPL
+```
+
+Flag precedence: `RUST_LOG` overrides `--verbose` and `--debug`. When neither `--verbose` nor `--debug` is set, only warnings and errors are printed to stderr.
+
 ### Schema introspection
 
 `marketsurge-agent schema` dumps the CLI surface as compact JSON for scripts and agent tooling. It does not read browser cookies or make network requests. The schema shape is experimental; `schema_version: 3` includes the binary name, package version, exit-code metadata, structured error metadata, command metadata, and visible command arguments.

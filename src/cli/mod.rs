@@ -7,6 +7,8 @@ pub mod commands;
 pub mod common;
 /// Command groups that organize related subcommands.
 pub mod groups;
+/// Tracing subscriber initialization for CLI diagnostics.
+pub mod logging;
 /// JSON output formatting and field selection.
 pub mod output;
 
@@ -56,6 +58,9 @@ pub async fn run() -> i32 {
         }
     };
     common::error::set_command_name(command_name(&cli.command));
+
+    logging::init(cli.verbose, cli.debug);
+
     let fields = cli.fields.as_slice();
 
     match &cli.command {
