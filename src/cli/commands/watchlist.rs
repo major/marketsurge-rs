@@ -100,6 +100,7 @@ pub struct WatchlistSymbolRecord {
 #[derive(Debug)]
 enum WatchlistResolutionError {
     NotFound { query: String },
+    Empty { query: String },
     MultipleMatches { query: String, matches: Vec<String> },
 }
 
@@ -222,6 +223,10 @@ fn render_watchlist_resolution_error(error: WatchlistResolutionError) -> i32 {
                     .to_string(),
             ),
         ),
+        WatchlistResolutionError::Empty { query } => render_no_results_message(
+            format!("Watchlist '{query}' has no resolved ticker symbols."),
+            Some("Add symbols to the watchlist or pass symbols directly.".to_string()),
+        ),
         WatchlistResolutionError::MultipleMatches { query, matches } => {
             render_usage_message_with_suggestion(
                 format!("Multiple watchlists matched '{query}'."),
@@ -328,6 +333,7 @@ async fn execute_screen(args: &WatchlistScreenArgs, fields: &[String]) -> i32 {
     let columns = response_columns(&args.columns);
     let symbols = args.symbols.clone();
     let watchlist_id_or_name = args.watchlist_symbols.clone();
+    let watchlist_query = watchlist_id_or_name.clone();
 
     run_client_command(fields, |client| async move {
         let symbols = match watchlist_id_or_name {
@@ -343,6 +349,13 @@ async fn execute_screen(args: &WatchlistScreenArgs, fields: &[String]) -> i32 {
             }
             None => symbols,
         };
+        if symbols.is_empty() {
+            return Err(render_watchlist_resolution_error(
+                WatchlistResolutionError::Empty {
+                    query: watchlist_query.unwrap_or_else(|| "provided symbols".to_string()),
+                },
+            ));
+        }
         let symbol_refs: Vec<&str> = symbols.iter().map(String::as_str).collect();
         let response = api_call(client.screener_watchlist_items(&symbol_refs, columns)).await?;
 
@@ -722,6 +735,15 @@ mod tests {
     fn render_watchlist_resolution_error_reports_no_results() {
         let exit_code = render_watchlist_resolution_error(WatchlistResolutionError::NotFound {
             query: "$(rm -rf /)".into(),
+        });
+
+        assert_eq!(exit_code, ExitCode::NoResults.code());
+    }
+
+    #[test]
+    fn render_watchlist_resolution_error_reports_empty_watchlist_as_no_results() {
+        let exit_code = render_watchlist_resolution_error(WatchlistResolutionError::Empty {
+            query: "Growth Picks".into(),
         });
 
         assert_eq!(exit_code, ExitCode::NoResults.code());
