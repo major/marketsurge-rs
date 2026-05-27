@@ -7,12 +7,12 @@
       {"name": "RSRating"},
       {"name": "AccDisRating"}
     ],
-    "resultLimit": 1,
-    "pageSize": 1,
+    "resultLimit": 3,
+    "pageSize": 3,
     "pageSkip": 0,
     "includeSource": {
       "instruments": {
-        "symbols": ["AMD"],
+        "symbols": ["AMD", "AAPL", "MSFT"],
         "dialect": "CHARTING"
       }
     }

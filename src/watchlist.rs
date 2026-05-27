@@ -92,6 +92,8 @@ pub struct WatchlistDetail {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WatchlistItem {
+    /// Human-readable ticker symbol when provided by the API.
+    pub symbol: Option<String>,
     /// Symbol key (e.g. "AAPL").
     pub key: Option<String>,
     /// Dow Jones symbol key (e.g. "US:AAPL").
@@ -161,6 +163,7 @@ impl Client {
         symbols: &[&str],
         response_columns: Vec<ResponseColumn>,
     ) -> crate::error::Result<ScreenerWatchlistItemsResponse> {
+        let requested_count = i64::try_from(symbols.len()).unwrap_or(i64::MAX).max(1);
         let include_source = AdhocScreenIncludeSource {
             screen_id: None,
             instruments: Some(AdhocScreenInstruments {
@@ -173,8 +176,8 @@ impl Client {
             DEFAULT_SCREENER_WATCHLIST_CORRELATION_TAG,
             response_columns,
             include_source,
-            1,
-            1,
+            requested_count,
+            requested_count,
             0,
         )
         .await
@@ -221,8 +224,10 @@ mod tests {
         assert_eq!(watchlist.id.as_deref(), Some("12345"));
         assert_eq!(watchlist.name.as_deref(), Some("My Watchlist"));
         assert_eq!(watchlist.items.len(), 2);
+        assert_eq!(watchlist.items[0].symbol.as_deref(), Some("AAPL"));
         assert_eq!(watchlist.items[0].key.as_deref(), Some("AAPL"));
         assert_eq!(watchlist.items[0].dow_jones_key.as_deref(), Some("US:AAPL"));
+        assert_eq!(watchlist.items[1].symbol.as_deref(), Some("MSFT"));
         assert_eq!(watchlist.items[1].key.as_deref(), Some("MSFT"));
         assert_eq!(watchlist.items[1].dow_jones_key.as_deref(), Some("US:MSFT"));
 
@@ -249,7 +254,7 @@ mod tests {
         ];
 
         let resp = client
-            .screener_watchlist_items(&["AMD"], columns)
+            .screener_watchlist_items(&["AMD", "AAPL", "MSFT"], columns)
             .await
             .expect("screener_watchlist_items should succeed");
 
@@ -261,7 +266,7 @@ mod tests {
             result.correlation_tag.as_deref(),
             Some("Screen With Watchlist")
         );
-        assert_eq!(result.response_values.len(), 1);
+        assert_eq!(result.response_values.len(), 3);
         assert_eq!(result.response_values[0].len(), 3);
 
         let eps = &result.response_values[0][0];

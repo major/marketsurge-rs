@@ -64,7 +64,7 @@ pub struct CliError {
     pub command: Option<&'static str>,
     /// Actionable recovery hint when one is known.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub suggestion: Option<&'static str>,
+    pub suggestion: Option<String>,
 }
 
 /// Documented structured error fields.
@@ -171,12 +171,17 @@ pub fn render_usage_error(err: &Error) -> i32 {
         status_code: None,
         retry_after: None,
         command: None,
-        suggestion: Some("Run with --help to see valid commands and options."),
+        suggestion: Some("Run with --help to see valid commands and options.".to_string()),
     })
 }
 
 /// Render a command usage error and return its mapped exit code.
 pub fn render_usage_message(message: String) -> i32 {
+    render_usage_message_with_suggestion(message, None)
+}
+
+/// Render a command usage error with an actionable suggestion.
+pub fn render_usage_message_with_suggestion(message: String, suggestion: Option<String>) -> i32 {
     render_cli_error(&CliError {
         kind: "usage",
         message,
@@ -184,7 +189,7 @@ pub fn render_usage_message(message: String) -> i32 {
         status_code: None,
         retry_after: None,
         command: command_name(),
-        suggestion: None,
+        suggestion,
     })
 }
 
@@ -221,7 +226,20 @@ pub fn render_internal_error(message: String) -> i32 {
 
 /// Render a no-results CLI error and return its mapped exit code.
 pub fn render_no_results_error(message: &'static str) -> i32 {
-    render_cli_error(&structured_no_results_error(message))
+    render_no_results_message(message.to_string(), None)
+}
+
+/// Render a no-results CLI error with an optional actionable suggestion.
+pub fn render_no_results_message(message: String, suggestion: Option<String>) -> i32 {
+    render_cli_error(&CliError {
+        kind: "no_results",
+        message,
+        exit_code: ExitCode::NoResults.code(),
+        status_code: None,
+        retry_after: None,
+        command: command_name(),
+        suggestion,
+    })
 }
 
 /// Convert a no-results condition into the documented structured error shape.
@@ -245,13 +263,13 @@ pub fn structured_client_error(err: &ClientError) -> CliError {
         (
             "auth_error",
             ExitCode::AuthError.code(),
-            Some("Log in to MarketSurge in Firefox, then retry the command."),
+            Some("Log in to MarketSurge in Firefox, then retry the command.".to_string()),
         )
     } else if err.is_rate_limited() {
         (
             "rate_limit",
             ExitCode::ApiError.code(),
-            Some("Wait before retrying the request."),
+            Some("Wait before retrying the request.".to_string()),
         )
     } else {
         ("api_error", ExitCode::ApiError.code(), None)

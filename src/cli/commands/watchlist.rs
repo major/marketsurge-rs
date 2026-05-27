@@ -7,6 +7,7 @@ use tracing::instrument;
 
 use crate::cli::WatchlistArgs;
 use crate::cli::common::command::{api_call, run_client_command, run_command};
+use crate::cli::common::error::{render_no_results_message, render_usage_message_with_suggestion};
 use crate::cli::common::rows::{flatten_response_rows, response_columns};
 
 /// Watchlist subcommands.
@@ -17,8 +18,10 @@ pub enum WatchlistCommand {
         after_help = "Examples:\n  marketsurge-agent watchlist list\n  marketsurge-agent watchlist list --query ibd"
     )]
     List(WatchlistListArgs),
-    /// Fetch symbols in a watchlist by ID.
-    #[command(after_help = "Examples:\n  marketsurge-agent watchlist symbols 12345")]
+    /// Fetch symbols in a watchlist by ID or exact name.
+    #[command(
+        after_help = "Examples:\n  marketsurge-agent watchlist symbols 12345\n  marketsurge-agent watchlist symbols \"My Watchlist\""
+    )]
     Symbols(WatchlistSymbolsArgs),
     /// Screen symbols with selected MarketSurge data columns.
     #[command(
@@ -38,7 +41,7 @@ pub struct WatchlistListArgs {
 /// Arguments for the watchlist symbols subcommand.
 #[derive(Debug, Args, Clone)]
 pub struct WatchlistSymbolsArgs {
-    /// Watchlist ID from `watchlist list`.
+    /// Watchlist ID or exact name from `watchlist list`.
     pub watchlist_id: String,
 }
 
@@ -78,10 +81,18 @@ pub struct WatchlistSymbolRecord {
     pub watchlist_id: Option<String>,
     /// Watchlist name.
     pub watchlist_name: Option<String>,
+    /// Human-readable ticker symbol.
+    pub symbol: Option<String>,
     /// Symbol key (e.g. "AAPL").
     pub key: Option<String>,
     /// Dow Jones symbol key (e.g. "US:AAPL").
     pub dow_jones_key: Option<String>,
+}
+
+#[derive(Debug)]
+enum WatchlistResolutionError {
+    NotFound { query: String },
+    MultipleMatches { query: String, matches: Vec<String> },
 }
 
 /// Handles the watchlist command group.
@@ -146,6 +157,75 @@ fn normalized_watchlist_name(name: &str) -> String {
         .collect()
 }
 
+fn resolve_watchlist_id_from_response(
+    response: &crate::watchlist::WatchlistNamesResponse,
+    id_or_name: &str,
+) -> Result<String, WatchlistResolutionError> {
+    if response
+        .watchlists
+        .iter()
+        .any(|watchlist| watchlist.id.as_deref() == Some(id_or_name))
+    {
+        return Ok(id_or_name.to_string());
+    }
+
+    let normalized_target = normalized_watchlist_name(id_or_name);
+    let matches: Vec<&WatchlistSummary> = response
+        .watchlists
+        .iter()
+        .filter(|watchlist| {
+            watchlist
+                .name
+                .as_deref()
+                .is_some_and(|name| normalized_watchlist_name(name) == normalized_target)
+        })
+        .collect();
+
+    match matches.as_slice() {
+        [watchlist] => watchlist
+            .id
+            .clone()
+            .ok_or_else(|| WatchlistResolutionError::NotFound {
+                query: id_or_name.to_string(),
+            }),
+        [] => Err(WatchlistResolutionError::NotFound {
+            query: id_or_name.to_string(),
+        }),
+        _ => Err(WatchlistResolutionError::MultipleMatches {
+            query: id_or_name.to_string(),
+            matches: matches
+                .iter()
+                .filter_map(|watchlist| {
+                    let id = watchlist.id.as_deref()?;
+                    let name = watchlist.name.as_deref().unwrap_or("<unnamed>");
+                    Some(format!("{name} ({id})"))
+                })
+                .collect(),
+        }),
+    }
+}
+
+fn render_watchlist_resolution_error(error: WatchlistResolutionError) -> i32 {
+    match error {
+        WatchlistResolutionError::NotFound { query } => render_no_results_message(
+            format!("No watchlist matched '{query}'."),
+            Some(
+                "Run `marketsurge-agent watchlist list --query <name>` to find the watchlist ID."
+                    .to_string(),
+            ),
+        ),
+        WatchlistResolutionError::MultipleMatches { query, matches } => {
+            render_usage_message_with_suggestion(
+                format!("Multiple watchlists matched '{query}'."),
+                Some(format!(
+                    "Use one of these watchlist IDs instead: {}.",
+                    matches.join(", ")
+                )),
+            )
+        }
+    }
+}
+
 #[instrument(skip_all)]
 #[cfg(not(coverage))]
 async fn execute_list(args: &WatchlistListArgs, fields: &[String]) -> i32 {
@@ -171,6 +251,7 @@ fn flatten_watchlist_symbols(watchlist: Option<&WatchlistDetail>) -> Vec<Watchli
                 .map(|item| WatchlistSymbolRecord {
                     watchlist_id: wl.id.clone(),
                     watchlist_name: wl.name.clone(),
+                    symbol: watchlist_item_symbol(item),
                     key: item.key.clone(),
                     dow_jones_key: item.dow_jones_key.clone(),
                 })
@@ -179,12 +260,46 @@ fn flatten_watchlist_symbols(watchlist: Option<&WatchlistDetail>) -> Vec<Watchli
         .unwrap_or_default()
 }
 
+fn watchlist_item_symbol(item: &crate::watchlist::WatchlistItem) -> Option<String> {
+    item.symbol
+        .as_deref()
+        .filter(|symbol| !symbol.is_empty())
+        .map(str::to_string)
+        .or_else(|| {
+            item.dow_jones_key
+                .as_deref()
+                .and_then(|key| key.rsplit_once(':').map(|(_, symbol)| symbol))
+                .filter(|symbol| !symbol.is_empty())
+                .map(str::to_string)
+        })
+        .or_else(|| {
+            item.key
+                .as_deref()
+                .filter(|key| looks_like_ticker(key))
+                .map(str::to_string)
+        })
+}
+
+fn looks_like_ticker(value: &str) -> bool {
+    (1..=8).contains(&value.len())
+        && value
+            .chars()
+            .all(|ch| ch.is_ascii_uppercase() || ch == '.' || ch == '-')
+}
+
 #[instrument(skip_all)]
 #[cfg(not(coverage))]
 async fn execute_symbols(args: &WatchlistSymbolsArgs, fields: &[String]) -> i32 {
-    let watchlist_id = args.watchlist_id.clone();
+    let watchlist_id_or_name = args.watchlist_id.clone();
 
     run_client_command(fields, |client| async move {
+        let watchlists = api_call(client.get_all_watchlist_names()).await?;
+        let watchlist_id =
+            match resolve_watchlist_id_from_response(&watchlists, &watchlist_id_or_name) {
+                Ok(watchlist_id) => watchlist_id,
+                Err(error) => return Err(render_watchlist_resolution_error(error)),
+            };
+
         let response = api_call(client.flagged_symbols(&watchlist_id)).await?;
 
         Ok(flatten_watchlist_symbols(response.watchlist.as_ref()))
@@ -214,6 +329,7 @@ async fn execute_screen(args: &WatchlistScreenArgs, fields: &[String]) -> i32 {
 
 #[cfg(test)]
 mod tests {
+    use crate::cli::common::exit::ExitCode;
     use crate::cli::common::test_support::{response_value, response_value_without_md_item};
     use crate::watchlist::WatchlistItem;
 
@@ -331,10 +447,12 @@ mod tests {
             description: None,
             items: vec![
                 WatchlistItem {
+                    symbol: Some("AAPL".into()),
                     key: Some("AAPL".into()),
                     dow_jones_key: Some("US:AAPL".into()),
                 },
                 WatchlistItem {
+                    symbol: Some("MSFT".into()),
                     key: Some("MSFT".into()),
                     dow_jones_key: Some("US:MSFT".into()),
                 },
@@ -346,9 +464,183 @@ mod tests {
         assert_eq!(records.len(), 2);
         assert_eq!(records[0].watchlist_id.as_deref(), Some("42"));
         assert_eq!(records[0].watchlist_name.as_deref(), Some("Tech"));
+        assert_eq!(records[0].symbol.as_deref(), Some("AAPL"));
         assert_eq!(records[0].key.as_deref(), Some("AAPL"));
+        assert_eq!(records[1].symbol.as_deref(), Some("MSFT"));
         assert_eq!(records[1].key.as_deref(), Some("MSFT"));
         assert_eq!(records[1].dow_jones_key.as_deref(), Some("US:MSFT"));
+    }
+
+    #[test]
+    fn flatten_symbols_derives_symbol_from_dow_jones_key() {
+        let detail = WatchlistDetail {
+            id: Some("42".into()),
+            name: Some("Tech".into()),
+            last_modified_date_utc: None,
+            description: None,
+            items: vec![WatchlistItem {
+                symbol: None,
+                key: Some("opaque-key".into()),
+                dow_jones_key: Some("US:NVDA".into()),
+            }],
+        };
+
+        let records = flatten_watchlist_symbols(Some(&detail));
+
+        assert_eq!(records[0].symbol.as_deref(), Some("NVDA"));
+        assert_eq!(records[0].key.as_deref(), Some("opaque-key"));
+    }
+
+    #[test]
+    fn flatten_symbols_uses_api_symbol_for_opaque_keys() {
+        let detail = WatchlistDetail {
+            id: Some("42".into()),
+            name: Some("Tech".into()),
+            last_modified_date_utc: None,
+            description: None,
+            items: vec![WatchlistItem {
+                symbol: Some("AAPL".into()),
+                key: Some("a1b2c3d4".into()),
+                dow_jones_key: Some("13-3122".into()),
+            }],
+        };
+
+        let records = flatten_watchlist_symbols(Some(&detail));
+
+        assert_eq!(records[0].symbol.as_deref(), Some("AAPL"));
+        assert_eq!(records[0].key.as_deref(), Some("a1b2c3d4"));
+        assert_eq!(records[0].dow_jones_key.as_deref(), Some("13-3122"));
+    }
+
+    #[test]
+    fn flatten_symbols_does_not_emit_opaque_key_as_symbol() {
+        let detail = WatchlistDetail {
+            id: Some("42".into()),
+            name: Some("Tech".into()),
+            last_modified_date_utc: None,
+            description: None,
+            items: vec![WatchlistItem {
+                symbol: None,
+                key: Some("a1b2c3d4".into()),
+                dow_jones_key: Some("13-3122".into()),
+            }],
+        };
+
+        let records = flatten_watchlist_symbols(Some(&detail));
+
+        assert_eq!(records[0].symbol, None);
+        assert_eq!(records[0].key.as_deref(), Some("a1b2c3d4"));
+        assert_eq!(records[0].dow_jones_key.as_deref(), Some("13-3122"));
+    }
+
+    #[test]
+    fn resolve_watchlist_id_accepts_exact_id() {
+        let response = crate::watchlist::WatchlistNamesResponse {
+            watchlists: vec![WatchlistSummary {
+                id: Some("12345".into()),
+                name: Some("My Watchlist".into()),
+                last_modified_date_utc: None,
+                description: None,
+            }],
+        };
+
+        let resolved = resolve_watchlist_id_from_response(&response, "12345");
+
+        assert_eq!(resolved.expect("id should resolve"), "12345");
+    }
+
+    #[test]
+    fn resolve_watchlist_id_accepts_exact_normalized_name() {
+        let response = crate::watchlist::WatchlistNamesResponse {
+            watchlists: vec![WatchlistSummary {
+                id: Some("12345".into()),
+                name: Some("My Watchlist".into()),
+                last_modified_date_utc: None,
+                description: None,
+            }],
+        };
+
+        let resolved = resolve_watchlist_id_from_response(&response, "my-watchlist");
+
+        assert_eq!(resolved.expect("name should resolve"), "12345");
+    }
+
+    #[test]
+    fn resolve_watchlist_id_reports_missing_match() {
+        let response = crate::watchlist::WatchlistNamesResponse { watchlists: vec![] };
+
+        let resolved = resolve_watchlist_id_from_response(&response, "missing");
+
+        assert!(matches!(
+            resolved,
+            Err(WatchlistResolutionError::NotFound { .. })
+        ));
+    }
+
+    #[test]
+    fn resolve_watchlist_id_reports_name_match_without_id_as_missing() {
+        let response = crate::watchlist::WatchlistNamesResponse {
+            watchlists: vec![WatchlistSummary {
+                id: None,
+                name: Some("My Watchlist".into()),
+                last_modified_date_utc: None,
+                description: None,
+            }],
+        };
+
+        let resolved = resolve_watchlist_id_from_response(&response, "My Watchlist");
+
+        assert!(matches!(
+            resolved,
+            Err(WatchlistResolutionError::NotFound { query }) if query == "My Watchlist"
+        ));
+    }
+
+    #[test]
+    fn resolve_watchlist_id_reports_multiple_name_matches() {
+        let response = crate::watchlist::WatchlistNamesResponse {
+            watchlists: vec![
+                WatchlistSummary {
+                    id: Some("1".into()),
+                    name: Some("Jeff Sun".into()),
+                    last_modified_date_utc: None,
+                    description: None,
+                },
+                WatchlistSummary {
+                    id: Some("2".into()),
+                    name: Some("Jeff-Sun".into()),
+                    last_modified_date_utc: None,
+                    description: None,
+                },
+            ],
+        };
+
+        let resolved = resolve_watchlist_id_from_response(&response, "Jeff Sun");
+
+        assert!(matches!(
+            resolved,
+            Err(WatchlistResolutionError::MultipleMatches { .. })
+        ));
+    }
+
+    #[test]
+    fn render_watchlist_resolution_error_reports_no_results() {
+        let exit_code = render_watchlist_resolution_error(WatchlistResolutionError::NotFound {
+            query: "$(rm -rf /)".into(),
+        });
+
+        assert_eq!(exit_code, ExitCode::NoResults.code());
+    }
+
+    #[test]
+    fn render_watchlist_resolution_error_reports_multiple_matches_as_usage_error() {
+        let exit_code =
+            render_watchlist_resolution_error(WatchlistResolutionError::MultipleMatches {
+                query: "Jeff Sun".into(),
+                matches: vec!["Jeff Sun (1)".into(), "Jeff-Sun (2)".into()],
+            });
+
+        assert_eq!(exit_code, ExitCode::Usage.code());
     }
 
     #[test]

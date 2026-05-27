@@ -4,5 +4,5 @@
     "pub": "msr",
     "watchlistId": "12345"
   },
-  "query": "query FlaggedSymbols($pub: String!, $watchlistId: ID!) {\n  watchlist(pub: $pub, watchlistId: $watchlistId) {\n    id\n    name\n    lastModifiedDateUtc\n    description\n    items {\n      key\n      dowJonesKey\n    }\n  }\n}"
+  "query": "query FlaggedSymbols($pub: String!, $watchlistId: ID!) {\n  watchlist(pub: $pub, watchlistId: $watchlistId) {\n    id\n    name\n    lastModifiedDateUtc\n    description\n    items {\n      symbol\n      key\n      dowJonesKey\n    }\n  }\n}"
 }

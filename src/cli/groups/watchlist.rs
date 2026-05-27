@@ -17,8 +17,10 @@ pub enum Cmd {
     )]
     List(WatchlistListArgs),
 
-    /// Fetch symbols in a watchlist by ID.
-    #[command(after_help = "Examples:\n  marketsurge-agent watchlist symbols 12345")]
+    /// Fetch symbols in a watchlist by ID or exact name.
+    #[command(
+        after_help = "Examples:\n  marketsurge-agent watchlist symbols 12345\n  marketsurge-agent watchlist symbols \"My Watchlist\""
+    )]
     Symbols(WatchlistSymbolsArgs),
 
     /// Screen symbols with selected MarketSurge data columns.
