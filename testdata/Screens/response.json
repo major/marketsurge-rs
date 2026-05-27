@@ -23,6 +23,11 @@
             ],
             "type": "AND"
           },
+          "resultConfig": {
+            "sortBy": {
+              "field": "RSRating"
+            }
+          },
           "description": "Top growth stocks by composite rating",
           "createdAt": "2024-06-01T08:00:00Z"
         },
@@ -34,6 +39,7 @@
           "source": null,
           "updatedAt": "2025-02-20T14:00:00Z",
           "filterCriteria": null,
+          "resultConfig": null,
           "description": null,
           "createdAt": "2024-09-10T12:00:00Z"
         }

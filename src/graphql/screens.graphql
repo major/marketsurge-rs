@@ -12,6 +12,11 @@ query Screens($site: Site!, $type: ScreenType, $sortDir: SortDirInput) {
       }
       updatedAt
       filterCriteria
+      resultConfig {
+        sortBy {
+          field
+        }
+      }
       description
       createdAt
     }

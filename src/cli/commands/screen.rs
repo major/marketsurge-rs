@@ -1,5 +1,7 @@
 //! Stock screen commands for listing, running, and querying screens.
 
+use std::collections::{BTreeMap, BTreeSet};
+
 use crate::ClientError;
 use crate::coach::{CoachTreeNode, CoachTreeResponse};
 use crate::screen::{ResponseValue, ScreenEntry, ScreensResponse};
@@ -16,6 +18,12 @@ const IBD_50_LIMITATION: &str = "MarketSurge did not expose an official IBD 50 s
 /// Screen subcommands.
 #[derive(Debug, Subcommand)]
 pub enum ScreenCommand {
+    /// List screener column names discovered from MarketSurge screen definitions.
+    #[command(
+        long_about = "List screener column names discovered from MarketSurge saved screen definitions. This is API-sourced discovery, not a complete catalog of every valid ad-hoc column.",
+        after_help = "Examples:\n  marketsurge-agent screen columns\n  marketsurge-agent --fields name,sources screen columns"
+    )]
+    Columns(ColumnsArgs),
     /// List user screens, optionally including predefined coach screens.
     #[command(
         after_help = "Examples:\n  marketsurge-agent screen list\n  marketsurge-agent screen list --coach\n  marketsurge-agent screen list --query ibd"
@@ -27,6 +35,10 @@ pub enum ScreenCommand {
     )]
     Run(RunArgs),
 }
+
+/// Arguments for listing discovered screen columns.
+#[derive(Debug, Args, Clone)]
+pub struct ColumnsArgs {}
 
 /// Arguments for listing screens.
 #[derive(Debug, Args, Clone)]
@@ -68,14 +80,40 @@ pub struct ScreenListRecord {
     pub created_at: Option<String>,
 }
 
+/// Column name discovered from API-returned screen definitions.
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub struct ScreenColumnRecord {
+    /// API column name to pass to `screen adhoc --columns`.
+    pub name: String,
+    /// Column data type when exposed by the API. Currently unknown for saved screen definitions.
+    #[serde(rename = "type")]
+    pub data_type: Option<String>,
+    /// Market data item identifier when exposed by the API. Currently unknown for saved screen definitions.
+    pub md_item_id: Option<serde_json::Value>,
+    /// API fields where this column name was observed, such as `filter` or `sort`.
+    pub sources: Vec<String>,
+}
+
 /// Handles the screen command group.
 #[instrument(skip_all)]
 #[cfg(not(coverage))]
 pub async fn handle(args: &crate::cli::ScreenArgs, fields: &[String]) -> i32 {
     match &args.command {
+        ScreenCommand::Columns(a) => execute_columns(a, fields).await,
         ScreenCommand::List(a) => execute_list(a, fields).await,
         ScreenCommand::Run(a) => execute_run(a, fields).await,
     }
+}
+
+#[instrument(skip_all)]
+#[cfg(not(coverage))]
+async fn execute_columns(_args: &ColumnsArgs, fields: &[String]) -> i32 {
+    run_client_command(fields, |client| async move {
+        let screens_response = api_call(client.screens("marketsurge")).await?;
+
+        Ok(discover_screen_columns(&screens_response))
+    })
+    .await
 }
 
 #[instrument(skip_all)]
@@ -187,6 +225,51 @@ fn filter_screen_list(
         .into_iter()
         .filter(|record| screen_record_matches(record, normalized_query))
         .collect()
+}
+
+fn discover_screen_columns(response: &ScreensResponse) -> Vec<ScreenColumnRecord> {
+    let mut columns: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+
+    for entry in response.user.iter().flat_map(|user| &user.screens) {
+        if let Some(criteria) = &entry.filter_criteria {
+            for term in &criteria.terms {
+                if let Some(name) = term.left.as_ref().and_then(|left| left.name.as_deref()) {
+                    add_column_source(&mut columns, name, "filter");
+                }
+            }
+        }
+
+        if let Some(field) = entry
+            .result_config
+            .as_ref()
+            .and_then(|config| config.sort_by.as_ref())
+            .and_then(|sort| sort.field.as_deref())
+        {
+            add_column_source(&mut columns, field, "sort");
+        }
+    }
+
+    columns
+        .into_iter()
+        .map(|(name, sources)| ScreenColumnRecord {
+            name,
+            data_type: None,
+            md_item_id: None,
+            sources: sources.into_iter().collect(),
+        })
+        .collect()
+}
+
+fn add_column_source(columns: &mut BTreeMap<String, BTreeSet<String>>, name: &str, source: &str) {
+    let name = name.trim();
+    if name.is_empty() {
+        return;
+    }
+
+    columns
+        .entry(name.to_string())
+        .or_default()
+        .insert(source.to_string());
 }
 
 fn normalized_screen_query(query: Option<&str>) -> Option<String> {
@@ -334,7 +417,10 @@ mod tests {
     };
     use crate::coach::{CoachTreeResponse, CoachTreeUser};
     use crate::graphql::GraphQLFieldError;
-    use crate::screen::{ScreensResponse, ScreensUser};
+    use crate::screen::{
+        ScreenFilterCriteria, ScreenFilterTerm, ScreenFilterTermLeft, ScreenResultConfig,
+        ScreenSortBy, ScreensResponse, ScreensUser,
+    };
 
     fn make_screen_entry(id: &str, name: &str) -> ScreenEntry {
         ScreenEntry {
@@ -345,6 +431,7 @@ mod tests {
             source: None,
             updated_at: Some("2025-01-15".to_string()),
             filter_criteria: None,
+            result_config: None,
             description: Some("test screen".to_string()),
             created_at: Some("2025-01-01".to_string()),
         }
@@ -448,6 +535,35 @@ mod tests {
         }
     }
 
+    fn make_screen_entry_with_columns(
+        filter_names: Vec<&str>,
+        sort_field: Option<&str>,
+    ) -> ScreenEntry {
+        ScreenEntry {
+            filter_criteria: Some(ScreenFilterCriteria {
+                terms: filter_names
+                    .into_iter()
+                    .map(|name| ScreenFilterTerm {
+                        left: Some(ScreenFilterTermLeft {
+                            name: Some(name.to_string()),
+                        }),
+                        operand: Some("GREATER_THAN_OR_EQUAL".to_string()),
+                        right: None,
+                    })
+                    .collect(),
+                criteria_type: Some("AND".to_string()),
+            }),
+            result_config: Some(ScreenResultConfig {
+                limit: Some(100),
+                sort_by: sort_field.map(|field| ScreenSortBy {
+                    field: Some(field.to_string()),
+                    direction: Some("DESCENDING".to_string()),
+                }),
+            }),
+            ..make_screen_entry("scr-columns", "Column Source")
+        }
+    }
+
     fn make_coach_response(nodes: Vec<CoachTreeNode>) -> CoachTreeResponse {
         CoachTreeResponse {
             user: Some(CoachTreeUser {
@@ -471,6 +587,47 @@ mod tests {
         assert_eq!(records[0].id.as_deref(), Some("scr-1"));
         assert_eq!(records[1].source, "user");
         assert_eq!(records[1].name.as_deref(), Some("Value"));
+    }
+
+    #[test]
+    fn discover_screen_columns_deduplicates_and_sorts_sources() {
+        let response = make_screens_response(vec![
+            make_screen_entry_with_columns(vec!["RSRating", "CompositeRating"], Some("RSRating")),
+            make_screen_entry_with_columns(vec!["EPSRating", "  "], Some("CompositeRating")),
+        ]);
+
+        let columns = discover_screen_columns(&response);
+
+        assert_eq!(
+            columns,
+            vec![
+                ScreenColumnRecord {
+                    name: "CompositeRating".to_string(),
+                    data_type: None,
+                    md_item_id: None,
+                    sources: vec!["filter".to_string(), "sort".to_string()],
+                },
+                ScreenColumnRecord {
+                    name: "EPSRating".to_string(),
+                    data_type: None,
+                    md_item_id: None,
+                    sources: vec!["filter".to_string()],
+                },
+                ScreenColumnRecord {
+                    name: "RSRating".to_string(),
+                    data_type: None,
+                    md_item_id: None,
+                    sources: vec!["filter".to_string(), "sort".to_string()],
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn discover_screen_columns_handles_missing_user() {
+        let response = ScreensResponse { user: None };
+
+        assert!(discover_screen_columns(&response).is_empty());
     }
 
     #[test]

@@ -10,12 +10,12 @@ use crate::cli::common::error::{render_usage_message, render_warning_message};
 use crate::cli::common::rows::{flatten_response_rows, response_columns};
 use crate::screen::ResponseValue;
 
-const INVALID_COLUMN_SUGGESTION: &str = "Check the column names and spelling before retrying.";
+const INVALID_COLUMN_SUGGESTION: &str = "Check the column names and spelling, or run `screen columns` to discover API-sourced names seen in saved screen definitions.";
 
 /// Arguments for the adhoc-screen command.
 #[derive(Debug, Args)]
 pub struct AdhocScreenCommandArgs {
-    /// Output columns, comma-separated.
+    /// Output columns, comma-separated. Use `screen columns` to discover API-sourced names seen in saved screen definitions.
     #[arg(long, value_delimiter = ',', default_value = "Symbol,CompanyName")]
     pub columns: Vec<String>,
 
@@ -189,8 +189,8 @@ fn build_include_source(args: &AdhocScreenCommandArgs) -> AdhocScreenIncludeSour
 #[cfg(test)]
 mod tests {
     use super::{
-        AdhocScreenCommandArgs, all_invalid_columns_message, build_include_source, missing_columns,
-        normalized_columns, partial_invalid_columns_message,
+        AdhocScreenCommandArgs, INVALID_COLUMN_SUGGESTION, all_invalid_columns_message,
+        build_include_source, missing_columns, normalized_columns, partial_invalid_columns_message,
     };
     use crate::cli::common::rows::flatten_response_rows;
     use crate::cli::common::test_support::{
@@ -374,5 +374,11 @@ mod tests {
 
         assert!(message.contains("FakeColumn, RSrating"));
         assert!(!message.contains("Valid columns in the same request were still returned"));
+    }
+
+    #[test]
+    fn test_invalid_column_suggestion_references_discovery_command() {
+        assert!(INVALID_COLUMN_SUGGESTION.contains("screen columns"));
+        assert!(INVALID_COLUMN_SUGGESTION.contains("saved screen definitions"));
     }
 }

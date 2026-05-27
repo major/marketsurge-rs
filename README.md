@@ -46,6 +46,9 @@ marketsurge-agent --fields symbol,num_funds_held ownership summary AAPL
 marketsurge-agent watchlist list --query ibd
 marketsurge-agent screen list --query ibd
 
+# Discover screen column names seen in MarketSurge saved screen definitions
+marketsurge-agent screen columns
+
 # Generate shell completions
 marketsurge-agent completions zsh > _marketsurge-agent
 
@@ -101,6 +104,10 @@ Flag precedence: `RUST_LOG` overrides `--verbose` and `--debug`. When neither `-
 ### Schema introspection
 
 `marketsurge-agent schema` dumps the CLI surface as compact JSON for scripts and agent tooling. It does not read browser cookies or make network requests. The schema shape is experimental; `schema_version: 3` includes the binary name, package version, exit-code metadata, structured error metadata, command metadata, and visible command arguments.
+
+### Screen column discovery
+
+`marketsurge-agent screen columns` lists screener column names discovered from MarketSurge saved screen definitions. This is API-sourced discovery, not a complete catalog of every valid `screen adhoc --columns` value, because the public GraphQL API does not expose a dedicated column catalog. The output includes each discovered `name`, nullable `type` and `md_item_id` fields when the API exposes them, and `sources` showing whether the name appeared in screen filters or sort configuration.
 
 ### Structured errors
 
