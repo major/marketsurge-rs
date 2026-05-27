@@ -223,7 +223,10 @@ fn map_user_screen_entry(entry: &ScreenEntry) -> ScreenListRecord {
 fn map_coach_screen_node(node: &CoachTreeNode) -> ScreenListRecord {
     ScreenListRecord {
         source: "coach".to_string(),
-        id: node.reference_id.clone(),
+        id: node
+            .reference_id
+            .as_deref()
+            .map(normalize_screen_reference_id),
         name: node.name.clone(),
         screen_type: node.node_type.clone(),
         description: None,
@@ -273,7 +276,30 @@ fn find_coach_screen_reference_id(
                 .as_deref()
                 .is_some_and(|name| normalized_screen_name(name) == normalized_target)
         })
-        .and_then(|node| node.reference_id.clone())
+        .and_then(|node| {
+            node.reference_id
+                .as_deref()
+                .map(normalize_screen_reference_id)
+        })
+}
+
+fn normalize_screen_reference_id(reference_id: &str) -> String {
+    let Ok(value) = serde_json::from_str::<serde_json::Value>(reference_id) else {
+        return reference_id.to_string();
+    };
+
+    json_screen_reference_id(&value).unwrap_or_else(|| reference_id.to_string())
+}
+
+fn json_screen_reference_id(value: &serde_json::Value) -> Option<String> {
+    match value {
+        serde_json::Value::String(value) => Some(value.clone()),
+        serde_json::Value::Number(value) => Some(value.to_string()),
+        serde_json::Value::Object(map) => ["screenId", "originalId", "id"]
+            .into_iter()
+            .find_map(|key| map.get(key).and_then(json_screen_reference_id)),
+        _ => None,
+    }
 }
 
 fn normalized_screen_name(name: &str) -> String {
@@ -364,6 +390,14 @@ mod tests {
         assert!(record.description.is_none());
         assert!(record.updated_at.is_none());
         assert!(record.created_at.is_none());
+    }
+
+    #[test]
+    fn map_coach_screen_node_unwraps_json_reference_id() {
+        let node = make_coach_node("EF-50", r#"{"screenId":"01KEWR7EMYP4NSE72XVQY3V8GY"}"#);
+        let record = map_coach_screen_node(&node);
+
+        assert_eq!(record.id.as_deref(), Some("01KEWR7EMYP4NSE72XVQY3V8GY"));
     }
 
     #[test]
@@ -581,6 +615,32 @@ mod tests {
         assert_eq!(
             find_coach_screen_reference_id(&coach, "ibd 50").as_deref(),
             Some("ref-ibd50")
+        );
+    }
+
+    #[test]
+    fn find_coach_screen_reference_id_unwraps_json_reference_id() {
+        let coach = make_coach_response(vec![make_coach_node(
+            "EF-50",
+            r#"{"screenId":"01KEWR7EMYP4NSE72XVQY3V8GY"}"#,
+        )]);
+
+        assert_eq!(
+            find_coach_screen_reference_id(&coach, "EF 50").as_deref(),
+            Some("01KEWR7EMYP4NSE72XVQY3V8GY")
+        );
+    }
+
+    #[test]
+    fn find_coach_screen_reference_id_unwraps_original_id_reference_id() {
+        let coach = make_coach_response(vec![make_coach_node(
+            "Sector Leaders",
+            r#"{"originalId":120,"isCoachAccount":false}"#,
+        )]);
+
+        assert_eq!(
+            find_coach_screen_reference_id(&coach, "Sector Leaders").as_deref(),
+            Some("120")
         );
     }
 

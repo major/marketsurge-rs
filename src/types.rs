@@ -6,8 +6,13 @@ use serde_json::Value;
 /// Default symbol dialect type for market data queries.
 pub(crate) const DEFAULT_SYMBOL_DIALECT_TYPE: &str = "CHARTING";
 
-pub(crate) const DEFAULT_STRING_KEYS: &[&str] =
-    &["value", "formattedValue", "displayValue", "name"];
+pub(crate) const DEFAULT_STRING_KEYS: &[&str] = &[
+    "value",
+    "formattedValue",
+    "displayValue",
+    "name",
+    "companyName",
+];
 
 pub(crate) const SCREEN_STRING_KEYS: &[&str] = &[
     "formattedValue",
@@ -178,7 +183,9 @@ pub struct TreeNode {
 
 #[cfg(test)]
 mod tests {
-    use super::{DEFAULT_SYMBOL_DIALECT_TYPE, SymbolVariables, symbols_to_owned};
+    use super::{
+        DEFAULT_SYMBOL_DIALECT_TYPE, SymbolVariables, json_value_to_string, symbols_to_owned,
+    };
 
     #[test]
     fn symbols_to_owned_preserves_order() {
@@ -199,6 +206,19 @@ mod tests {
 
         assert_eq!(variables.symbols, vec!["AAPL"]);
         assert_eq!(variables.symbol_dialect_type, "CUSTOM");
+    }
+
+    #[test]
+    fn json_value_to_string_extracts_company_name_objects() {
+        let value = serde_json::json!({
+            "instrumentId": 12345,
+            "companyName": "Apple Inc"
+        });
+
+        assert_eq!(
+            json_value_to_string(value, super::DEFAULT_STRING_KEYS).as_deref(),
+            Some("Apple Inc")
+        );
     }
 }
 
