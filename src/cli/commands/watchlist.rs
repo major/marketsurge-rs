@@ -28,7 +28,7 @@ pub enum WatchlistCommand {
 }
 
 /// Arguments for the watchlist list subcommand.
-#[derive(Debug, Args)]
+#[derive(Debug, Args, Clone)]
 pub struct WatchlistListArgs {
     /// Filter watchlists by ID, name, or description.
     #[arg(long, short)]
@@ -36,14 +36,14 @@ pub struct WatchlistListArgs {
 }
 
 /// Arguments for the watchlist symbols subcommand.
-#[derive(Debug, Args)]
+#[derive(Debug, Args, Clone)]
 pub struct WatchlistSymbolsArgs {
     /// Watchlist ID from `watchlist list`.
     pub watchlist_id: String,
 }
 
 /// Arguments for the watchlist screen subcommand.
-#[derive(Debug, Args)]
+#[derive(Debug, Args, Clone)]
 pub struct WatchlistScreenArgs {
     /// Symbols to screen, for example AAPL MSFT.
     #[arg(required = true)]

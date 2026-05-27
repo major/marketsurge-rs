@@ -32,7 +32,9 @@ fn top_level_help_exits_successfully() {
     let stdout = stdout(&output);
     assert!(stdout.contains("Usage: marketsurge-agent [OPTIONS] <COMMAND>"));
     assert!(stdout.contains("Commands:"));
-    assert!(stdout.contains("ratings"));
+    assert!(stdout.contains("analysis"));
+    assert!(stdout.contains("market"));
+    assert!(stdout.contains("navigation"));
     assert!(stdout.contains("watchlist"));
     assert!(stdout.contains("completions"));
     assert!(stdout.contains("schema"));
@@ -42,7 +44,7 @@ fn top_level_help_exits_successfully() {
 #[test]
 #[cfg_attr(coverage, ignore)]
 fn command_specific_help_exits_successfully() {
-    for command in ["ratings", "chart", "market-data", "schema"] {
+    for command in ["analysis", "market", "navigation", "schema"] {
         let output = output(&[command, "--help"]);
 
         assert!(output.status.success(), "{command} --help should exit 0");

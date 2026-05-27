@@ -28,7 +28,7 @@ pub enum ScreenCommand {
 }
 
 /// Arguments for listing screens.
-#[derive(Debug, Args)]
+#[derive(Debug, Args, Clone)]
 pub struct ListArgs {
     /// Include predefined coach screens such as IBD 50.
     #[arg(long)]
@@ -39,7 +39,7 @@ pub struct ListArgs {
 }
 
 /// Arguments for running a saved screen.
-#[derive(Debug, Args)]
+#[derive(Debug, Args, Clone)]
 pub struct RunArgs {
     /// Screen ID or screen name, for example IBD 50.
     pub screen_id: String,
