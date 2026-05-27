@@ -154,6 +154,13 @@ pub enum Commands {
         after_help = "Examples:\n  marketsurge-agent schema\n  marketsurge-agent schema | jq '.commands | length'"
     )]
     Schema,
+
+    /// Run diagnostic checks to verify the tool is working.
+    #[command(
+        long_about = "Run diagnostic checks to verify the tool is configured correctly. Always writes compact JSON to stdout so scripts and LLM agents can consume the results. Exit codes reflect the worst check result. Network checks (JWT exchange, GraphQL connectivity) are planned but not yet implemented.",
+        after_help = "Examples:\n  marketsurge-agent doctor\n  marketsurge-agent doctor --skip-network\n  marketsurge-agent doctor | jq .summary"
+    )]
+    Doctor(DoctorArgs),
 }
 
 /// Arguments for the chart command.
@@ -213,6 +220,14 @@ pub struct WatchlistArgs {
 pub struct CompletionsArgs {
     /// Target shell for completion output.
     pub shell: Shell,
+}
+
+/// Arguments for the doctor diagnostic command.
+#[derive(Debug, Args)]
+pub struct DoctorArgs {
+    /// Skip network-based checks (JWT exchange, GraphQL connectivity).
+    #[arg(long)]
+    pub skip_network: bool,
 }
 
 /// Arguments containing one or more ticker symbols.

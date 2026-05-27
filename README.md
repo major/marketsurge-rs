@@ -52,13 +52,37 @@ marketsurge-agent completions zsh > _marketsurge-agent
 # Check whether browser cookies and JWT are ready before running queries
 marketsurge-agent auth status
 
+# Run diagnostic checks to verify the tool is working
+marketsurge-agent doctor
+marketsurge-agent doctor --skip-network
+
 # Dump the experimental CLI schema without network access
 marketsurge-agent schema | jq '.commands | length'
 ```
 
-### Diagnostics
+### Doctor
 
-The CLI supports `--verbose` and `--debug` flags for troubleshooting. All diagnostic output goes to stderr and never contaminates stdout JSON. Cookie values, auth tokens, and full sensitive headers are never logged.
+`marketsurge-agent doctor` runs diagnostic checks to verify the tool is configured correctly and can reach MarketSurge. Output is compact JSON written to stdout so scripts and LLM agents can consume the results. The command exits non-zero when any check fails.
+
+Checks include:
+- `binary_version` - package version and MSRV
+- `config` - resolved client configuration (endpoints, timeout, body limit)
+- `firefox_cookies` - browser cookie extraction for authentication
+
+Network checks (JWT exchange, GraphQL connectivity) are planned but not yet implemented. Use `--skip-network` to explicitly skip them once they land.
+
+```bash
+# Run all local checks
+marketsurge-agent doctor
+
+# Skip network checks (useful once network checks are added)
+marketsurge-agent doctor --skip-network
+
+# Inspect summary counts
+marketsurge-agent doctor | jq .summary
+```
+
+### Verbose logging
 
 ```bash
 # Info-level diagnostics: HTTP status codes, auth discovery steps

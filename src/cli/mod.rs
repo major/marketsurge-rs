@@ -101,6 +101,7 @@ pub async fn run() -> i32 {
             ExitCode::Success.code()
         }
         Commands::Schema => commands::schema::handle(fields),
+        Commands::Doctor(args) => commands::doctor::handle(fields, args.skip_network),
     }
 }
 
@@ -117,5 +118,6 @@ fn command_name(command: &Commands) -> Option<&'static str> {
         Commands::Auth { .. } => Some("auth"),
         Commands::Completions(_) => Some("completions"),
         Commands::Schema => Some("schema"),
+        Commands::Doctor(_) => Some("doctor"),
     }
 }

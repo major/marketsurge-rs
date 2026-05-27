@@ -8,6 +8,8 @@ pub mod auth;
 pub mod chart;
 /// Shell completion generation.
 pub mod completions;
+/// Doctor: diagnostic checks for troubleshooting.
+pub mod doctor;
 /// Fundamental financial data command.
 pub mod fundamentals;
 /// Industry group data commands.
