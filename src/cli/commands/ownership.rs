@@ -17,7 +17,10 @@ const FUND_OWNERSHIP_SCREEN: &str = "MarketSurge.RelatedInformation.MUTIFundOwne
 #[derive(Debug, Subcommand)]
 pub enum OwnershipCommand {
     /// Fetch quarterly fund ownership summary rows for symbols.
-    #[command(after_help = "Examples:\n  marketsurge-agent ownership summary AAPL MSFT")]
+    #[command(
+        long_about = "Fetch quarterly fund ownership summary rows for symbols. The funds_float_pct_held field is the current percentage of float held by funds from the MarketSurge response. MarketSurge does not provide this value per quarter in the ownership summary payload, so the CLI repeats the current value on each quarterly row for context. Use num_funds_held for historical quarter-by-quarter trend analysis.",
+        after_help = "Examples:\n  marketsurge-agent ownership summary AAPL MSFT\n\nField notes:\n  funds_float_pct_held is current-only in the MarketSurge response and is repeated on each quarterly row. Use num_funds_held for historical quarter-by-quarter trend analysis."
+    )]
     Summary(SymbolsArgs),
     /// Fetch individual fund holders and share history for symbols.
     #[command(after_help = "Examples:\n  marketsurge-agent ownership funds AAPL MSFT")]
@@ -29,7 +32,8 @@ pub enum OwnershipCommand {
 pub struct OwnershipSummaryRecord {
     /// Ticker symbol.
     pub symbol: String,
-    /// Percentage of float held by funds.
+    /// Current percentage of float held by funds, repeated on each row because
+    /// MarketSurge does not provide this value per quarter.
     pub funds_float_pct_held: Option<String>,
     /// Quarter date.
     pub date: Option<String>,
@@ -163,6 +167,10 @@ fn flatten_ownership_summary(
             None => continue,
         };
 
+        // The API exposes fundsFloatPercentHeld once at the ownership level,
+        // not inside fundOwnershipSummary. Keep the flat row shape stable by
+        // carrying that current value onto each quarter row, and document the
+        // current-only semantics in command help.
         let pct_held = ownership
             .funds_float_percent_held
             .as_ref()

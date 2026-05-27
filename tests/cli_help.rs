@@ -69,5 +69,8 @@ fn nested_command_help_exits_successfully() {
         stderr(&output).is_empty(),
         "nested help should not write stderr"
     );
-    assert!(stdout(&output).contains("Usage: marketsurge-agent ownership summary"));
+    let stdout = stdout(&output);
+    assert!(stdout.contains("Usage: marketsurge-agent ownership summary"));
+    assert!(stdout.contains("funds_float_pct_held is current-only"));
+    assert!(stdout.contains("Use num_funds_held for historical quarter-by-quarter trend analysis"));
 }

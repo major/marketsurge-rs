@@ -60,6 +60,8 @@ marketsurge-agent doctor --skip-network
 marketsurge-agent schema | jq '.commands | length'
 ```
 
+`ownership summary` returns one row per quarter. The `funds_float_pct_held` field is current-only in the MarketSurge ownership response and is repeated on each row for context; use `num_funds_held` for historical quarter-by-quarter trend analysis.
+
 ### Doctor
 
 `marketsurge-agent doctor` runs diagnostic checks to verify the tool is configured correctly and can reach MarketSurge. Output is compact JSON written to stdout so scripts and LLM agents can consume the results. The command exits non-zero when any check fails.
