@@ -104,9 +104,9 @@ Flag precedence: `RUST_LOG` overrides `--verbose` and `--debug`. When neither `-
 
 ### Structured errors
 
-Failures are written as compact JSON to stderr while stdout stays reserved for successful command output. Structured errors always include `kind`, `message`, and `exit_code`. They may include `status_code`, `retry_after`, `command`, and `suggestion` when that context is available.
+Failures are written as compact JSON to stderr while stdout stays reserved for successful command output. Non-fatal diagnostics may also use this structured stderr shape with `kind: "warning"` and `exit_code: 0` while stdout still contains successful command output. Structured stderr records always include `kind`, `message`, and `exit_code`. They may include `status_code`, `retry_after`, `command`, and `suggestion` when that context is available.
 
-Documented `kind` values are `usage`, `auth_error`, `api_error`, `rate_limit`, `internal_error`, and `no_results`. The `schema` command includes this contract in its `errors` field.
+Documented `kind` values are `warning`, `usage`, `auth_error`, `api_error`, `rate_limit`, `internal_error`, and `no_results`. The `schema` command includes this contract in its `errors` field.
 
 ### Exit codes
 

@@ -126,6 +126,11 @@ fn schema_returns_exit_code_0_and_valid_json() {
             .iter()
             .any(|kind| kind["kind"] == "rate_limit" && kind["exit_code"] == 3)
     }));
+    assert!(schema["errors"]["kinds"].as_array().is_some_and(|kinds| {
+        kinds
+            .iter()
+            .any(|kind| kind["kind"] == "warning" && kind["exit_code"] == 0)
+    }));
 
     let line_count = stdout(&output).lines().count();
     assert_eq!(line_count, 1, "schema should be compact single-line JSON");
