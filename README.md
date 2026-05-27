@@ -42,6 +42,10 @@ marketsurge-agent ownership summary AAPL
 # Limit output to selected top-level fields
 marketsurge-agent --fields symbol,num_funds_held ownership summary AAPL
 
+# Fetch only recent chart bars or bars from a specific date
+marketsurge-agent market chart AAPL --days 10
+marketsurge-agent market chart AAPL --start-date 2026-05-01
+
 # Find saved watchlists or screens by ID or name, including punctuation-insensitive matches like IBD 50
 marketsurge-agent watchlist list --query ibd
 marketsurge-agent screen list --query ibd
