@@ -4,6 +4,7 @@ use clap::{Command, CommandFactory, builder::StyledStr};
 use serde::Serialize;
 
 use crate::cli::Cli;
+use crate::cli::common::exit::{EXIT_CODES, ExitCodeMetadata};
 use crate::cli::output::{finish_output, print_json};
 
 /// Dumps the CLI command surface as compact JSON.
@@ -16,6 +17,7 @@ struct SchemaPayload {
     schema_version: u8,
     binary: &'static str,
     version: &'static str,
+    exit_codes: &'static [ExitCodeMetadata],
     commands: Vec<CommandSchema>,
 }
 
@@ -43,9 +45,10 @@ fn schema_payload() -> SchemaPayload {
     let commands = cmd.get_subcommands().map(command_schema).collect();
 
     SchemaPayload {
-        schema_version: 1,
+        schema_version: 2,
         binary: "marketsurge-agent",
         version: env!("CARGO_PKG_VERSION"),
+        exit_codes: EXIT_CODES,
         commands,
     }
 }
@@ -89,15 +92,28 @@ mod tests {
     fn payload_contains_top_level_metadata() {
         let payload = schema_payload();
 
-        assert_eq!(payload.schema_version, 1);
+        assert_eq!(payload.schema_version, 2);
         assert_eq!(payload.binary, "marketsurge-agent");
         assert_eq!(payload.version, env!("CARGO_PKG_VERSION"));
+        assert_eq!(payload.exit_codes.len(), 6);
         assert!(
             payload
                 .commands
                 .iter()
                 .any(|command| command.name == "schema")
         );
+    }
+
+    #[test]
+    fn payload_includes_exit_code_contract() {
+        let payload = schema_payload();
+
+        assert!(payload.exit_codes.iter().any(|entry| {
+            entry.code == 2 && entry.name == "usage" && entry.description.contains("invalid")
+        }));
+        assert!(payload.exit_codes.iter().any(|entry| {
+            entry.code == 4 && entry.name == "auth_error" && entry.description.contains("cookies")
+        }));
     }
 
     #[test]

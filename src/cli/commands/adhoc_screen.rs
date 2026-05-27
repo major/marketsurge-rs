@@ -5,6 +5,7 @@ use clap::Args;
 use tracing::instrument;
 
 use crate::cli::common::command::{api_call, run_client_command};
+use crate::cli::common::exit::ExitCode;
 use crate::cli::common::rows::{flatten_response_rows, response_columns};
 
 /// Arguments for the adhoc-screen command.
@@ -54,7 +55,7 @@ pub async fn handle(args: &AdhocScreenCommandArgs, fields: &[String]) -> i32 {
             Ok(v) => Some(v),
             Err(e) => {
                 tracing::error!("invalid --query JSON: {e}");
-                return 1;
+                return ExitCode::Usage.code();
             }
         },
         None => None,

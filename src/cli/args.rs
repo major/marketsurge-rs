@@ -15,7 +15,7 @@ use super::groups;
     version,
     about = "Query MarketSurge data as compact JSON",
     long_about = "Query MarketSurge data as compact JSON. Auth reads browser cookies, so log in at https://marketsurge.investors.com first. Use --fields to limit top-level JSON fields in command output.",
-    after_help = "Examples:\n  marketsurge-agent analysis ratings AAPL\n  marketsurge-agent --fields symbol,rs_rating analysis ratings AAPL\n  marketsurge-agent completions zsh > _marketsurge-agent",
+    after_help = "Examples:\n  marketsurge-agent analysis ratings AAPL\n  marketsurge-agent --fields symbol,rs_rating analysis ratings AAPL\n  marketsurge-agent completions zsh > _marketsurge-agent\n\nExit codes:\n  0  success - command completed successfully\n  1  internal_error - unexpected internal error, including local output failures\n  2  usage - invalid arguments or command usage\n  3  api_error - network failure, rate limit, or upstream MarketSurge API failure\n  4  auth_error - browser cookies are missing, expired, or rejected\n  5  no_results - command completed but produced no actionable result",
     arg_required_else_help = true
 )]
 pub struct Cli {
@@ -33,6 +33,8 @@ pub struct Cli {
 pub enum Commands {
     /// Market data: chart OHLCV bars and broad snapshots.
     #[command(
+        subcommand_required = true,
+        arg_required_else_help = true,
         after_help = "Examples:\n  marketsurge-agent market chart AAPL MSFT\n  marketsurge-agent market snapshot AAPL MSFT"
     )]
     Market {
@@ -43,6 +45,8 @@ pub enum Commands {
 
     /// Analysis: company fundamentals and RS ratings.
     #[command(
+        subcommand_required = true,
+        arg_required_else_help = true,
         after_help = "Examples:\n  marketsurge-agent analysis fundamentals AAPL MSFT\n  marketsurge-agent analysis ratings AAPL MSFT"
     )]
     Analysis {
@@ -53,6 +57,8 @@ pub enum Commands {
 
     /// Stock screens: ad-hoc queries, list, and run.
     #[command(
+        subcommand_required = true,
+        arg_required_else_help = true,
         after_help = "Examples:\n  marketsurge-agent screen adhoc --symbols AAPL,MSFT\n  marketsurge-agent screen list --query ibd\n  marketsurge-agent screen run 'IBD 50'"
     )]
     Screen {
@@ -63,6 +69,8 @@ pub enum Commands {
 
     /// Fund ownership data: quarterly summaries and fund holdings.
     #[command(
+        subcommand_required = true,
+        arg_required_else_help = true,
         after_help = "Examples:\n  marketsurge-agent ownership summary AAPL\n  marketsurge-agent ownership funds AAPL"
     )]
     Ownership {
@@ -73,6 +81,8 @@ pub enum Commands {
 
     /// Industry group data: RS ratings and overview.
     #[command(
+        subcommand_required = true,
+        arg_required_else_help = true,
         after_help = "Examples:\n  marketsurge-agent industry rs AAPL\n  marketsurge-agent industry overview AAPL"
     )]
     Industry {
@@ -83,6 +93,8 @@ pub enum Commands {
 
     /// Navigation trees: coach and site navigation.
     #[command(
+        subcommand_required = true,
+        arg_required_else_help = true,
         after_help = "Examples:\n  marketsurge-agent navigation coach\n  marketsurge-agent navigation nav"
     )]
     Navigation {
@@ -93,6 +105,8 @@ pub enum Commands {
 
     /// Watchlist data: list, symbols, and screening.
     #[command(
+        subcommand_required = true,
+        arg_required_else_help = true,
         after_help = "Examples:\n  marketsurge-agent watchlist list --query ibd\n  marketsurge-agent watchlist symbols 12345"
     )]
     Watchlist {
@@ -109,7 +123,7 @@ pub enum Commands {
 
     /// Dump the CLI surface as machine-readable JSON.
     #[command(
-        long_about = "Dump the CLI surface as machine-readable JSON. The output format is experimental and may change between versions. schema_version 1 is the initial format.\n\nThis command does not read browser cookies and does not make any network requests.",
+        long_about = "Dump the CLI surface as machine-readable JSON. The output format is experimental and may change between versions. schema_version 2 adds the exit-code contract.\n\nThis command does not read browser cookies and does not make any network requests.",
         after_help = "Examples:\n  marketsurge-agent schema\n  marketsurge-agent schema | jq '.commands | length'"
     )]
     Schema,

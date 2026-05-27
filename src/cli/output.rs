@@ -5,6 +5,8 @@ use std::io::{self, Write};
 use serde::Serialize;
 use serde_json::{Map, Value};
 
+use crate::cli::common::exit::ExitCode;
+
 /// Writes `value` as compact JSON to stdout, newline-terminated.
 pub fn print_json<T: Serialize>(value: &T, fields: &[String]) -> io::Result<()> {
     let selected_fields = selected_fields(fields);
@@ -24,7 +26,7 @@ pub fn finish_output(result: io::Result<()>) -> i32 {
         Ok(()) => 0,
         Err(err) => {
             eprintln!("output error: {err}");
-            1
+            ExitCode::InternalError.code()
         }
     }
 }
@@ -75,6 +77,8 @@ fn write_json<W: Write, T: Serialize>(writer: &mut W, value: &T) -> io::Result<(
 mod tests {
     use serde::Serialize;
 
+    use crate::cli::common::exit::ExitCode;
+
     use super::{filter_value_fields, finish_output, print_json, selected_fields, write_json};
 
     #[derive(Debug, Serialize)]
@@ -115,7 +119,10 @@ mod tests {
     #[test]
     fn finish_output_maps_result_to_exit_code() {
         assert_eq!(finish_output(Ok(())), 0);
-        assert_eq!(finish_output(Err(std::io::Error::other("broken pipe"))), 1);
+        assert_eq!(
+            finish_output(Err(std::io::Error::other("broken pipe"))),
+            ExitCode::InternalError.code()
+        );
     }
 
     #[test]

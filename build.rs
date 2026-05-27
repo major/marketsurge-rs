@@ -1,6 +1,7 @@
 fn main() {
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=src/cli/args.rs");
+    println!("cargo:rerun-if-changed=src/cli/common/exit.rs");
 
     if std::env::var_os("CARGO_FEATURE_CLI").is_some() {
         use std::io::Write;
@@ -9,7 +10,7 @@ fn main() {
             .about("Query MarketSurge data as compact JSON")
             .version(env!("CARGO_PKG_VERSION"))
             .long_about("Query MarketSurge data as compact JSON. Auth reads browser cookies, so log in at https://marketsurge.investors.com first. Use --fields to limit top-level JSON fields in command output.")
-            .after_help("Examples:\n  marketsurge-agent ratings AAPL MSFT\n  marketsurge-agent --fields symbol,rs_rating ratings AAPL\n  marketsurge-agent completions zsh > _marketsurge-agent")
+            .after_help("Examples:\n  marketsurge-agent analysis ratings AAPL\n  marketsurge-agent --fields symbol,rs_rating analysis ratings AAPL\n  marketsurge-agent completions zsh > _marketsurge-agent\n\nExit codes:\n  0  success - command completed successfully\n  1  internal_error - unexpected internal error, including local output failures\n  2  usage - invalid arguments or command usage\n  3  api_error - network failure, rate limit, or upstream MarketSurge API failure\n  4  auth_error - browser cookies are missing, expired, or rejected\n  5  no_results - command completed but produced no actionable result")
             .arg(
                 clap::Arg::new("fields")
                     .long("fields")

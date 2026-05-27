@@ -2,6 +2,8 @@
 
 use crate::{Client, ClientError};
 
+use super::exit::ExitCode;
+
 /// Build a MarketSurge client from browser cookies and a JWT exchange.
 #[cfg(not(test))]
 pub async fn make_client() -> Result<Client, i32> {
@@ -10,10 +12,10 @@ pub async fn make_client() -> Result<Client, i32> {
         Err(err) => {
             if err.is_auth_error() {
                 eprintln!("auth error: {err}");
-                Err(2)
+                Err(ExitCode::AuthError.code())
             } else {
                 eprintln!("client error: {err}");
-                Err(1)
+                Err(ExitCode::ApiError.code())
             }
         }
     }
@@ -29,10 +31,10 @@ pub async fn make_client() -> Result<Client, i32> {
 pub fn handle_api_error(err: ClientError) -> i32 {
     if err.is_auth_error() {
         eprintln!("auth error: {err}");
-        2
+        ExitCode::AuthError.code()
     } else {
         eprintln!("API error: {err}");
-        1
+        ExitCode::ApiError.code()
     }
 }
 
@@ -49,12 +51,12 @@ mod tests {
     }
 
     #[test]
-    fn test_handle_api_error_auth_returns_2() {
-        assert_eq!(handle_api_error(status_error(401)), 2);
+    fn test_handle_api_error_auth_returns_auth_error() {
+        assert_eq!(handle_api_error(status_error(401)), 4);
     }
 
     #[test]
-    fn test_handle_api_error_other_returns_1() {
-        assert_eq!(handle_api_error(status_error(500)), 1);
+    fn test_handle_api_error_other_returns_api_error() {
+        assert_eq!(handle_api_error(status_error(500)), 3);
     }
 }

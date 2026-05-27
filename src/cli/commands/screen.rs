@@ -112,7 +112,7 @@ async fn execute_run(args: &RunArgs, fields: &[String]) -> i32 {
         // Resolve name to ID via coach tree; falls back to input as-is.
         let Some(screen_id) = resolve_screen_id(&client, &screen_id_or_name).await? else {
             error!("{IBD_50_LIMITATION}");
-            return Err(1);
+            return Err(crate::cli::common::exit::ExitCode::NoResults.code());
         };
 
         let input = crate::screen::RunScreenInput {
@@ -131,7 +131,7 @@ async fn execute_run(args: &RunArgs, fields: &[String]) -> i32 {
             Ok(response) => response,
             Err(err) if is_ibd_50_name(&screen_id_or_name) && is_not_found_error(&err) => {
                 error!("{IBD_50_LIMITATION}");
-                return Err(1);
+                return Err(crate::cli::common::exit::ExitCode::NoResults.code());
             }
             Err(err) => return Err(crate::cli::common::auth::handle_api_error(err)),
         };

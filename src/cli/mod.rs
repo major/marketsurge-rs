@@ -14,6 +14,8 @@ pub use args::*;
 
 use clap::Parser;
 
+use common::exit::ExitCode;
+
 /// No-op stub so the binary compiles under `cargo-llvm-cov`.
 ///
 /// Coverage instrumentation excludes the real `handle` functions (which call
@@ -22,7 +24,7 @@ use clap::Parser;
 /// directly.
 #[cfg(coverage)]
 pub async fn run() -> i32 {
-    0
+    ExitCode::Success.code()
 }
 
 /// Prints help for a command group when invoked without a subcommand.
@@ -35,7 +37,7 @@ fn print_subcommand_help(name: &str) -> i32 {
         let mut sub = sub.clone();
         let _ = sub.print_help();
     }
-    0
+    ExitCode::Success.code()
 }
 
 /// Parses CLI arguments, routes to the appropriate command handler, and returns
@@ -76,7 +78,7 @@ pub async fn run() -> i32 {
         },
         Commands::Completions(args) => {
             commands::completions::handle(args);
-            0
+            ExitCode::Success.code()
         }
         Commands::Schema => commands::schema::handle(fields),
     }
