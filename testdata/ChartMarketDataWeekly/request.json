@@ -6,7 +6,7 @@
     "where": {
       "startDateTime": { "eq": "2024-05-01T00:00:00.000Z" },
       "endDateTime": { "eq": "2025-05-02T23:59:59.000Z" },
-      "timeSeriesType": { "eq": "ONE_WEEK" },
+      "timeSeriesType": { "eq": "P7D" },
       "includeIntradayData": true
     }
   },
