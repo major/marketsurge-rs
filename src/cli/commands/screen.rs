@@ -5,9 +5,10 @@ use crate::coach::{CoachTreeNode, CoachTreeResponse};
 use crate::screen::{ResponseValue, ScreenEntry, ScreensResponse};
 use clap::{Args, Subcommand};
 use serde::Serialize;
-use tracing::{error, instrument};
+use tracing::instrument;
 
 use crate::cli::common::command::{api_call, run_client_command};
+use crate::cli::common::error::render_no_results_error;
 use crate::cli::common::rows::flatten_response_rows;
 
 const IBD_50_LIMITATION: &str = "MarketSurge did not expose an official IBD 50 screen in the coach tree. Try `screen list --query ibd`, `screen list --coach`, or `tree coach` for currently exposed lists such as EF-50.";
@@ -111,8 +112,7 @@ async fn execute_run(args: &RunArgs, fields: &[String]) -> i32 {
     run_client_command(fields, |client| async move {
         // Resolve name to ID via coach tree; falls back to input as-is.
         let Some(screen_id) = resolve_screen_id(&client, &screen_id_or_name).await? else {
-            error!("{IBD_50_LIMITATION}");
-            return Err(crate::cli::common::exit::ExitCode::NoResults.code());
+            return Err(render_no_results_error(IBD_50_LIMITATION));
         };
 
         let input = crate::screen::RunScreenInput {
@@ -130,8 +130,7 @@ async fn execute_run(args: &RunArgs, fields: &[String]) -> i32 {
         let response = match client.run_screen(input).await {
             Ok(response) => response,
             Err(err) if is_ibd_50_name(&screen_id_or_name) && is_not_found_error(&err) => {
-                error!("{IBD_50_LIMITATION}");
-                return Err(crate::cli::common::exit::ExitCode::NoResults.code());
+                return Err(render_no_results_error(IBD_50_LIMITATION));
             }
             Err(err) => return Err(crate::cli::common::auth::handle_api_error(err)),
         };

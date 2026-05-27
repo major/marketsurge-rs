@@ -4,6 +4,8 @@
 pub mod auth;
 /// Shared command execution helpers.
 pub mod command;
+/// Structured CLI error rendering.
+pub mod error;
 /// Stable process exit-code contract.
 pub mod exit;
 /// Shared tabular response helpers.

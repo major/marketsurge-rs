@@ -43,8 +43,8 @@ fn stderr(output: &Output) -> String {
     String::from_utf8(output.stderr.clone()).expect("stderr should be UTF-8")
 }
 
-fn combined_output(output: &Output) -> String {
-    format!("{}{}", stdout(output), stderr(output))
+fn stderr_json(output: &Output) -> serde_json::Value {
+    serde_json::from_str(&stderr(output)).expect("stderr should be valid JSON")
 }
 
 #[test]
@@ -76,7 +76,7 @@ fn schema_returns_exit_code_0_and_valid_json() {
     assert!(stderr(&output).is_empty(), "schema should not write stderr");
 
     let schema: serde_json::Value = serde_json::from_str(&stdout(&output)).unwrap();
-    assert_eq!(schema["schema_version"], 2);
+    assert_eq!(schema["schema_version"], 3);
     assert_eq!(schema["binary"], "marketsurge-agent");
     assert_eq!(schema["version"], env!("CARGO_PKG_VERSION"));
     assert_eq!(
@@ -120,6 +120,12 @@ fn schema_returns_exit_code_0_and_valid_json() {
             .as_array()
             .is_some_and(|commands| { commands.iter().any(|command| command["name"] == "schema") })
     );
+    assert_eq!(schema["errors"]["fields"][0]["name"], "kind");
+    assert!(schema["errors"]["kinds"].as_array().is_some_and(|kinds| {
+        kinds
+            .iter()
+            .any(|kind| kind["kind"] == "rate_limit" && kind["exit_code"] == 3)
+    }));
 
     let line_count = stdout(&output).lines().count();
     assert_eq!(line_count, 1, "schema should be compact single-line JSON");
@@ -136,7 +142,7 @@ fn schema_honors_global_field_selection() {
     let schema: serde_json::Value = serde_json::from_str(&stdout(&output)).unwrap();
     assert_eq!(
         schema,
-        serde_json::json!({"schema_version": 2, "binary": "marketsurge-agent"})
+        serde_json::json!({"schema_version": 3, "binary": "marketsurge-agent"})
     );
 }
 
@@ -166,9 +172,38 @@ fn invalid_flag_returns_exit_code_2() {
         stdout(&output).is_empty(),
         "invalid flags should not write stdout"
     );
+    let error = stderr_json(&output);
+    assert_eq!(error["kind"], "usage");
+    assert_eq!(error["exit_code"], 2);
     assert!(
-        stderr(&output).contains("unexpected argument '--definitely-invalid'"),
-        "invalid flag should use clap's error path"
+        error["message"]
+            .as_str()
+            .is_some_and(|message| message.contains("unexpected argument '--definitely-invalid'")),
+        "usage error should preserve clap's message"
+    );
+    assert!(error["suggestion"].is_string());
+}
+
+#[test]
+#[cfg_attr(coverage, ignore)]
+fn invalid_query_writes_structured_stderr() {
+    let output = output(&["screen", "adhoc", "--query", "{"]);
+
+    assert_eq!(output.status.code(), Some(2));
+    assert!(
+        stdout(&output).is_empty(),
+        "structured command usage errors should not write stdout"
+    );
+
+    let error = stderr_json(&output);
+    assert_eq!(error["kind"], "usage");
+    assert_eq!(error["exit_code"], 2);
+    assert_eq!(error["command"], "screen");
+    assert!(
+        error["message"]
+            .as_str()
+            .is_some_and(|message| message.contains("invalid --query JSON")),
+        "usage error should include the invalid query context"
     );
 }
 
@@ -179,8 +214,18 @@ fn missing_subcommand_returns_exit_code_2() {
 
     assert_eq!(output.status.code(), Some(2));
     assert!(
-        combined_output(&output).contains("Usage: marketsurge-agent [OPTIONS] <COMMAND>"),
-        "missing subcommand should print help"
+        stdout(&output).is_empty(),
+        "usage errors should not write stdout"
+    );
+
+    let error = stderr_json(&output);
+    assert_eq!(error["kind"], "usage");
+    assert_eq!(error["exit_code"], 2);
+    assert!(
+        error["message"]
+            .as_str()
+            .is_some_and(|message| message.contains("Usage: marketsurge-agent [OPTIONS] <COMMAND>")),
+        "missing subcommand should include usage"
     );
 }
 
@@ -191,8 +236,18 @@ fn missing_nested_subcommand_returns_exit_code_2() {
 
     assert_eq!(output.status.code(), Some(2));
     assert!(
-        combined_output(&output).contains("Usage: marketsurge-agent analysis [OPTIONS] <COMMAND>"),
-        "missing nested subcommands should print group usage"
+        stdout(&output).is_empty(),
+        "usage errors should not write stdout"
+    );
+
+    let error = stderr_json(&output);
+    assert_eq!(error["kind"], "usage");
+    assert_eq!(error["exit_code"], 2);
+    assert!(
+        error["message"].as_str().is_some_and(
+            |message| message.contains("Usage: marketsurge-agent analysis [OPTIONS] <COMMAND>")
+        ),
+        "missing nested subcommands should include group usage"
     );
 }
 
@@ -206,15 +261,20 @@ fn unknown_command_returns_exit_code_2() {
         stdout(&output).is_empty(),
         "unknown commands should not write stdout"
     );
+    let error = stderr_json(&output);
+    assert_eq!(error["kind"], "usage");
+    assert_eq!(error["exit_code"], 2);
     assert!(
-        stderr(&output).contains("unrecognized subcommand 'not-a-command'"),
-        "unknown commands should use clap's error path"
+        error["message"]
+            .as_str()
+            .is_some_and(|message| message.contains("unrecognized subcommand 'not-a-command'")),
+        "unknown commands should preserve clap's message"
     );
 }
 
 #[test]
 #[cfg_attr(coverage, ignore)]
-fn missing_browser_cookies_return_exit_code_4() {
+fn missing_browser_cookies_write_structured_stderr() {
     let output = output_without_browser_cookies(&["analysis", "ratings", "AAPL"]);
 
     assert_eq!(output.status.code(), Some(4));
@@ -222,8 +282,16 @@ fn missing_browser_cookies_return_exit_code_4() {
         stdout(&output).is_empty(),
         "auth failures should not write stdout"
     );
+    let error = stderr_json(&output);
+    assert_eq!(error["kind"], "auth_error");
+    assert_eq!(error["exit_code"], 4);
+    assert_eq!(error["status_code"], 401);
+    assert_eq!(error["command"], "analysis");
     assert!(
-        stderr(&output).contains("auth error:"),
-        "auth failures should identify the auth error path"
+        error["message"]
+            .as_str()
+            .is_some_and(|message| message.contains("no cookies found")),
+        "auth error should preserve the underlying client message"
     );
+    assert!(error["suggestion"].is_string());
 }

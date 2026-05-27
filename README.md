@@ -33,7 +33,7 @@ Requires Rust 1.95.0 or later.
 
 The CLI reads browser cookies from Firefox automatically for authentication. Log in to [MarketSurge](https://marketsurge.investors.com) in your browser first, then run commands.
 
-Output goes to stdout as compact JSON with all fields included by default. Use `--fields` with a comma-delimited list to keep only selected top-level JSON fields. Pipe through `jq` for pretty-printing. Logs and errors go to stderr.
+Output goes to stdout as compact JSON with all fields included by default. Use `--fields` with a comma-delimited list to keep only selected top-level JSON fields. Pipe through `jq` for pretty-printing. Failures emit structured JSON on stderr.
 
 ```bash
 # Fund ownership summary for a stock
@@ -58,7 +58,13 @@ marketsurge-agent schema | jq '.commands | length'
 
 ### Schema introspection
 
-`marketsurge-agent schema` dumps the CLI surface as compact JSON for scripts and agent tooling. It does not read browser cookies or make network requests. The schema shape is experimental; `schema_version: 2` includes the binary name, package version, exit-code metadata, command metadata, and visible command arguments.
+`marketsurge-agent schema` dumps the CLI surface as compact JSON for scripts and agent tooling. It does not read browser cookies or make network requests. The schema shape is experimental; `schema_version: 3` includes the binary name, package version, exit-code metadata, structured error metadata, command metadata, and visible command arguments.
+
+### Structured errors
+
+Failures are written as compact JSON to stderr while stdout stays reserved for successful command output. Structured errors always include `kind`, `message`, and `exit_code`. They may include `status_code`, `retry_after`, `command`, and `suggestion` when that context is available.
+
+Documented `kind` values are `usage`, `auth_error`, `api_error`, `rate_limit`, `internal_error`, and `no_results`. The `schema` command includes this contract in its `errors` field.
 
 ### Exit codes
 

@@ -44,7 +44,18 @@ fn print_subcommand_help(name: &str) -> i32 {
 /// the process exit code.
 #[cfg(not(coverage))]
 pub async fn run() -> i32 {
-    let cli = Cli::parse();
+    let cli = match Cli::try_parse() {
+        Ok(cli) => cli,
+        Err(err) => {
+            if err.exit_code() != ExitCode::Success.code() {
+                return common::error::render_usage_error(&err);
+            }
+
+            let _ = err.print();
+            return err.exit_code();
+        }
+    };
+    common::error::set_command_name(command_name(&cli.command));
     let fields = cli.fields.as_slice();
 
     match &cli.command {
@@ -85,5 +96,21 @@ pub async fn run() -> i32 {
             ExitCode::Success.code()
         }
         Commands::Schema => commands::schema::handle(fields),
+    }
+}
+
+#[cfg(not(coverage))]
+fn command_name(command: &Commands) -> Option<&'static str> {
+    match command {
+        Commands::Market { .. } => Some("market"),
+        Commands::Analysis { .. } => Some("analysis"),
+        Commands::Screen { .. } => Some("screen"),
+        Commands::Ownership { .. } => Some("ownership"),
+        Commands::Industry { .. } => Some("industry"),
+        Commands::Navigation { .. } => Some("navigation"),
+        Commands::Watchlist { .. } => Some("watchlist"),
+        Commands::Auth { .. } => Some("auth"),
+        Commands::Completions(_) => Some("completions"),
+        Commands::Schema => Some("schema"),
     }
 }
