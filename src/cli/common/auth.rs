@@ -2,40 +2,26 @@
 
 use crate::{Client, ClientError};
 
-use super::exit::ExitCode;
+use super::error::render_client_error;
 
 /// Build a MarketSurge client from browser cookies and a JWT exchange.
-#[cfg(not(test))]
+#[cfg(not(any(test, coverage)))]
 pub async fn make_client() -> Result<Client, i32> {
     match Client::from_browser().await {
         Ok(client) => Ok(client),
-        Err(err) => {
-            if err.is_auth_error() {
-                eprintln!("auth error: {err}");
-                Err(ExitCode::AuthError.code())
-            } else {
-                eprintln!("client error: {err}");
-                Err(ExitCode::ApiError.code())
-            }
-        }
+        Err(err) => Err(render_client_error(&err)),
     }
 }
 
 /// Build a test client without reading browser cookies.
-#[cfg(test)]
+#[cfg(any(test, coverage))]
 pub async fn make_client() -> Result<Client, i32> {
     Client::new(crate::ClientConfig::default()).map_err(handle_api_error)
 }
 
 /// Convert API errors into CLI exit codes and messages.
 pub fn handle_api_error(err: ClientError) -> i32 {
-    if err.is_auth_error() {
-        eprintln!("auth error: {err}");
-        ExitCode::AuthError.code()
-    } else {
-        eprintln!("API error: {err}");
-        ExitCode::ApiError.code()
-    }
+    render_client_error(&err)
 }
 
 #[cfg(test)]

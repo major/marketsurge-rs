@@ -5,7 +5,7 @@ use std::io::{self, Write};
 use serde::Serialize;
 use serde_json::{Map, Value};
 
-use crate::cli::common::exit::ExitCode;
+use crate::cli::common::error::render_internal_error;
 
 /// Writes `value` as compact JSON to stdout, newline-terminated.
 pub fn print_json<T: Serialize>(value: &T, fields: &[String]) -> io::Result<()> {
@@ -24,10 +24,7 @@ pub fn print_json<T: Serialize>(value: &T, fields: &[String]) -> io::Result<()> 
 pub fn finish_output(result: io::Result<()>) -> i32 {
     match result {
         Ok(()) => 0,
-        Err(err) => {
-            eprintln!("output error: {err}");
-            ExitCode::InternalError.code()
-        }
+        Err(err) => render_internal_error(err.to_string()),
     }
 }
 

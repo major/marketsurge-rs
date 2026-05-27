@@ -8,6 +8,7 @@ use crate::cli::SymbolsArgs;
 use crate::market_data::MdMarketDataItem;
 
 use crate::cli::common::command::{api_call, run_command, zip_symbols};
+use crate::cli::common::error::render_api_error;
 
 /// Flat output record for a single symbol's market data snapshot.
 ///
@@ -286,15 +287,16 @@ pub async fn handle(args: &SymbolsArgs, fields: &[String]) -> i32 {
 
         let records = flatten_market_data(&symbol_refs, &response.market_data);
         if all_rows_failed_to_decode(&records) {
-            for record in &records {
-                if let Some(error) = &record.decode_error {
-                    eprintln!(
-                        "market-data decode error for {}: {error}",
-                        record.symbol.as_str()
-                    );
-                }
-            }
-            return Err(crate::cli::common::exit::ExitCode::ApiError.code());
+            let message = records
+                .iter()
+                .filter_map(|record| {
+                    record.decode_error.as_ref().map(|error| {
+                        format!("market-data decode error for {}: {error}", record.symbol)
+                    })
+                })
+                .collect::<Vec<_>>()
+                .join("; ");
+            return Err(render_api_error(message));
         }
 
         Ok(records)
