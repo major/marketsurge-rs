@@ -79,13 +79,41 @@ fn schema_returns_exit_code_0_and_valid_json() {
     assert_eq!(schema["schema_version"], 2);
     assert_eq!(schema["binary"], "marketsurge-agent");
     assert_eq!(schema["version"], env!("CARGO_PKG_VERSION"));
-    assert!(
-        schema["exit_codes"].as_array().is_some_and(|codes| {
-            codes
-                .iter()
-                .any(|code| code["code"] == 4 && code["name"] == "auth_error")
-        }),
-        "schema should expose the auth error exit code"
+    assert_eq!(
+        schema["exit_codes"],
+        serde_json::json!([
+            {
+                "code": 0,
+                "name": "success",
+                "description": "command completed successfully"
+            },
+            {
+                "code": 1,
+                "name": "internal_error",
+                "description": "unexpected internal error, including local output failures"
+            },
+            {
+                "code": 2,
+                "name": "usage",
+                "description": "invalid arguments or command usage"
+            },
+            {
+                "code": 3,
+                "name": "api_error",
+                "description": "network failure, rate limit, or upstream MarketSurge API failure"
+            },
+            {
+                "code": 4,
+                "name": "auth_error",
+                "description": "browser cookies are missing, expired, or rejected"
+            },
+            {
+                "code": 5,
+                "name": "no_results",
+                "description": "command completed but produced no actionable result"
+            }
+        ]),
+        "schema should expose the full ordered exit-code contract"
     );
     assert!(
         schema["commands"]
@@ -153,6 +181,18 @@ fn missing_subcommand_returns_exit_code_2() {
     assert!(
         combined_output(&output).contains("Usage: marketsurge-agent [OPTIONS] <COMMAND>"),
         "missing subcommand should print help"
+    );
+}
+
+#[test]
+#[cfg_attr(coverage, ignore)]
+fn missing_nested_subcommand_returns_exit_code_2() {
+    let output = output(&["analysis"]);
+
+    assert_eq!(output.status.code(), Some(2));
+    assert!(
+        combined_output(&output).contains("Usage: marketsurge-agent analysis [OPTIONS] <COMMAND>"),
+        "missing nested subcommands should print group usage"
     );
 }
 

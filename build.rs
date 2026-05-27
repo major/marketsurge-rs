@@ -1,6 +1,7 @@
 fn main() {
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=src/cli/args.rs");
+    println!("cargo:rerun-if-changed=src/cli/common/exit.rs");
 
     if std::env::var_os("CARGO_FEATURE_CLI").is_some() {
         use std::io::Write;
