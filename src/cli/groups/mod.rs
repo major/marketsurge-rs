@@ -7,6 +7,7 @@
 //! `Commands` enum.
 
 pub mod analysis;
+pub mod auth;
 pub mod industry;
 pub mod market;
 pub mod navigation;

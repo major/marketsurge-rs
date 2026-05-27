@@ -29,6 +29,7 @@ fn main() {
             .subcommand(clap::Command::new("screen").about("List or run stock screens, including coach screens"))
             .subcommand(clap::Command::new("tree").about("Fetch coach or navigation trees"))
             .subcommand(clap::Command::new("watchlist").about("List watchlists, read symbols, or screen symbols"))
+            .subcommand(clap::Command::new("auth").about("Verify browser cookie and JWT readiness"))
             .subcommand(clap::Command::new("completions").about("Generate shell completion scripts"))
             .subcommand(clap::Command::new("schema").about("Dump the CLI surface as machine-readable JSON"));
 
