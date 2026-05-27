@@ -148,9 +148,14 @@ make doc        # cargo doc with -D warnings
 # Coverage (90% line minimum enforced)
 make coverage
 
+# Patch coverage (100% of changed lines; run before opening PRs)
+make patch-coverage
+
 # Live integration tests (requires browser cookies)
 make integration
 ```
+
+`make coverage` enforces 90% line coverage with `cargo llvm-cov`. `make patch-coverage` generates `lcov.info` and checks changed-line coverage against `main` with `diff-cover`, matching the Codecov patch gate used in CI. Override the comparison base with `PATCH_COVERAGE_BASE=<branch>`, lower the local threshold with `PATCH_COVERAGE_FAIL_UNDER=<percent>`, or use `DIFF_COVER='uvx diff-cover'` if `diff-cover` is not installed as a standalone command.
 
 ## License
 
