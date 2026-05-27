@@ -65,6 +65,23 @@ marketsurge-agent schema | jq '.commands | length'
 
 `ownership summary` returns one row per quarter. The `funds_float_pct_held` field is current-only in the MarketSurge ownership response and is repeated on each row for context; use `num_funds_held` for historical quarter-by-quarter trend analysis.
 
+### Ad-hoc screen queries
+
+`marketsurge-agent screen adhoc --query` accepts a raw JSON object with a `terms` array. Each term has a `left.name` field for the MarketSurge metric, an `operand`, and a `right` value object. Supported operands include `>`, `>=`, `<`, `<=`, and `=`. Numeric comparisons should pass numbers as strings because the MarketSurge API echoes query values that way.
+
+```bash
+# Single numeric criterion: Composite Rating at least 90
+marketsurge-agent screen adhoc --query '{"terms":[{"left":{"name":"CompositeRating"},"operand":">=","right":{"value":"90"}}]}'
+
+# Combined criteria: high RS Rating and EPS Rating
+marketsurge-agent screen adhoc --query '{"terms":[{"left":{"name":"RSRating"},"operand":">=","right":{"value":"90"}},{"left":{"name":"EPSRating"},"operand":">=","right":{"value":"80"}}]}'
+
+# Numeric comparison with selected output columns
+marketsurge-agent screen adhoc --query '{"terms":[{"left":{"name":"Price"},"operand":">","right":{"value":"50"}}]}' --columns Symbol,CompanyName,Price
+```
+
+Use `--columns` to choose returned columns. The query key in `left.name` is the MarketSurge field name, such as `CompositeRating`, `RSRating`, `EPSRating`, or `Price`.
+
 ### Doctor
 
 `marketsurge-agent doctor` runs diagnostic checks to verify the tool is configured correctly and can reach MarketSurge. Output is compact JSON written to stdout so scripts and LLM agents can consume the results. The command exits non-zero when any check fails.

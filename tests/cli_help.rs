@@ -74,3 +74,23 @@ fn nested_command_help_exits_successfully() {
     assert!(stdout.contains("funds_float_pct_held is current-only"));
     assert!(stdout.contains("Use num_funds_held for historical quarter-by-quarter trend analysis"));
 }
+
+#[test]
+#[cfg_attr(coverage, ignore)]
+fn screen_adhoc_help_documents_query_examples() {
+    let output = output(&["screen", "adhoc", "--help"]);
+
+    assert!(output.status.success(), "screen adhoc --help should exit 0");
+    assert!(
+        stderr(&output).is_empty(),
+        "screen adhoc --help should not write stderr"
+    );
+
+    let stdout = stdout(&output);
+    assert!(stdout.contains("--query <QUERY>"));
+    assert!(stdout.contains("Operators include >, >=, <, <=, and ="));
+    assert!(stdout.contains("CompositeRating"));
+    assert!(stdout.contains("RSRating"));
+    assert!(stdout.contains("EPSRating"));
+    assert!(stdout.contains("Price"));
+}

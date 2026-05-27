@@ -17,9 +17,12 @@ pub enum Cmd {
     Columns(ColumnsArgs),
 
     /// Run an ad-hoc screener query and return matching rows.
-    #[command(
-        after_help = "Examples:\n  marketsurge-agent screen adhoc --symbols AAPL,MSFT --columns Symbol,CompanyName,EPSRating\n  marketsurge-agent screen adhoc --screen-id 12345 --limit 100"
-    )]
+    #[command(after_help = r#"Examples:
+  marketsurge-agent screen adhoc --symbols AAPL,MSFT --columns Symbol,CompanyName,EPSRating
+  marketsurge-agent screen adhoc --screen-id 12345 --limit 100
+  marketsurge-agent screen adhoc --query '{"terms":[{"left":{"name":"CompositeRating"},"operand":">=","right":{"value":"90"}}]}'
+  marketsurge-agent screen adhoc --query '{"terms":[{"left":{"name":"RSRating"},"operand":">=","right":{"value":"90"}},{"left":{"name":"EPSRating"},"operand":">=","right":{"value":"80"}}]}'
+  marketsurge-agent screen adhoc --query '{"terms":[{"left":{"name":"Price"},"operand":">","right":{"value":"50"}}]}' --columns Symbol,CompanyName,Price"#)]
     Adhoc(AdhocScreenCommandArgs),
 
     /// List user screens, optionally including coach screens.

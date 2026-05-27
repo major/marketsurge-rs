@@ -20,7 +20,10 @@ pub struct AdhocScreenCommandArgs {
     pub columns: Vec<String>,
 
     /// Screener filter as raw JSON.
-    #[arg(long)]
+    #[arg(
+        long,
+        long_help = "Screener filter as raw JSON. Use a terms array where each term has left.name, operand, and right value fields. Operators include >, >=, <, <=, and =. Example: {\"terms\":[{\"left\":{\"name\":\"CompositeRating\"},\"operand\":\">=\",\"right\":{\"value\":\"90\"}}]}"
+    )]
     pub query: Option<String>,
 
     /// Use symbols from this saved screen ID.
