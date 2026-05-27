@@ -76,7 +76,7 @@ fn schema_returns_exit_code_0_and_valid_json() {
     assert!(stderr(&output).is_empty(), "schema should not write stderr");
 
     let schema: serde_json::Value = serde_json::from_str(&stdout(&output)).unwrap();
-    assert_eq!(schema["schema_version"], 3);
+    assert_eq!(schema["schema_version"], 4);
     assert_eq!(schema["binary"], "marketsurge-agent");
     assert_eq!(schema["version"], env!("CARGO_PKG_VERSION"));
     assert_eq!(
@@ -131,6 +131,23 @@ fn schema_returns_exit_code_0_and_valid_json() {
             .iter()
             .any(|kind| kind["kind"] == "warning" && kind["exit_code"] == 0)
     }));
+    assert!(schema["commands"].as_array().is_some_and(|commands| {
+        commands.iter().any(|command| {
+            command["name"] == "analysis"
+                && command["subcommands"]
+                    .as_array()
+                    .is_some_and(|subcommands| {
+                        subcommands.iter().any(|subcommand| {
+                            subcommand["name"] == "fundamentals"
+                                && subcommand["output_fields"]
+                                    .as_array()
+                                    .is_some_and(|fields| {
+                                        fields.iter().any(|field| field["name"] == "pct_change_yoy")
+                                    })
+                        })
+                    })
+        })
+    }));
 
     let line_count = stdout(&output).lines().count();
     assert_eq!(line_count, 1, "schema should be compact single-line JSON");
@@ -147,7 +164,47 @@ fn schema_honors_global_field_selection() {
     let schema: serde_json::Value = serde_json::from_str(&stdout(&output)).unwrap();
     assert_eq!(
         schema,
-        serde_json::json!({"schema_version": 3, "binary": "marketsurge-agent"})
+        serde_json::json!({"schema_version": 4, "binary": "marketsurge-agent"})
+    );
+}
+
+#[test]
+#[cfg_attr(coverage, ignore)]
+fn fields_warns_for_partial_invalid_selection() {
+    let output = output(&["--fields", "schema_version,definitely_missing", "schema"]);
+
+    assert_eq!(output.status.code(), Some(0));
+    let schema: serde_json::Value = serde_json::from_str(&stdout(&output)).unwrap();
+    assert_eq!(schema, serde_json::json!({"schema_version": 4}));
+
+    let warning = stderr_json(&output);
+    assert_eq!(warning["kind"], "warning");
+    assert_eq!(warning["exit_code"], 0);
+    assert!(warning["message"].as_str().is_some_and(|message| {
+        message.contains("unrecognized --fields name(s): definitely_missing")
+    }));
+}
+
+#[test]
+#[cfg_attr(coverage, ignore)]
+fn fields_rejects_all_invalid_selection() {
+    let output = output(&["--fields", "definitely_missing", "schema"]);
+
+    assert_eq!(output.status.code(), Some(2));
+    assert!(
+        stdout(&output).is_empty(),
+        "all-invalid field selections should not write stdout"
+    );
+    let error = stderr_json(&output);
+    assert_eq!(error["kind"], "usage");
+    assert_eq!(error["exit_code"], 2);
+    assert!(error["message"].as_str().is_some_and(|message| {
+        message.contains("unrecognized --fields name(s): definitely_missing")
+    }));
+    assert!(
+        error["suggestion"]
+            .as_str()
+            .is_some_and(|suggestion| { suggestion.contains("marketsurge-agent schema") })
     );
 }
 
