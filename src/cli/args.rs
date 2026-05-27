@@ -70,11 +70,11 @@ pub enum Commands {
         command: Option<groups::analysis::Cmd>,
     },
 
-    /// Stock screens: ad-hoc queries, list, and run.
+    /// Stock screens: column discovery, ad-hoc queries, list, and run.
     #[command(
         subcommand_required = true,
         arg_required_else_help = true,
-        after_help = "Examples:\n  marketsurge-agent screen adhoc --symbols AAPL,MSFT\n  marketsurge-agent screen list --query ibd\n  marketsurge-agent screen run 'IBD 50'"
+        after_help = "Examples:\n  marketsurge-agent screen columns\n  marketsurge-agent screen adhoc --symbols AAPL,MSFT\n  marketsurge-agent screen list --query ibd\n  marketsurge-agent screen run 'IBD 50'"
     )]
     Screen {
         /// Screen subcommand to run.

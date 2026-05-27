@@ -265,6 +265,8 @@ pub struct ScreenEntry {
     pub updated_at: Option<String>,
     /// Filter criteria.
     pub filter_criteria: Option<ScreenFilterCriteria>,
+    /// Result configuration (limit and sort).
+    pub result_config: Option<ScreenResultConfig>,
     /// Human-readable description.
     pub description: Option<String>,
     /// Creation timestamp.

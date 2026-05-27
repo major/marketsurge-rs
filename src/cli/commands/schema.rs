@@ -188,7 +188,6 @@ mod tests {
             "screen run should expose its required screen_id positional arg"
         );
     }
-
     #[test]
     fn payload_documents_ownership_summary_float_pct_semantics() {
         let payload = schema_payload();
@@ -210,5 +209,28 @@ mod tests {
         assert!(long_about.contains("funds_float_pct_held"));
         assert!(long_about.contains("current percentage of float held by funds"));
         assert!(long_about.contains("does not provide this value per quarter"));
+    }
+
+    #[test]
+    fn payload_includes_screen_columns_command() {
+        let payload = schema_payload();
+        let screen = payload
+            .commands
+            .iter()
+            .find(|command| command.name == "screen")
+            .expect("screen command should be present");
+        let columns = screen
+            .subcommands
+            .iter()
+            .find(|command| command.name == "columns")
+            .expect("screen columns command should be present");
+
+        assert!(
+            columns
+                .about
+                .as_deref()
+                .is_some_and(|about| about.contains("discovered")),
+            "screen columns should describe its discovery scope"
+        );
     }
 }

@@ -5,11 +5,17 @@ use clap::Subcommand;
 use crate::cli::ScreenArgs;
 use crate::cli::commands;
 use crate::cli::commands::adhoc_screen::AdhocScreenCommandArgs;
-use crate::cli::commands::screen::{ListArgs, RunArgs};
+use crate::cli::commands::screen::{ColumnsArgs, ListArgs, RunArgs};
 
 /// Screen subcommands.
 #[derive(Debug, Subcommand)]
 pub enum Cmd {
+    /// List screener column names discovered from MarketSurge screen definitions.
+    #[command(
+        after_help = "Examples:\n  marketsurge-agent screen columns\n  marketsurge-agent --fields name,sources screen columns"
+    )]
+    Columns(ColumnsArgs),
+
     /// Run an ad-hoc screener query and return matching rows.
     #[command(
         after_help = "Examples:\n  marketsurge-agent screen adhoc --symbols AAPL,MSFT --columns Symbol,CompanyName,EPSRating\n  marketsurge-agent screen adhoc --screen-id 12345 --limit 100"
@@ -33,6 +39,16 @@ pub enum Cmd {
 #[cfg(not(coverage))]
 pub(crate) async fn dispatch(cmd: &Cmd, fields: &[String]) -> i32 {
     match cmd {
+        Cmd::Columns(args) => {
+            let screen_cmd = commands::screen::ScreenCommand::Columns(args.clone());
+            commands::screen::handle(
+                &ScreenArgs {
+                    command: screen_cmd,
+                },
+                fields,
+            )
+            .await
+        }
         Cmd::Adhoc(args) => commands::adhoc_screen::handle(args, fields).await,
         Cmd::List(args) => {
             let screen_cmd = commands::screen::ScreenCommand::List(args.clone());
