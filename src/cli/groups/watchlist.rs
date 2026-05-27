@@ -23,9 +23,9 @@ pub enum Cmd {
     )]
     Symbols(WatchlistSymbolsArgs),
 
-    /// Screen symbols with selected MarketSurge data columns.
+    /// Screen symbols or watchlist symbols with selected MarketSurge data columns.
     #[command(
-        after_help = "Examples:\n  marketsurge-agent watchlist screen AAPL MSFT\n  marketsurge-agent watchlist screen AAPL --columns Symbol,EPSRating,RSRating"
+        after_help = "Examples:\n  marketsurge-agent watchlist screen AAPL MSFT\n  marketsurge-agent watchlist screen --symbols \"My Watchlist\"\n  marketsurge-agent watchlist screen AAPL --columns Symbol,EPSRating,RSRating"
     )]
     Screen(WatchlistScreenArgs),
 }

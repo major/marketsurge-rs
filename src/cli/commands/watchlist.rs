@@ -6,7 +6,7 @@ use serde::Serialize;
 use tracing::instrument;
 
 use crate::cli::WatchlistArgs;
-use crate::cli::common::command::{api_call, run_client_command, run_command};
+use crate::cli::common::command::{api_call, run_client_command};
 use crate::cli::common::error::{render_no_results_message, render_usage_message_with_suggestion};
 use crate::cli::common::rows::{flatten_response_rows, response_columns};
 
@@ -23,9 +23,9 @@ pub enum WatchlistCommand {
         after_help = "Examples:\n  marketsurge-agent watchlist symbols 12345\n  marketsurge-agent watchlist symbols \"My Watchlist\""
     )]
     Symbols(WatchlistSymbolsArgs),
-    /// Screen symbols with selected MarketSurge data columns.
+    /// Screen symbols or watchlist symbols with selected MarketSurge data columns.
     #[command(
-        after_help = "Examples:\n  marketsurge-agent watchlist screen AAPL MSFT\n  marketsurge-agent watchlist screen AAPL --columns Symbol,EPSRating,RSRating"
+        after_help = "Examples:\n  marketsurge-agent watchlist screen AAPL MSFT\n  marketsurge-agent watchlist screen --symbols \"My Watchlist\"\n  marketsurge-agent watchlist screen AAPL --columns Symbol,EPSRating,RSRating"
     )]
     Screen(WatchlistScreenArgs),
 }
@@ -49,8 +49,16 @@ pub struct WatchlistSymbolsArgs {
 #[derive(Debug, Args, Clone)]
 pub struct WatchlistScreenArgs {
     /// Symbols to screen, for example AAPL MSFT.
-    #[arg(required = true)]
+    #[arg(
+        value_name = "SYMBOL",
+        required_unless_present = "watchlist_symbols",
+        conflicts_with = "watchlist_symbols"
+    )]
     pub symbols: Vec<String>,
+
+    /// Watchlist ID or exact name from `watchlist list` to screen.
+    #[arg(long = "symbols", value_name = "WATCHLIST", id = "watchlist_symbols")]
+    pub watchlist_symbols: Option<String>,
 
     /// Output columns, comma-separated.
     #[arg(
@@ -92,6 +100,7 @@ pub struct WatchlistSymbolRecord {
 #[derive(Debug)]
 enum WatchlistResolutionError {
     NotFound { query: String },
+    Empty { query: String },
     MultipleMatches { query: String, matches: Vec<String> },
 }
 
@@ -214,6 +223,10 @@ fn render_watchlist_resolution_error(error: WatchlistResolutionError) -> i32 {
                     .to_string(),
             ),
         ),
+        WatchlistResolutionError::Empty { query } => render_no_results_message(
+            format!("Watchlist '{query}' has no resolved ticker symbols."),
+            Some("Add symbols to the watchlist or pass symbols directly.".to_string()),
+        ),
         WatchlistResolutionError::MultipleMatches { query, matches } => {
             render_usage_message_with_suggestion(
                 format!("Multiple watchlists matched '{query}'."),
@@ -280,6 +293,13 @@ fn watchlist_item_symbol(item: &crate::watchlist::WatchlistItem) -> Option<Strin
         })
 }
 
+fn watchlist_detail_symbols(watchlist: Option<&WatchlistDetail>) -> Vec<String> {
+    flatten_watchlist_symbols(watchlist)
+        .into_iter()
+        .filter_map(|record| record.symbol)
+        .collect()
+}
+
 fn looks_like_ticker(value: &str) -> bool {
     (1..=8).contains(&value.len())
         && value
@@ -311,8 +331,32 @@ async fn execute_symbols(args: &WatchlistSymbolsArgs, fields: &[String]) -> i32 
 #[cfg(not(coverage))]
 async fn execute_screen(args: &WatchlistScreenArgs, fields: &[String]) -> i32 {
     let columns = response_columns(&args.columns);
+    let symbols = args.symbols.clone();
+    let watchlist_id_or_name = args.watchlist_symbols.clone();
+    let watchlist_query = watchlist_id_or_name.clone();
 
-    run_command(&args.symbols, fields, |client, symbol_refs| async move {
+    run_client_command(fields, |client| async move {
+        let symbols = match watchlist_id_or_name {
+            Some(watchlist_id_or_name) => {
+                let watchlists = api_call(client.get_all_watchlist_names()).await?;
+                let watchlist_id =
+                    match resolve_watchlist_id_from_response(&watchlists, &watchlist_id_or_name) {
+                        Ok(watchlist_id) => watchlist_id,
+                        Err(error) => return Err(render_watchlist_resolution_error(error)),
+                    };
+                let response = api_call(client.flagged_symbols(&watchlist_id)).await?;
+                watchlist_detail_symbols(response.watchlist.as_ref())
+            }
+            None => symbols,
+        };
+        if symbols.is_empty() {
+            return Err(render_watchlist_resolution_error(
+                WatchlistResolutionError::Empty {
+                    query: watchlist_query.unwrap_or_else(|| "provided symbols".to_string()),
+                },
+            ));
+        }
+        let symbol_refs: Vec<&str> = symbols.iter().map(String::as_str).collect();
         let response = api_call(client.screener_watchlist_items(&symbol_refs, columns)).await?;
 
         let empty = Vec::new();
@@ -329,9 +373,11 @@ async fn execute_screen(args: &WatchlistScreenArgs, fields: &[String]) -> i32 {
 
 #[cfg(test)]
 mod tests {
+    use crate::cli::args::Cli;
     use crate::cli::common::exit::ExitCode;
     use crate::cli::common::test_support::{response_value, response_value_without_md_item};
     use crate::watchlist::WatchlistItem;
+    use clap::Parser;
 
     use super::*;
 
@@ -534,6 +580,68 @@ mod tests {
     }
 
     #[test]
+    fn watchlist_detail_symbols_keeps_only_resolved_tickers() {
+        let detail = WatchlistDetail {
+            id: Some("42".into()),
+            name: Some("Tech".into()),
+            last_modified_date_utc: None,
+            description: None,
+            items: vec![
+                WatchlistItem {
+                    symbol: Some("AAPL".into()),
+                    key: Some("AAPL".into()),
+                    dow_jones_key: None,
+                },
+                WatchlistItem {
+                    symbol: None,
+                    key: Some("opaque-key".into()),
+                    dow_jones_key: Some("US:NVDA".into()),
+                },
+                WatchlistItem {
+                    symbol: None,
+                    key: Some("a1b2c3d4".into()),
+                    dow_jones_key: Some("13-3122".into()),
+                },
+            ],
+        };
+
+        let symbols = watchlist_detail_symbols(Some(&detail));
+
+        assert_eq!(symbols, vec!["AAPL", "NVDA"]);
+    }
+
+    #[test]
+    fn watchlist_screen_accepts_watchlist_symbols_flag() {
+        let cli = Cli::parse_from([
+            "marketsurge-agent",
+            "watchlist",
+            "screen",
+            "--symbols",
+            "Growth Picks",
+        ]);
+
+        let command = format!("{:?}", cli.command);
+
+        assert!(command.contains("symbols: []"));
+        assert!(command.contains("watchlist_symbols: Some(\"Growth Picks\")"));
+    }
+
+    #[test]
+    fn watchlist_screen_rejects_symbols_and_watchlist_symbols_together() {
+        let error = Cli::try_parse_from([
+            "marketsurge-agent",
+            "watchlist",
+            "screen",
+            "AAPL",
+            "--symbols",
+            "Growth Picks",
+        ])
+        .expect_err("positional symbols and --symbols should conflict");
+
+        assert_eq!(error.kind(), clap::error::ErrorKind::ArgumentConflict);
+    }
+
+    #[test]
     fn resolve_watchlist_id_accepts_exact_id() {
         let response = crate::watchlist::WatchlistNamesResponse {
             watchlists: vec![WatchlistSummary {
@@ -627,6 +735,15 @@ mod tests {
     fn render_watchlist_resolution_error_reports_no_results() {
         let exit_code = render_watchlist_resolution_error(WatchlistResolutionError::NotFound {
             query: "$(rm -rf /)".into(),
+        });
+
+        assert_eq!(exit_code, ExitCode::NoResults.code());
+    }
+
+    #[test]
+    fn render_watchlist_resolution_error_reports_empty_watchlist_as_no_results() {
+        let exit_code = render_watchlist_resolution_error(WatchlistResolutionError::Empty {
+            query: "Growth Picks".into(),
         });
 
         assert_eq!(exit_code, ExitCode::NoResults.code());
