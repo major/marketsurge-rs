@@ -46,7 +46,7 @@ pub struct OwnershipSummaryRecord {
 #[derive(Debug, Clone, Serialize)]
 pub struct FundOwnershipRecord {
     /// Stock ticker that was queried.
-    pub queried_symbol: String,
+    pub symbol: String,
     /// Fund ticker symbol.
     pub fund_symbol: Option<String>,
     /// Fund name.
@@ -264,7 +264,7 @@ fn flatten_fund_rows(
     response_values
         .iter()
         .map(|row| FundOwnershipRecord {
-            queried_symbol: symbol.to_string(),
+            symbol: symbol.to_string(),
             fund_symbol: cell_value(row, "Symbol"),
             fund_name: cell_value(row, "CompanyName"),
             holdings_pct: cell_value(row, "HoldingsPctFundAssetsHeld"),
@@ -498,13 +498,13 @@ mod tests {
         let records = flatten_fund_rows("AAPL", &rows);
 
         assert_eq!(records.len(), 2);
-        assert_eq!(records[0].queried_symbol, "AAPL");
+        assert_eq!(records[0].symbol, "AAPL");
         assert_eq!(records[0].fund_symbol.as_deref(), Some("VFIAX"));
         assert_eq!(records[0].fund_name.as_deref(), Some("Vanguard 500 Index"));
         assert_eq!(records[0].holdings_pct.as_deref(), Some("6.82"));
         assert_eq!(records[0].shares_held_1q_ago.as_deref(), Some("1000"));
         assert_eq!(records[0].date_1q_ago.as_deref(), Some("2026-03-31"));
-        assert_eq!(records[1].queried_symbol, "AAPL");
+        assert_eq!(records[1].symbol, "AAPL");
         assert_eq!(records[1].fund_symbol.as_deref(), Some("FXAIX"));
         assert_eq!(records[1].fund_name.as_deref(), Some("Fidelity 500 Index"));
         assert_eq!(records[1].holdings_pct.as_deref(), Some("5.10"));

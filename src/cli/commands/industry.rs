@@ -27,14 +27,14 @@ pub struct IndustryRsRecord {
     /// Ticker symbol.
     pub symbol: String,
     /// Industry group RS value (6-month current).
-    pub group_rs: Option<i64>,
+    pub group_rank: Option<i64>,
 }
 
 /// Flat output record for industry overview data.
 #[derive(Debug, Clone, Serialize)]
 pub struct IndustryOverviewRecord {
     /// Requested ticker symbol.
-    pub ticker: String,
+    pub symbol: String,
     /// MarketSurge industry identifier returned by the API.
     pub industry_id: String,
     /// Industry group name.
@@ -86,7 +86,7 @@ pub(super) fn flatten_industry_rs(
 ) -> Vec<IndustryRsRecord> {
     zip_symbols(symbols, market_data)
         .map(|(symbol, item)| {
-            let group_rs = item
+            let group_rank = item
                 .industry
                 .as_ref()
                 .and_then(|ind| ind.group_rs.first())
@@ -94,7 +94,7 @@ pub(super) fn flatten_industry_rs(
 
             IndustryRsRecord {
                 symbol: symbol.to_string(),
-                group_rs,
+                group_rank,
             }
         })
         .collect()
@@ -151,7 +151,7 @@ fn flatten_industry_overview(
                 .and_then(|v| v.formatted_value.clone());
 
             IndustryOverviewRecord {
-                ticker: symbol.to_string(),
+                symbol: symbol.to_string(),
                 industry_id,
                 name: industry.and_then(|i| i.name.clone()),
                 sector: industry.and_then(|i| i.sector.clone()),
@@ -229,9 +229,9 @@ mod tests {
 
         assert_eq!(records.len(), 2);
         assert_eq!(records[0].symbol, "AAPL");
-        assert_eq!(records[0].group_rs, Some(85));
+        assert_eq!(records[0].group_rank, Some(85));
         assert_eq!(records[1].symbol, "MSFT");
-        assert_eq!(records[1].group_rs, Some(42));
+        assert_eq!(records[1].group_rank, Some(42));
     }
 
     #[test]
@@ -251,7 +251,7 @@ mod tests {
 
         assert_eq!(records.len(), 1);
         assert_eq!(records[0].symbol, "AAPL");
-        assert_eq!(records[0].group_rs, None);
+        assert_eq!(records[0].group_rank, None);
     }
 
     // -----------------------------------------------------------------------
@@ -308,7 +308,7 @@ mod tests {
 
         assert_eq!(records.len(), 1);
         let r = &records[0];
-        assert_eq!(r.ticker, "AAPL");
+        assert_eq!(r.symbol, "AAPL");
         assert_eq!(r.industry_id, "13-4698");
         assert_eq!(r.name.as_deref(), Some("Elec-Semicondctor Fablss"));
         assert_eq!(r.sector.as_deref(), Some("CHIPS"));
@@ -340,7 +340,7 @@ mod tests {
 
         assert_eq!(records.len(), 1);
         let r = &records[0];
-        assert_eq!(r.ticker, "AAPL");
+        assert_eq!(r.symbol, "AAPL");
         assert_eq!(r.industry_id, "");
         assert!(r.name.is_none());
         assert!(r.sector.is_none());
@@ -411,7 +411,7 @@ mod tests {
 
         assert_eq!(records.len(), 1);
         let r = &records[0];
-        assert_eq!(r.ticker, "AAPL");
+        assert_eq!(r.symbol, "AAPL");
         assert_eq!(r.industry_id, "13-4698");
         assert_eq!(r.group_market_value_billions.as_deref(), Some("$12.34B"));
         assert_eq!(r.num_new_highs, Some(3));

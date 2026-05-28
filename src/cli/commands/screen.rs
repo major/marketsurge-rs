@@ -502,7 +502,7 @@ mod tests {
 
         let result = flatten_response_rows(&rows);
         assert_eq!(result.len(), 2);
-        assert_eq!(result[0].get("Symbol"), Some(&Some("AAPL".to_string())));
+        assert_eq!(result[0].get("symbol"), Some(&Some("AAPL".to_string())));
         assert_eq!(
             result[1].get("CompanyName"),
             Some(&Some("NVIDIA Corp".to_string()))
@@ -526,7 +526,7 @@ mod tests {
         let result = flatten_response_rows(&rows);
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].len(), 1);
-        assert_eq!(result[0].get("Symbol"), Some(&Some("TSLA".to_string())));
+        assert_eq!(result[0].get("symbol"), Some(&Some("TSLA".to_string())));
     }
 
     fn make_screens_response(entries: Vec<ScreenEntry>) -> ScreensResponse {

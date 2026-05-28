@@ -157,7 +157,7 @@ pub enum Commands {
 
     /// Dump the CLI surface as machine-readable JSON.
     #[command(
-        long_about = "Dump the CLI surface as machine-readable JSON. The output format is experimental and may change between versions. schema_version 4 documents top-level output fields for field-filterable commands.\n\nThis command does not read browser cookies and does not make any network requests.",
+        long_about = "Dump the CLI surface as machine-readable JSON. The output format is experimental and may change between versions. schema_version 5 documents normalized output field names for field-filterable commands.\n\nThis command does not read browser cookies and does not make any network requests.",
         after_help = "Examples:\n  marketsurge-agent schema\n  marketsurge-agent schema | jq '.commands | length'"
     )]
     Schema,

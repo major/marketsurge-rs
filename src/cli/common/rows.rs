@@ -15,11 +15,19 @@ pub(crate) fn flatten_response_rows(
             row.iter()
                 .filter_map(|cell| {
                     let name = cell.md_item.as_ref().and_then(|m| m.name.clone())?;
-                    Some((name, cell.value.clone()))
+                    Some((normalize_column_name(&name).to_string(), cell.value.clone()))
                 })
                 .collect()
         })
         .collect()
+}
+
+fn normalize_column_name(name: &str) -> &str {
+    match name {
+        "Symbol" => "symbol",
+        "RSRating" => "rs_rating",
+        _ => name,
+    }
 }
 
 /// Builds response column requests with no sort information.
@@ -46,7 +54,7 @@ pub(crate) fn truncate_records<T>(mut records: Vec<T>, limit: usize) -> Vec<T> {
 
 #[cfg(test)]
 mod tests {
-    use super::{flatten_response_rows, response_columns, truncate_records};
+    use super::{flatten_response_rows, normalize_column_name, response_columns, truncate_records};
     use crate::cli::common::test_support::{
         optional_response_value, response_value, response_value_without_md_item,
     };
@@ -67,9 +75,9 @@ mod tests {
         let flattened = flatten_response_rows(&rows);
 
         assert_eq!(flattened.len(), 2);
-        assert_eq!(flattened[0].get("Symbol"), Some(&Some("AAPL".to_string())));
+        assert_eq!(flattened[0].get("symbol"), Some(&Some("AAPL".to_string())));
         assert_eq!(flattened[0].get("RS"), Some(&None));
-        assert_eq!(flattened[1].get("Symbol"), Some(&Some("MSFT".to_string())));
+        assert_eq!(flattened[1].get("symbol"), Some(&Some("MSFT".to_string())));
         assert_eq!(flattened[1].get("RS"), Some(&Some("95".to_string())));
     }
 
@@ -85,7 +93,33 @@ mod tests {
 
         assert_eq!(flattened.len(), 1);
         assert_eq!(flattened[0].len(), 1);
-        assert_eq!(flattened[0].get("Symbol"), Some(&Some("AAPL".to_string())));
+        assert_eq!(flattened[0].get("symbol"), Some(&Some("AAPL".to_string())));
+    }
+
+    #[test]
+    fn flatten_response_rows_normalizes_known_column_names() {
+        let rows = vec![vec![
+            response_value("Symbol", Some("AAPL")),
+            response_value("RSRating", Some("92")),
+            response_value("CompanyName", Some("Apple")),
+        ]];
+
+        let flattened = flatten_response_rows(&rows);
+
+        assert_eq!(flattened[0].get("symbol"), Some(&Some("AAPL".to_string())));
+        assert_eq!(flattened[0].get("rs_rating"), Some(&Some("92".to_string())));
+        assert_eq!(
+            flattened[0].get("CompanyName"),
+            Some(&Some("Apple".to_string()))
+        );
+    }
+
+    #[test]
+    fn normalize_column_name_maps_known_columns() {
+        assert_eq!(normalize_column_name("Symbol"), "symbol");
+        assert_eq!(normalize_column_name("RSRating"), "rs_rating");
+        assert_eq!(normalize_column_name("CompanyName"), "CompanyName");
+        assert_eq!(normalize_column_name("EPSRating"), "EPSRating");
     }
 
     #[test]

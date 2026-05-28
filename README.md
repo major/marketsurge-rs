@@ -33,7 +33,7 @@ Requires Rust 1.95.0 or later.
 
 The CLI reads browser cookies from Firefox automatically for authentication. Log in to [MarketSurge](https://marketsurge.investors.com) in your browser first, then run commands.
 
-Output goes to stdout as compact JSON with all fields included by default. Use `--fields` with a comma-delimited list to keep only selected top-level JSON fields. Data-returning commands such as `market chart`, `analysis fundamentals`, `analysis ratings`, `ownership summary`, `ownership funds`, `industry rs`, and `industry overview` accept `--limit COUNT`; use `--limit 0` for no limit. Pipe through `jq` for pretty-printing. Failures emit structured JSON on stderr.
+Output goes to stdout as compact JSON with all fields included by default. Output field names use lowercase snake_case for stable `jq` and agent consumption, including `symbol` for ticker fields, `rs_rating` for RS ratings, and `group_rank` for industry group ranking fields. Use `--fields` with a comma-delimited list to keep only selected top-level JSON fields. Data-returning commands such as `market chart`, `analysis fundamentals`, `analysis ratings`, `ownership summary`, `ownership funds`, `industry rs`, and `industry overview` accept `--limit COUNT`; use `--limit 0` for no limit. Pipe through `jq` for pretty-printing. Failures emit structured JSON on stderr.
 
 ```bash
 # Fund ownership summary for a stock
@@ -132,7 +132,7 @@ Flag precedence: `RUST_LOG` overrides `--verbose` and `--debug`. When neither `-
 
 ### Schema introspection
 
-`marketsurge-agent schema` dumps the CLI surface as compact JSON for scripts and agent tooling. It does not read browser cookies or make network requests. The schema shape is experimental; `schema_version: 4` includes the binary name, package version, exit-code metadata, structured error metadata, command metadata, visible command arguments, and documented top-level output fields for field-filterable commands.
+`marketsurge-agent schema` dumps the CLI surface as compact JSON for scripts and agent tooling. It does not read browser cookies or make network requests. The schema shape is experimental; `schema_version: 5` includes the binary name, package version, exit-code metadata, structured error metadata, command metadata, visible command arguments, documented top-level output fields for field-filterable commands, and normalized output field names.
 
 ### Screen column discovery
 

@@ -777,7 +777,7 @@ mod tests {
 
         assert_eq!(records.len(), 1);
         assert_eq!(records[0].get("EPSRating"), Some(&Some("95".into())));
-        assert_eq!(records[0].get("RSRating"), Some(&Some("88".into())));
+        assert_eq!(records[0].get("rs_rating"), Some(&Some("88".into())));
     }
 
     #[test]

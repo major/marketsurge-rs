@@ -6,7 +6,7 @@
 
 Unofficial Rust client library and CLI for the MarketSurge platform. Not affiliated with, endorsed by, or sponsored by IBD, MarketSurge, or Dow Jones. Single package `rusty-marketsurge` with a `cli` feature (enabled by default) that builds the `marketsurge-agent` binary.
 
-The `marketsurge-agent schema` command dumps the CLI surface as experimental compact JSON for scripts and agent tooling. It uses Clap introspection, does not read browser cookies, and does not make network requests. `schema_version: 4` documents exit codes, structured stderr error fields, error kinds, and top-level output fields for field-filterable commands.
+The `marketsurge-agent schema` command dumps the CLI surface as experimental compact JSON for scripts and agent tooling. It uses Clap introspection, does not read browser cookies, and does not make network requests. `schema_version: 5` documents exit codes, structured stderr error fields, error kinds, top-level output fields for field-filterable commands, and normalized output field names.
 
 ## Package Layout
 

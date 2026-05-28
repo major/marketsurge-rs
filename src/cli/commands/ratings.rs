@@ -24,7 +24,7 @@ pub struct RatingsRecord {
     /// Letter grade (e.g. "A", "B").
     pub letter_value: Option<String>,
     /// Numeric RS rating value (1-99).
-    pub value: Option<i64>,
+    pub rs_rating: Option<i64>,
     /// Whether the RS line is at a new high.
     pub rs_line_new_high: Option<bool>,
 }
@@ -73,7 +73,7 @@ pub(super) fn flatten_ratings(
                 period: None,
                 period_offset: None,
                 letter_value: None,
-                value: None,
+                rs_rating: None,
                 rs_line_new_high,
             });
         } else {
@@ -83,7 +83,7 @@ pub(super) fn flatten_ratings(
                     period: snap.period.clone(),
                     period_offset: snap.period_offset.clone(),
                     letter_value: snap.letter_value.clone(),
-                    value: snap.value,
+                    rs_rating: snap.value,
                     rs_line_new_high,
                 });
             }
@@ -161,13 +161,13 @@ mod tests {
         assert_eq!(records[0].period.as_deref(), Some("DAILY"));
         assert_eq!(records[0].period_offset.as_deref(), Some("CURRENT"));
         assert_eq!(records[0].letter_value.as_deref(), Some("A"));
-        assert_eq!(records[0].value, Some(92));
+        assert_eq!(records[0].rs_rating, Some(92));
         assert_eq!(records[0].rs_line_new_high, Some(true));
         assert_eq!(records[1].symbol, "AAPL");
         assert_eq!(records[1].period.as_deref(), Some("WEEKLY"));
         assert_eq!(records[1].period_offset.as_deref(), Some("P1W_AGO"));
         assert_eq!(records[1].letter_value.as_deref(), Some("B"));
-        assert_eq!(records[1].value, Some(85));
+        assert_eq!(records[1].rs_rating, Some(85));
         assert_eq!(records[1].rs_line_new_high, Some(true));
     }
 
@@ -184,7 +184,7 @@ mod tests {
         assert_eq!(records[0].period, None);
         assert_eq!(records[0].period_offset, None);
         assert_eq!(records[0].letter_value, None);
-        assert_eq!(records[0].value, None);
+        assert_eq!(records[0].rs_rating, None);
         assert_eq!(records[0].rs_line_new_high, Some(true));
     }
 

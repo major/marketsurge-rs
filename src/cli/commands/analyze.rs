@@ -362,7 +362,7 @@ mod tests {
             period: Some("DAILY".to_string()),
             period_offset: Some("CURRENT".to_string()),
             letter_value: Some("A".to_string()),
-            value: Some(value),
+            rs_rating: Some(value),
             rs_line_new_high: Some(true),
         }
     }
@@ -380,10 +380,10 @@ mod tests {
         }
     }
 
-    fn industry(symbol: &str, group_rs: i64) -> IndustryRsRecord {
+    fn industry(symbol: &str, group_rank: i64) -> IndustryRsRecord {
         IndustryRsRecord {
             symbol: symbol.to_string(),
-            group_rs: Some(group_rs),
+            group_rank: Some(group_rank),
         }
     }
 
@@ -487,14 +487,14 @@ mod tests {
             Some(AnalyzeSection::Data(row)) if row.comp_rating == Some(95)
         ));
         assert!(
-            matches!(&records[0].ratings, Some(AnalyzeSection::Data(rows)) if rows[0].value == Some(93))
+            matches!(&records[0].ratings, Some(AnalyzeSection::Data(rows)) if rows[0].rs_rating == Some(93))
         );
         assert!(matches!(
             &records[0].fundamentals,
             Some(AnalyzeSection::Data(rows)) if rows[0].metric == "reported_eps"
         ));
         assert!(
-            matches!(&records[1].industry, Some(AnalyzeSection::Data(row)) if row.group_rs == Some(71))
+            matches!(&records[1].industry, Some(AnalyzeSection::Data(row)) if row.group_rank == Some(71))
         );
         assert!(matches!(
             &records[1].ownership,
