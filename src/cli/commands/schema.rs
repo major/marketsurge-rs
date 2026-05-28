@@ -93,7 +93,7 @@ const ANALYSIS_RATINGS_OUTPUT_FIELDS: &[OutputFieldSchema] = &[
     output_field("period", "string", false, "rating period"),
     output_field("period_offset", "string", false, "rating period offset"),
     output_field("letter_value", "string", false, "letter rating value"),
-    output_field("value", "integer", false, "numeric RS rating value"),
+    output_field("rs_rating", "integer", false, "numeric RS rating value"),
     output_field(
         "rs_line_new_high",
         "boolean",
@@ -212,12 +212,7 @@ const OWNERSHIP_SUMMARY_OUTPUT_FIELDS: &[OutputFieldSchema] = &[
 ];
 
 const OWNERSHIP_FUNDS_OUTPUT_FIELDS: &[OutputFieldSchema] = &[
-    output_field(
-        "queried_symbol",
-        "string",
-        true,
-        "stock ticker that was queried",
-    ),
+    output_field("symbol", "string", true, "stock ticker that was queried"),
     output_field("fund_symbol", "string", false, "fund ticker symbol"),
     output_field("fund_name", "string", false, "fund name"),
     output_field(
@@ -278,11 +273,11 @@ const OWNERSHIP_FUNDS_OUTPUT_FIELDS: &[OutputFieldSchema] = &[
 
 const INDUSTRY_RS_OUTPUT_FIELDS: &[OutputFieldSchema] = &[
     output_field("symbol", "string", true, "ticker symbol"),
-    output_field("group_rs", "integer", false, "industry group RS value"),
+    output_field("group_rank", "integer", false, "industry group rank"),
 ];
 
 const INDUSTRY_OVERVIEW_OUTPUT_FIELDS: &[OutputFieldSchema] = &[
-    output_field("ticker", "string", true, "requested ticker symbol"),
+    output_field("symbol", "string", true, "requested ticker symbol"),
     output_field(
         "industry_id",
         "string",
@@ -409,7 +404,7 @@ fn schema_payload() -> SchemaPayload {
     let commands = cmd.get_subcommands().map(command_schema).collect();
 
     SchemaPayload {
-        schema_version: 4,
+        schema_version: 5,
         binary: "marketsurge-agent",
         version: env!("CARGO_PKG_VERSION"),
         exit_codes: EXIT_CODES,
@@ -484,7 +479,7 @@ mod tests {
     fn payload_contains_top_level_metadata() {
         let payload = schema_payload();
 
-        assert_eq!(payload.schema_version, 4);
+        assert_eq!(payload.schema_version, 5);
         assert_eq!(payload.binary, "marketsurge-agent");
         assert_eq!(payload.version, env!("CARGO_PKG_VERSION"));
         assert_eq!(payload.exit_codes.len(), 6);

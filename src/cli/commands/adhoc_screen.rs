@@ -288,10 +288,10 @@ mod tests {
         let result = flatten_response_rows(&rows);
 
         assert_eq!(result.len(), 3);
-        assert_eq!(result[0].get("Symbol").unwrap(), &Some("AAPL".to_string()));
+        assert_eq!(result[0].get("symbol").unwrap(), &Some("AAPL".to_string()));
         assert_eq!(result[0].get("RS").unwrap(), &Some("95".to_string()));
-        assert_eq!(result[1].get("Symbol").unwrap(), &Some("NVDA".to_string()));
-        assert_eq!(result[2].get("Symbol").unwrap(), &Some("TSLA".to_string()));
+        assert_eq!(result[1].get("symbol").unwrap(), &Some("NVDA".to_string()));
+        assert_eq!(result[2].get("symbol").unwrap(), &Some("TSLA".to_string()));
     }
 
     #[test]
@@ -313,7 +313,7 @@ mod tests {
 
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].len(), 1);
-        assert_eq!(result[0].get("Symbol").unwrap(), &Some("AAPL".to_string()));
+        assert_eq!(result[0].get("symbol").unwrap(), &Some("AAPL".to_string()));
     }
 
     #[test]

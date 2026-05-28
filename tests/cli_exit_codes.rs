@@ -76,7 +76,7 @@ fn schema_returns_exit_code_0_and_valid_json() {
     assert!(stderr(&output).is_empty(), "schema should not write stderr");
 
     let schema: serde_json::Value = serde_json::from_str(&stdout(&output)).unwrap();
-    assert_eq!(schema["schema_version"], 4);
+    assert_eq!(schema["schema_version"], 5);
     assert_eq!(schema["binary"], "marketsurge-agent");
     assert_eq!(schema["version"], env!("CARGO_PKG_VERSION"));
     assert_eq!(
@@ -164,7 +164,7 @@ fn schema_honors_global_field_selection() {
     let schema: serde_json::Value = serde_json::from_str(&stdout(&output)).unwrap();
     assert_eq!(
         schema,
-        serde_json::json!({"schema_version": 4, "binary": "marketsurge-agent"})
+        serde_json::json!({"schema_version": 5, "binary": "marketsurge-agent"})
     );
 }
 
@@ -175,7 +175,7 @@ fn fields_warns_for_partial_invalid_selection() {
 
     assert_eq!(output.status.code(), Some(0));
     let schema: serde_json::Value = serde_json::from_str(&stdout(&output)).unwrap();
-    assert_eq!(schema, serde_json::json!({"schema_version": 4}));
+    assert_eq!(schema, serde_json::json!({"schema_version": 5}));
 
     let warning = stderr_json(&output);
     assert_eq!(warning["kind"], "warning");
