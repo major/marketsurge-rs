@@ -2,19 +2,23 @@
 
 use clap::Subcommand;
 
-use crate::cli::SymbolsArgs;
+use crate::cli::SymbolLimitArgs;
 use crate::cli::commands;
 
 /// Analysis subcommands.
 #[derive(Debug, Subcommand)]
 pub enum Cmd {
     /// Fetch EPS, sales, and estimate fundamentals for symbols.
-    #[command(after_help = "Examples:\n  marketsurge-agent analysis fundamentals AAPL MSFT")]
-    Fundamentals(SymbolsArgs),
+    #[command(
+        after_help = "Examples:\n  marketsurge-agent analysis fundamentals AAPL MSFT\n  marketsurge-agent analysis fundamentals --limit 8 AAPL"
+    )]
+    Fundamentals(SymbolLimitArgs),
 
     /// Fetch relative strength ratings for symbols.
-    #[command(after_help = "Examples:\n  marketsurge-agent analysis ratings AAPL MSFT")]
-    Ratings(SymbolsArgs),
+    #[command(
+        after_help = "Examples:\n  marketsurge-agent analysis ratings AAPL MSFT\n  marketsurge-agent analysis ratings --limit 3 AAPL"
+    )]
+    Ratings(SymbolLimitArgs),
 }
 
 /// Dispatch to the appropriate command handler.

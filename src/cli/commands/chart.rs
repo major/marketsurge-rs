@@ -7,6 +7,7 @@ use tracing::instrument;
 use crate::chart::ChartMarketDataResponse;
 use crate::cli::ChartArgs;
 use crate::cli::common::command::{api_call, run_command, zip_symbols};
+use crate::cli::common::rows::truncate_records;
 
 /// Flat output record for a single OHLCV data point.
 ///
@@ -172,9 +173,9 @@ pub async fn handle(args: &ChartArgs, fields: &[String]) -> i32 {
                 .await?
             };
 
-            Ok(keep_last_bars_per_symbol(
-                flatten_chart_data(&symbol_refs, response),
-                args.days,
+            Ok(truncate_records(
+                keep_last_bars_per_symbol(flatten_chart_data(&symbol_refs, response), args.days),
+                args.limit.limit,
             ))
         },
     )
@@ -189,13 +190,14 @@ mod tests {
     use crate::chart::{
         ChartDataPoint, ChartMarketDataItem, ChartMarketDataResponse, ChartPricing, ChartTimeSeries,
     };
-    use crate::cli::{ChartArgs, SymbolsArgs};
+    use crate::cli::{ChartArgs, LimitArgs, SymbolsArgs};
 
     fn chart_args(weekly: bool, days: Option<u16>, start_date: Option<&str>) -> ChartArgs {
         ChartArgs {
             weekly,
             days,
             start_date: start_date.map(|date| date.parse().expect("valid test date")),
+            limit: LimitArgs::default(),
             symbols: SymbolsArgs {
                 symbols: vec!["AAPL".to_string()],
             },

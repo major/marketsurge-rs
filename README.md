@@ -33,7 +33,7 @@ Requires Rust 1.95.0 or later.
 
 The CLI reads browser cookies from Firefox automatically for authentication. Log in to [MarketSurge](https://marketsurge.investors.com) in your browser first, then run commands.
 
-Output goes to stdout as compact JSON with all fields included by default. Use `--fields` with a comma-delimited list to keep only selected top-level JSON fields. Pipe through `jq` for pretty-printing. Failures emit structured JSON on stderr.
+Output goes to stdout as compact JSON with all fields included by default. Use `--fields` with a comma-delimited list to keep only selected top-level JSON fields. Data-returning commands such as `market chart`, `analysis fundamentals`, `analysis ratings`, `ownership summary`, `ownership funds`, `industry rs`, and `industry overview` accept `--limit COUNT`; use `--limit 0` for no limit. Pipe through `jq` for pretty-printing. Failures emit structured JSON on stderr.
 
 ```bash
 # Fund ownership summary for a stock
@@ -45,6 +45,10 @@ marketsurge-agent --fields symbol,num_funds_held ownership summary AAPL
 # Fetch only recent chart bars or bars from a specific date
 marketsurge-agent market chart AAPL --days 10
 marketsurge-agent market chart AAPL --start-date 2026-05-01
+
+# Limit output rows after data is fetched
+marketsurge-agent analysis fundamentals --limit 8 AAPL
+marketsurge-agent ownership funds --limit 10 AAPL
 
 # Find saved watchlists or screens by ID or name, including punctuation-insensitive matches like IBD 50
 marketsurge-agent watchlist list --query ibd

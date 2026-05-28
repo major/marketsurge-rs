@@ -3,18 +3,22 @@
 use clap::Subcommand;
 
 use crate::cli::commands;
-use crate::cli::{IndustryArgs, SymbolsArgs};
+use crate::cli::{IndustryArgs, SymbolLimitArgs};
 
 /// Industry subcommands.
 #[derive(Debug, Subcommand)]
 pub enum Cmd {
     /// Fetch industry group relative strength ratings for symbols.
-    #[command(after_help = "Examples:\n  marketsurge-agent industry rs AAPL MSFT")]
-    Rs(SymbolsArgs),
+    #[command(
+        after_help = "Examples:\n  marketsurge-agent industry rs AAPL MSFT\n  marketsurge-agent industry rs --limit 5 AAPL MSFT"
+    )]
+    Rs(SymbolLimitArgs),
 
     /// Fetch industry rankings, sector, and breadth data for symbols.
-    #[command(after_help = "Examples:\n  marketsurge-agent industry overview AAPL MSFT")]
-    Overview(SymbolsArgs),
+    #[command(
+        after_help = "Examples:\n  marketsurge-agent industry overview AAPL MSFT\n  marketsurge-agent industry overview --limit 5 AAPL MSFT"
+    )]
+    Overview(SymbolLimitArgs),
 }
 
 /// Dispatch to the appropriate command handler.

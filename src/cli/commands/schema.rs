@@ -519,6 +519,13 @@ mod tests {
                 .any(|arg| { arg.name == "symbols" && arg.kind == "positional" && arg.required }),
             "ratings should expose its required symbols positional arg"
         );
+        assert!(
+            ratings
+                .args
+                .iter()
+                .any(|arg| { arg.name == "limit" && arg.kind == "option" && !arg.required }),
+            "ratings should expose its optional limit arg"
+        );
     }
 
     #[test]
@@ -635,6 +642,47 @@ mod tests {
                 .iter()
                 .any(|arg| { arg.name == "start_date" && arg.kind == "option" && !arg.required })
         );
+        assert!(
+            chart
+                .args
+                .iter()
+                .any(|arg| { arg.name == "limit" && arg.kind == "option" && !arg.required })
+        );
+    }
+
+    #[test]
+    fn payload_documents_limit_for_data_returning_commands() {
+        let payload = schema_payload();
+        let expected_paths = [
+            ["analysis", "fundamentals"],
+            ["analysis", "ratings"],
+            ["market", "chart"],
+            ["ownership", "summary"],
+            ["ownership", "funds"],
+            ["industry", "rs"],
+            ["industry", "overview"],
+        ];
+
+        for [group_name, command_name] in expected_paths {
+            let group = payload
+                .commands
+                .iter()
+                .find(|command| command.name == group_name)
+                .expect("command group should be present");
+            let command = group
+                .subcommands
+                .iter()
+                .find(|command| command.name == command_name)
+                .expect("subcommand should be present");
+
+            assert!(
+                command
+                    .args
+                    .iter()
+                    .any(|arg| arg.name == "limit" && arg.kind == "option" && !arg.required),
+                "{group_name} {command_name} should expose --limit"
+            );
+        }
     }
 
     #[test]
