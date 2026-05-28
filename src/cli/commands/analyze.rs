@@ -215,10 +215,11 @@ impl SectionSelection {
     }
 }
 
-fn analyze_output(records: Vec<AnalyzeRecord>) -> AnalyzeOutput {
-    match records.as_slice() {
-        [record] => AnalyzeOutput::Single(Box::new(record.clone())),
-        _ => AnalyzeOutput::Multiple(records),
+fn analyze_output(mut records: Vec<AnalyzeRecord>) -> AnalyzeOutput {
+    if records.len() == 1 {
+        AnalyzeOutput::Single(Box::new(records.remove(0)))
+    } else {
+        AnalyzeOutput::Multiple(records)
     }
 }
 
