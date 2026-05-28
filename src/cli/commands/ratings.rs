@@ -48,7 +48,10 @@ pub async fn handle(args: &SymbolLimitArgs, fields: &[String]) -> i32 {
     .await
 }
 
-fn flatten_ratings(symbol_refs: &[&str], response: RsRatingRiPanelResponse) -> Vec<RatingsRecord> {
+pub(super) fn flatten_ratings(
+    symbol_refs: &[&str],
+    response: RsRatingRiPanelResponse,
+) -> Vec<RatingsRecord> {
     let mut records = Vec::new();
 
     for (symbol, item) in zip_symbols(symbol_refs, &response.market_data) {

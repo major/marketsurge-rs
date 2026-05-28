@@ -165,7 +165,7 @@ fn cell_value(row: &[ResponseValue], name: &str) -> Option<String> {
 /// Symbols whose ownership is `None` are skipped. Symbols with ownership but
 /// an empty `fund_ownership_summary` produce a single record with no date or
 /// fund count.
-fn flatten_ownership_summary(
+pub(super) fn flatten_ownership_summary(
     symbols: &[&str],
     market_data: &[OwnershipItem],
 ) -> Vec<OwnershipSummaryRecord> {

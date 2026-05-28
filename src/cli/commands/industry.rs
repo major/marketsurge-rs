@@ -80,7 +80,7 @@ pub async fn handle(args: &IndustryArgs, fields: &[String]) -> i32 {
 }
 
 /// Transforms raw industry group RS response items into flat output records.
-fn flatten_industry_rs(
+pub(super) fn flatten_industry_rs(
     symbols: &[&str],
     market_data: &[IndustryGroupRsItem],
 ) -> Vec<IndustryRsRecord> {

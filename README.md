@@ -50,6 +50,10 @@ marketsurge-agent market chart AAPL --start-date 2026-05-01
 marketsurge-agent analysis fundamentals --limit 8 AAPL
 marketsurge-agent ownership funds --limit 10 AAPL
 
+# Combine snapshot, ratings, fundamentals, industry RS, and ownership summary
+marketsurge-agent analyze AAPL
+marketsurge-agent analyze --sections snapshot,ratings,fundamentals AAPL MSFT
+
 # Find saved watchlists or screens by ID or name, including punctuation-insensitive matches like IBD 50
 marketsurge-agent watchlist list --query ibd
 marketsurge-agent screen list --query ibd

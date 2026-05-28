@@ -356,6 +356,40 @@ const INDUSTRY_OVERVIEW_OUTPUT_FIELDS: &[OutputFieldSchema] = &[
     ),
 ];
 
+const ANALYZE_OUTPUT_FIELDS: &[OutputFieldSchema] = &[
+    output_field("symbol", "string", true, "ticker symbol"),
+    output_field(
+        "snapshot",
+        "object",
+        false,
+        "market snapshot data or a structured section error",
+    ),
+    output_field(
+        "ratings",
+        "array",
+        false,
+        "RS rating rows or a structured section error",
+    ),
+    output_field(
+        "fundamentals",
+        "array",
+        false,
+        "fundamental metric rows or a structured section error",
+    ),
+    output_field(
+        "industry",
+        "object",
+        false,
+        "industry RS data or a structured section error",
+    ),
+    output_field(
+        "ownership",
+        "array",
+        false,
+        "fund ownership summary rows or a structured section error",
+    ),
+];
+
 const fn output_field(
     name: &'static str,
     r#type: &'static str,
@@ -425,6 +459,7 @@ fn command_schema_with_path(command: &Command, parent_path: &[&str]) -> CommandS
 
 fn output_fields_for_command(path: &[&str]) -> &'static [OutputFieldSchema] {
     match path {
+        ["analyze"] => ANALYZE_OUTPUT_FIELDS,
         ["analysis", "fundamentals"] => ANALYSIS_FUNDAMENTALS_OUTPUT_FIELDS,
         ["analysis", "ratings"] => ANALYSIS_RATINGS_OUTPUT_FIELDS,
         ["market", "chart"] => MARKET_CHART_OUTPUT_FIELDS,
@@ -526,6 +561,35 @@ mod tests {
                 .any(|arg| { arg.name == "limit" && arg.kind == "option" && !arg.required }),
             "ratings should expose its optional limit arg"
         );
+    }
+
+    #[test]
+    fn payload_includes_analyze_command_contract() {
+        let payload = schema_payload();
+        let analyze = payload
+            .commands
+            .iter()
+            .find(|command| command.name == "analyze")
+            .expect("analyze command should be present");
+
+        assert!(
+            analyze
+                .args
+                .iter()
+                .any(|arg| { arg.name == "symbols" && arg.kind == "positional" && arg.required })
+        );
+        assert!(
+            analyze
+                .args
+                .iter()
+                .any(|arg| { arg.name == "sections" && arg.kind == "option" && !arg.required })
+        );
+        assert!(analyze.output_fields.iter().any(|field| {
+            field.name == "snapshot" && field.r#type == "object" && !field.required
+        }));
+        assert!(analyze.output_fields.iter().any(|field| {
+            field.name == "ratings" && field.r#type == "array" && !field.required
+        }));
     }
 
     #[test]
