@@ -2,6 +2,8 @@
 
 /// Ad-hoc stock screening command.
 pub mod adhoc_screen;
+/// Combined stock overview command.
+pub mod analyze;
 /// Auth: verify browser cookie and JWT readiness.
 pub mod auth;
 /// Chart OHLCV data command.

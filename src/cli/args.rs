@@ -1,5 +1,5 @@
 use chrono::NaiveDate;
-use clap::{Args, Parser, Subcommand};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 use clap_complete::Shell;
 
 use super::commands::industry::IndustryCommand;
@@ -47,6 +47,12 @@ pub struct Cli {
 /// Top-level command groups.
 #[derive(Debug, Subcommand)]
 pub enum Commands {
+    /// Combined single-call stock overview for agent consumers.
+    #[command(
+        after_help = "Examples:\n  marketsurge-agent analyze AAPL\n  marketsurge-agent analyze AAPL MSFT NVDA\n  marketsurge-agent analyze --sections snapshot,ratings,fundamentals AAPL"
+    )]
+    Analyze(AnalyzeArgs),
+
     /// Market data: chart OHLCV bars and broad snapshots.
     #[command(
         subcommand_required = true,
@@ -162,6 +168,33 @@ pub enum Commands {
         after_help = "Examples:\n  marketsurge-agent doctor\n  marketsurge-agent doctor --skip-network\n  marketsurge-agent doctor | jq .summary"
     )]
     Doctor(DoctorArgs),
+}
+
+/// Sections available in the combined analyze command.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum AnalyzeSectionArg {
+    /// Broad market snapshot fields.
+    Snapshot,
+    /// Relative strength rating history.
+    Ratings,
+    /// Fundamental reported and estimated metrics.
+    Fundamentals,
+    /// Industry relative strength.
+    Industry,
+    /// Fund ownership summary.
+    Ownership,
+}
+
+/// Arguments for the combined analyze command.
+#[derive(Debug, Args)]
+pub struct AnalyzeArgs {
+    /// Comma-delimited sections to include. Defaults to all sections.
+    #[arg(long, value_delimiter = ',', value_enum, value_name = "SECTION")]
+    pub sections: Vec<AnalyzeSectionArg>,
+
+    /// Ticker symbols and options.
+    #[command(flatten)]
+    pub symbols: SymbolsArgs,
 }
 
 /// Arguments for the chart command.
@@ -310,6 +343,49 @@ mod tests {
 
         assert_eq!(cli.fields, vec!["symbol", "num_funds_held"]);
         assert!(matches!(cli.command, Commands::Ownership { .. }));
+    }
+
+    #[test]
+    fn analyze_accepts_default_sections() {
+        let cli = Cli::parse_from(["marketsurge-agent", "analyze", "AAPL"]);
+
+        let command = format!("{:?}", cli.command);
+
+        assert!(command.contains("Analyze"));
+        assert!(command.contains("sections: []"));
+        assert!(command.contains("symbols: [\"AAPL\"]"));
+    }
+
+    #[test]
+    fn analyze_accepts_selected_sections_and_multiple_symbols() {
+        let cli = Cli::parse_from([
+            "marketsurge-agent",
+            "analyze",
+            "--sections",
+            "snapshot,ratings,fundamentals",
+            "AAPL",
+            "MSFT",
+        ]);
+
+        let command = format!("{:?}", cli.command);
+
+        assert!(command.contains("Snapshot"));
+        assert!(command.contains("Ratings"));
+        assert!(command.contains("Fundamentals"));
+        assert!(command.contains("symbols: [\"AAPL\", \"MSFT\"]"));
+    }
+
+    #[test]
+    fn analyze_rejects_unknown_sections() {
+        let result = Cli::try_parse_from([
+            "marketsurge-agent",
+            "analyze",
+            "--sections",
+            "snapshot,unknown",
+            "AAPL",
+        ]);
+
+        assert!(result.is_err());
     }
 
     #[test]

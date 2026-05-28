@@ -64,6 +64,7 @@ pub async fn run() -> i32 {
     let fields = cli.fields.as_slice();
 
     match &cli.command {
+        Commands::Analyze(args) => commands::analyze::handle(args, fields).await,
         Commands::Market { command } => match command {
             Some(cmd) => groups::market::dispatch(cmd, fields).await,
             None => print_subcommand_help("market"),
@@ -108,6 +109,7 @@ pub async fn run() -> i32 {
 #[cfg(not(coverage))]
 fn command_name(command: &Commands) -> Option<&'static str> {
     match command {
+        Commands::Analyze(_) => Some("analyze"),
         Commands::Market { .. } => Some("market"),
         Commands::Analysis { .. } => Some("analysis"),
         Commands::Screen { .. } => Some("screen"),

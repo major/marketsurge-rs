@@ -222,7 +222,7 @@ fn fundamental_fields(item: &MdMarketDataItem) -> FundamentalFields {
 
 /// Flattens nested [`MdMarketDataItem`] responses into flat
 /// [`MarketDataRecord`] rows, one per symbol.
-fn flatten_market_data(
+pub(super) fn flatten_market_data(
     symbols: &[&str],
     market_data: &[MdMarketDataItem],
 ) -> Vec<MarketDataRecord> {

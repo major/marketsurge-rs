@@ -39,7 +39,7 @@ pub struct FundamentalsRecord {
 /// Each [`FundamentalsItem`] may contain up to four metric branches:
 /// reported EPS, reported sales, EPS estimates, and sales estimates.
 /// Items with `financials: None` are skipped.
-fn flatten_fundamentals(
+pub(super) fn flatten_fundamentals(
     symbols: &[&str],
     market_data: &[FundamentalsItem],
 ) -> Vec<FundamentalsRecord> {
